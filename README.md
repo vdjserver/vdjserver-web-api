@@ -7,6 +7,8 @@ Uses MongoDB as the local account info store. Assumes a local,running,and availa
 
 Uses Agave2.0 for community accounts, data IO, compute, etc...
 
+Uses Express.js as a backend framework.
+
 ####Installation & Setup
 This assumes you already have MongoDB, node.js & npm installed.
 
@@ -14,10 +16,18 @@ This assumes you already have MongoDB, node.js & npm installed.
 git clone git@bitbucket.org:taccaci/vdjserver-web.git
 cd vdjserver-web
 
-edit app/server/modules/agave-settings.js with username and password to Agave API
+
+edit app/server/modules/agave-settings.js with the following:
+* username and password to Agave API
+
+
+edit app/server/modules/app-settings.js with the following:
+* agaveCert
+* agaveKey
+
 
 npm install -d
-node app
+node app/app
 ```
 #### TODO:
 -get full Agave internal account working. I think we need to make it such that internal accounts are created with usernames that use the mongodb "_id" field from the vdjserver-accounts.accounts db. So for example: "_id" : ObjectId("51a677b58abdf2af0f000001") would yeild an account name like "vdj_51a677b58abdf2af0f000001". 

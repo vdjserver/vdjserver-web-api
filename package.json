@@ -1,26 +1,26 @@
 {
-	"name": "vdjserver-web",
-	"version": "0.0.1",
-	"description": "VDJServer.org website",
+	"name":         "vdjserver-web",
+	"version":      "0.0.1",
+	"description":  "VDJServer.org website",
 	"author": {
-		"name": "Stephen Mock",
-		"email": "mock@tacc.utexas.edu"
+		"name":     "Stephen Mock",
+		"email":    "mock@tacc.utexas.edu"
 	},
 	"website":{
-		"url": "vdjserver.org"
+		"url":  "vdjserver.org"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://bitbucket.org/taccaci/vdjserver-web"
+		"url":  "https://bitbucket.org/taccaci/vdjserver-web"
 	},
 	"private": true,
 	"dependencies": {
-		"express": "3.0.6",
-		"stylus": "0.31.0",
-		"jade": "0.27.7",
-		"mongodb": "1.2.7",
-		"moment" : "1.7.2",
-		"emailjs": "0.3.3"
+		"express":  "3.0.6",
+		"stylus":   "0.31.0",
+		"jade":     "0.27.7",
+		"mongodb":  "1.2.7",
+		"moment" :  "1.7.2",
+		"emailjs":  "0.3.3"
 	},
 	"engines": {
 		"node": "0.8.14",

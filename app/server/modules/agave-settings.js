@@ -3,14 +3,14 @@
 
 module.exports = {
 
-agaveAuthHost       : 'iplant-vm.tacc.utexas.edu',
-agaveAuthBase       : 'https://iplant-vm.tacc.utexas.edu/',
-agaveAuth           : '/auth-v2/',
+    agaveAuthHost       : 'iplant-vm.tacc.utexas.edu',
+    agaveAuthBase       : 'https://iplant-vm.tacc.utexas.edu/',
+    agaveAuth           : '/auth-v2/',
 
-agaveHost           : 'iplant-dev.tacc.utexas.edu',
-agaveRegInternal    : '/v2/profiles/mock/users/',
-agaveUser           : 'USERNAME',
-agavePass           : 'PASSWORD',
-basicAuth           : 'Basic ' + new Buffer('USERNAME:PASSWORD').toString('base64')
-	
-}
+    agaveHost           : 'iplant-dev.tacc.utexas.edu',
+    agaveRegInternal    : '/v2/profiles/USERNAME/users/',
+    agaveUser           : 'USERNAME',
+    agavePass           : 'PASSWORD',
+    basicAuth           : 'Basic ' + new Buffer('USERNAME:PASSWORD').toString('base64')
+
+};
