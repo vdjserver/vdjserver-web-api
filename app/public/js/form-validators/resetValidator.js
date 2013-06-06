@@ -14,21 +14,21 @@ function ResetValidator() {
 
 ResetValidator.prototype.validatePassword = function(s) {
 
-	if (s.length >= 6) {
-		return true;
-	}
+    if (s.length >= 6) {
+        return true;
+    }
     else {
-		this.showAlert('Password Should Be At Least 6 Characters');
-		return false;
-	}
+        this.showAlert('Password Should Be At Least 6 Characters');
+        return false;
+    }
 
 }
 
 
 ResetValidator.prototype.showAlert = function(m) {
-	this.setPasswordAlert.attr('class', 'alert alert-error');
-	this.setPasswordAlert.html(m);
-	this.setPasswordAlert.show();
+    this.setPasswordAlert.attr('class', 'alert alert-error');
+    this.setPasswordAlert.html(m);
+    this.setPasswordAlert.show();
 }
 
 
@@ -38,7 +38,7 @@ ResetValidator.prototype.hideAlert = function() {
 
 
 ResetValidator.prototype.showSuccess = function(m) {
-	this.setPasswordAlert.attr('class', 'alert alert-success');
-	this.setPasswordAlert.html(m);
-	this.setPasswordAlert.fadeIn(500);
+    this.setPasswordAlert.attr('class', 'alert alert-success');
+    this.setPasswordAlert.html(m);
+    this.setPasswordAlert.fadeIn(500);
 }

@@ -8,7 +8,7 @@ module.exports = function(app) {
 
     // main login page //
 
-	app.get('/', function(req, res) {
+    app.get('/', function(req, res) {
 
         // check if the user's credentials are saved in a cookie //
         if (req.cookies.username == undefined ||
@@ -39,7 +39,7 @@ module.exports = function(app) {
         }
     });
 
-	app.post('/', function(req, res) {
+    app.post('/', function(req, res) {
         AM.manualLogin(req.param('username'),
                        req.param('pass'),
                        function(e, o) {
@@ -65,13 +65,13 @@ module.exports = function(app) {
                             }
                        }
         );
-	});
+    });
 
 
 
     // logged-in user homepage //
 
-	app.get('/home', function(req, res) {
+    app.get('/home', function(req, res) {
 
         if (req.session.username == null) {
             // if user is not logged-in redirect back to login page //
@@ -87,9 +87,9 @@ module.exports = function(app) {
             );
         }
 
-	});
+    });
 
-	app.post('/home', function(req, res) {
+    app.post('/home', function(req, res) {
 
         if (req.param('username') != undefined) {
             AM.updateAccount({
@@ -139,21 +139,21 @@ module.exports = function(app) {
 
     // creating new accounts //
 
-	app.get('/signup', function(req, res) {
+    app.get('/signup', function(req, res) {
         res.render('signup',
                    {  title: 'Signup', countries : CT }
         );
     });
 
-	app.post('/signup', function(req, res) {
+    app.post('/signup', function(req, res) {
 
         AM.addNewAccount({
-                            firstname 	: req.param('firstname'),
-                            lastname	: req.param('lastname'),
-                            email 		: req.param('email'),
-                            username	: req.param('username'),
-                            pass		: req.param('pass'),
-                            country 	: req.param('country')
+                            firstname   : req.param('firstname'),
+                            lastname    : req.param('lastname'),
+                            email       : req.param('email'),
+                            username    : req.param('username'),
+                            pass        : req.param('pass'),
+                            country     : req.param('country')
                          },
                          function(e) {
                              if (e) {
@@ -170,7 +170,7 @@ module.exports = function(app) {
 
     // password reset //
 
-	app.post('/lost-password', function(req, res) {
+    app.post('/lost-password', function(req, res) {
 
         // look up the user's account via their email //
         AM.getAccountByEmail(req.param('email'), function(o) {
@@ -199,9 +199,9 @@ module.exports = function(app) {
 
         });
 
-	});
+    });
 
-	app.get('/reset-password', function(req, res) {
+    app.get('/reset-password', function(req, res) {
         var email = req.query["e"];
         var passH = req.query["p"];
 
@@ -225,9 +225,9 @@ module.exports = function(app) {
                                 }
                              }
         );
-	});
+    });
 
-	app.post('/reset-password', function(req, res) {
+    app.post('/reset-password', function(req, res) {
 
         var nPass = req.param('pass');
 
@@ -254,7 +254,7 @@ module.exports = function(app) {
 
     // view & delete accounts //
 
-	app.get('/print', function(req, res) {
+    app.get('/print', function(req, res) {
 
         AM.getAllRecords(function(e, accounts) {
             res.render('print',
@@ -264,7 +264,7 @@ module.exports = function(app) {
 
     });
 
-	app.post('/delete', function(req, res) {
+    app.post('/delete', function(req, res) {
 
         AM.deleteAccount(req.body.id, function(e, obj) {
             if (!e) {
@@ -281,15 +281,15 @@ module.exports = function(app) {
 
     });
 
-	app.get('/reset', function(req, res) {
+    app.get('/reset', function(req, res) {
 
         AM.delAllRecords(function() {
             res.redirect('/print');
         });
 
-	});
+    });
 
-	app.get('*', function(req, res) {
+    app.get('*', function(req, res) {
 
         res.render('404',
                    { title: 'Page Not Found'}

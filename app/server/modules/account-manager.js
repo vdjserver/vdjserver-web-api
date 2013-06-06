@@ -90,7 +90,7 @@ exports.manualLogin = function(user,
 
 exports.addNewAccount = function(newData, callback) {
 
-	console.log('exports.addNewAccount called with ' + newData);
+    console.log('exports.addNewAccount called with ' + newData);
     accounts.findOne({username:newData.username}, function(e, o) {
 
         if (o) {
@@ -125,7 +125,7 @@ exports.addNewAccount = function(newData, callback) {
 
 exports.updateAccount = function(newData, callback) {
 
-	console.log("exports.updateAccount called with " + JSON.stringify(newData));
+    console.log("exports.updateAccount called with " + JSON.stringify(newData));
 
     accounts.findOne({username:newData.username}, function(e, o){
 

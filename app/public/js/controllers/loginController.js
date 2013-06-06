@@ -3,7 +3,7 @@ function LoginController() {
 
 
     // bind event listeners to button clicks //
-	$('#login-form #forgot-password').click(function() {
+    $('#login-form #forgot-password').click(function() {
         $('#get-credentials').modal('show');
     });
 
