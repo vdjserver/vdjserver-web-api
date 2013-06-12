@@ -31,7 +31,7 @@ node app/app
 ```
 
 #### Documentation:
-Documentation on the v2 version of the Agave API that this project uses is available at: https://iplant-dev.tacc.utexas.edu/v2/docs/
+Documentation on the v2 version of the Agave API that this project uses is available at: [https://iplant-dev.tacc.utexas.edu/v2/docs/](https://iplant-dev.tacc.utexas.edu/v2/docs/)
 
 #### Agave Authentication:
 Auth tokens should come from https://iplant-vm.tacc.utexas.edu/auth-v2/.
