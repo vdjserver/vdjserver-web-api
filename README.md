@@ -22,13 +22,21 @@ edit app/server/modules/agave-settings.js with the following:
 
 
 edit app/server/modules/app-settings.js with the following:
-* agaveCert
-* agaveKey
+* vdjCert
+* vdjKey
 
 
 npm install -d
 node app/app
 ```
+
+#### Documentation:
+Documentation on the v2 version of the Agave API that this project uses is available at: https://iplant-dev.tacc.utexas.edu/v2/docs/
+
+#### Agave Authentication:
+Auth tokens should come from https://iplant-vm.tacc.utexas.edu/auth-v2/.
+iplant-dev.tacc.utexas.edu will be used during development and testing. It should be able to read the tokens given by iplant-vm.tacc.utexas.edu.
+
 #### TODO:
 -get full Agave internal account working. I think we need to make it such that internal accounts are created with usernames that use the mongodb "_id" field from the vdjserver-accounts.accounts db. So for example: "_id" : ObjectId("51a677b58abdf2af0f000001") would yeild an account name like "vdj_51a677b58abdf2af0f000001". 
 -right now the line that attempts to create an internal Agave account is commented out in:
