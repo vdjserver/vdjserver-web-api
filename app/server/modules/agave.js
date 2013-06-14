@@ -19,7 +19,7 @@ AG.postOptionsToken = function(path, token) {
         hostname:   AGS.agaveHost,
         path:       path,
         method:     'POST',
-        auth:       AGS.agaveUser + ': ' + token,
+        auth:       AGS.agaveUser + ':' + token,
         rejectUnauthorized: false
     }
 }
@@ -62,7 +62,18 @@ AG.createInternalUser = function(userData) {
     AG.getToken(function(token) {
 
         console.log("Got token with " + token);
+            
+        // The API currently returns an error if city is blank...this is probably a bug.
+        var newUser = {
+            "username":     userData.username,
+            "email":        userData.email,
+            "city":         "testCity"
+            //"firstName":    userData.firstname,
+            //"lastName":     userData.lastname,
+            //"country":      userData.location,
+        };
 
+/*
         var unshared = {
             "username":     "gibberish",
             "email":        "gibberish@example.com",
@@ -83,7 +94,7 @@ AG.createInternalUser = function(userData) {
             ],
             "gender":       "MALE"
         };
-
+*/
         var postOptions = AG.postOptionsToken(AGS.agaveRegInternal, token);
         console.log("postOptions: " + JSON.stringify(postOptions));
 
@@ -96,9 +107,9 @@ AG.createInternalUser = function(userData) {
             });
 
             response.on('end',function() {
-                console.log(output);
                 var obj = JSON.parse(output);
-                console.log("Status: " + obj.status);
+                console.log("Obj is: "   + JSON.stringify(obj));
+                console.log("Status: "   + obj.status);
                 console.log("Username: " + obj.result.username);
                 return obj;
             });
@@ -112,9 +123,10 @@ AG.createInternalUser = function(userData) {
         })
 
         //write the JSON of the internal user
-        request.write(JSON.stringify(unshared));
+        request.write(JSON.stringify(newUser));
         request.end();
 
+        console.log("endOf createInternalUser");
     });
 
 }

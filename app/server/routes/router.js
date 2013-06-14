@@ -10,6 +10,8 @@ module.exports = function(app) {
 
     app.get('/', function(req, res) {
 
+        console.log("main login page ok");
+
         // check if the user's credentials are saved in a cookie //
         if (req.cookies.username == undefined ||
             req.cookies.pass     == undefined)
@@ -157,9 +159,11 @@ module.exports = function(app) {
                          },
                          function(e) {
                              if (e) {
+                                 console.log("addNewAccount 1 - e is: " + JSON.stringify(e));
                                  res.send(e, 400);
                              }
                              else {
+                                 console.log("addNewAccount 2 - e is: " + JSON.stringify(e));
                                  res.send('ok', 200);
                              }
                          }

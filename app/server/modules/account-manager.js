@@ -90,7 +90,7 @@ exports.manualLogin = function(user,
 
 exports.addNewAccount = function(newData, callback) {
 
-    console.log('exports.addNewAccount called with ' + newData);
+    console.log('exports.addNewAccount called with ' + JSON.stringify(newData));
     accounts.findOne({username:newData.username}, function(e, o) {
 
         if (o) {
@@ -104,18 +104,20 @@ exports.addNewAccount = function(newData, callback) {
                 else {
                     saltAndHash(newData.pass, function(hash) {
 
-                                    newData.pass = hash;
+                        newData.pass = hash;
 
-                                    // append date stamp when record was created //
-                                    newData.date = moment().format('MMMM Do YYYY, h:mm:ss a');
+                        // append date stamp when record was created //
+                        newData.date = moment().format('MMMM Do YYYY, h:mm:ss a');
 
-                                    accounts.insert(newData,
-                                                    {safe: true},
-                                                    callback);
+                        accounts.insert(newData,
+                                        {safe: true},
+                                        callback);
                     });
 
-                    //UNCOMMENT ME TO WORK!!
-                    //var interUser = Agave.createInternalUser(newData);
+                    console.log("about to run Agave.createInternalUser. newData is: " + JSON.stringify(newData));
+
+                    var interUser = Agave.createInternalUser(newData);
+                    console.log("interUser is: " + JSON.stringify(interUser));
                 }
             });
         }

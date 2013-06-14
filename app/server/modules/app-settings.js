@@ -6,6 +6,6 @@ var fs = require('fs');
 module.exports = {
 
     vdjKey      : fs.readFileSync(__dirname + '/../vendor/vdjserver.org.certificate/vdjserver.org.key'),
-    vdjCert     : fs.readFileSync(__dirname + '/../vendor/vdjserver.org.certificate/vdjserver.org.cer'),
+    vdjCert     : fs.readFileSync(__dirname + '/../vendor/vdjserver.org.certificate/vdjserver.org.cer')
 
 };

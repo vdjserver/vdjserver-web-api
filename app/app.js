@@ -2,7 +2,8 @@
 // Basic Config
 var express = require('express');
 var app     = express();
-var http    = require('https');
+//var http    = require('https');
+var http    = require('http');
 
 
 app.configure(function() {
@@ -13,7 +14,7 @@ app.configure(function() {
 
     app.locals.pretty = true;
 //  app.use(express.favicon());
-//  app.use(express.logger('dev'));
+    app.use(express.logger('dev'));
     app.use(express.bodyParser());
     app.use(express.cookieParser());
     app.use(express.session({ secret: 'super-duper-secret-secret' }));
@@ -41,6 +42,7 @@ var sslOptions = {
     cert: appSettings.vdjCert
 };
 
-http.createServer(sslOptions,app).listen(app.get('port'), function() {
+//http.createServer(sslOptions,app).listen(app.get('port'), function() {
+http.createServer(app).listen(app.get('port'), function() {
     console.log("Express server listening on port " + app.get('port'));
-})
+});
