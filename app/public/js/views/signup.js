@@ -17,15 +17,15 @@ $(document).ready(function() {
                            xhr,
                            $form)
         {
-            if (status == 'success') {
+            if (status === 'success') {
                 $('.modal-alert').modal('show');
             }
         },
         error : function(e) {
-            if (e.responseText == 'email-taken') {
+            if (e.responseText === 'email-taken') {
                 av.showInvalidEmail();
             }
-            else if (e.responseText == 'username-taken') {
+            else if (e.responseText === 'username-taken') {
                 av.showInvalidUserName();
             }
         }
@@ -53,4 +53,4 @@ $(document).ready(function() {
     $('.modal-alert .modal-header h3').text('Success!');
     $('.modal-alert .modal-body p').html('Your account has been created.</br>Click OK to return to the login page.');
 
-})
+});

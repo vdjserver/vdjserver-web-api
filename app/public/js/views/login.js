@@ -12,12 +12,12 @@ $(document).ready(function(){
                                 options)
         {
 
-            if (lv.validateForm() == false) {
+            if (lv.validateForm() === false) {
                 return false;
             }
             else {
                 // append 'remember-me' option to formData to write local cookie //
-                formData.push({name:'remember-me', value:$("input:checkbox:checked").length == 1})
+                formData.push({name:'remember-me', value:$("input:checkbox:checked").length == 1});
                 return true;
             }
 
@@ -27,7 +27,9 @@ $(document).ready(function(){
                            xhr,
                            $form)
         {
-            if (status == 'success') window.location.href = '/home';
+            if (status === 'success') {
+                window.location.href = '/home';
+            }
         },
         error : function(e){
             lv.showLoginError('Login Failure', 'Please check your username and/or password');
@@ -71,4 +73,4 @@ $(document).ready(function(){
         }
     });
 
-})
+});

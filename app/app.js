@@ -1,47 +1,27 @@
 
-// Basic Config
 var express = require('express');
 var app     = express();
 //var http    = require('https');
 var http    = require('http');
 
 
-app.configure(function() {
-
-    app.set('view engine', 'jade');
-    app.set('views', __dirname + '/server/views');
-    app.set('port', 8443);
-
-    app.locals.pretty = true;
-//  app.use(express.favicon());
-    app.use(express.logger('dev'));
-    app.use(express.bodyParser());
-    app.use(express.cookieParser());
-    app.use(express.session({ secret: 'super-duper-secret-secret' }));
-    app.use(express.methodOverride());
-    app.use(require('stylus').middleware({ src: __dirname + '/public' }));
-    app.use(express.static(__dirname + '/public'));
-});
+// Mongoose
+var mongoose = require('mongoose');
 
 
-app.configure('development', function() {
-    app.use(express.errorHandler());
-});
+// Config
+var config = require('./config.js')(app, express, mongoose);
 
 
-
-// Required Files
-require('./server/routes/router')(app);
-var appSettings = require('./server/modules/app-settings');
+// Models - (initialize here)
+require('./models/account');
 
 
+// Router
+require('./routes/router')(app);
 
-// Server / SSL
-var sslOptions = {
-    key:  appSettings.vdjKey,
-    cert: appSettings.vdjCert
-};
 
+// Server
 //http.createServer(sslOptions,app).listen(app.get('port'), function() {
 http.createServer(app).listen(app.get('port'), function() {
     console.log("Express server listening on port " + app.get('port'));

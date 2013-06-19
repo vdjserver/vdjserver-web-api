@@ -18,4 +18,4 @@ function LoginController() {
         $('#user-tf').focus();
     });
 
-}
+};

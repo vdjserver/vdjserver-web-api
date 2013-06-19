@@ -9,7 +9,7 @@ function ResetValidator() {
                              backdrop : 'static' });
 
     this.setPasswordAlert = $('#set-password .alert');
-}
+};
 
 
 ResetValidator.prototype.validatePassword = function(s) {
@@ -22,23 +22,23 @@ ResetValidator.prototype.validatePassword = function(s) {
         return false;
     }
 
-}
+};
 
 
 ResetValidator.prototype.showAlert = function(m) {
     this.setPasswordAlert.attr('class', 'alert alert-error');
     this.setPasswordAlert.html(m);
     this.setPasswordAlert.show();
-}
+};
 
 
 ResetValidator.prototype.hideAlert = function() {
     this.setPasswordAlert.hide();
-}
+};
 
 
 ResetValidator.prototype.showSuccess = function(m) {
     this.setPasswordAlert.attr('class', 'alert alert-success');
     this.setPasswordAlert.html(m);
     this.setPasswordAlert.fadeIn(500);
-}
+};

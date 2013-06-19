@@ -12,7 +12,7 @@ AG.authPostOptions = function(path) {
         auth:       AGS.agaveUser + ':' + AGS.agavePass,
         rejectUnauthorized: false
     }
-}
+};
 
 AG.postOptionsToken = function(path, token) {
     return {
@@ -22,7 +22,7 @@ AG.postOptionsToken = function(path, token) {
         auth:       AGS.agaveUser + ':' + token,
         rejectUnauthorized: false
     }
-}
+};
 
 AG.getToken = function(callback) {
     var request = require('https').request(AG.authPostOptions(AGS.agaveAuth), function(response) {
@@ -38,7 +38,7 @@ AG.getToken = function(callback) {
             token   = obj.result.token;
 
             console.log("Status: " + obj.status);
-            console.log("Token: " + obj.result.token);
+            console.log("Token: "  + obj.result.token);
 
             if (callback) {
                 callback(token);
@@ -46,31 +46,31 @@ AG.getToken = function(callback) {
         });
     });
 
-    request.on('error',function(e){
-        console.log("Error: " + postOptions + "\n" + e.message);
-        console.log( e.stack );
+    request.on('error', function(error) {
+        console.log("Error: " + postOptions + "\n" + error.message);
+        console.log( error.stack );
         return false;
     });
 
     request.end();
-}
+};
 
-AG.createInternalUser = function(userData) {
+AG.createInternalUser = function(newAccount, callback) {
 
-    console.log('AG.createInternalUser called with ' + JSON.stringify(userData));
+    console.log('AG.createInternalUser called with ' + JSON.stringify(newAccount));
 
     AG.getToken(function(token) {
 
         console.log("Got token with " + token);
-            
+
         // The API currently returns an error if city is blank...this is probably a bug.
         var newUser = {
-            "username":     userData.username,
-            "email":        userData.email,
+            "username":     newAccount.username,
+            "email":        newAccount.email,
+            "firstName":    newAccount.firstname,
+            "lastName":     newAccount.lastname,
+            "country":      newAccount.country,
             "city":         "testCity"
-            //"firstName":    userData.firstname,
-            //"lastName":     userData.lastname,
-            //"country":      userData.location,
         };
 
 /*
@@ -106,21 +106,26 @@ AG.createInternalUser = function(userData) {
                 output += chunk;
             });
 
-            response.on('end',function() {
+            response.on('end', function() {
                 var obj = JSON.parse(output);
                 console.log("Obj is: "   + JSON.stringify(obj));
                 console.log("Status: "   + obj.status);
                 console.log("Username: " + obj.result.username);
+
+                callback("", obj.status);
                 return obj;
             });
 
         });
 
-        request.on('error',function(e){
-            console.log("Error w/createInternalUser: " + postOptions + "\n" + e.message);
-            console.log( e.stack );
+        request.on('error', function(error) {
+            console.log("Error w/createInternalUser: " + postOptions + "\n" + error.message);
+            console.log( error.stack );
+
+            callback(error, "");
+
             return false;
-        })
+        });
 
         //write the JSON of the internal user
         request.write(JSON.stringify(newUser));
@@ -129,4 +134,4 @@ AG.createInternalUser = function(userData) {
         console.log("endOf createInternalUser");
     });
 
-}
+};

@@ -1,5 +1,5 @@
 
-$(document).ready(function(){
+$(document).ready(function() {
 
     var rv = new ResetValidator();
 
@@ -10,7 +10,7 @@ $(document).ready(function(){
                                 options)
         {
             rv.hideAlert();
-            if (rv.validatePassword($('#pass-tf').val()) == false) {
+            if (rv.validatePassword($('#pass-tf').val()) === false) {
                 return false;
             }
             else {
@@ -37,6 +37,6 @@ $(document).ready(function(){
     $('#set-password').modal('show');
     $('#set-password').on('shown', function() {
         $('#pass-tf').focus();
-    })
+    });
 
 });

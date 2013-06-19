@@ -12,12 +12,12 @@ $(document).ready(function() {
                                 options)
         {
 
-            if (av.validateForm() == false) {
+            if (av.validateForm() === false) {
                 return false;
             }
             else {
                 // push the disabled username field onto the form data array //
-                formData.push({name:'user', value:$('#user-tf').val()})
+                formData.push({name:'user', value:$('#user-tf').val()});
                 return true;
             }
 
@@ -28,17 +28,17 @@ $(document).ready(function() {
                            $form)
         {
 
-            if (status == 'success') {
+            if (status === 'success') {
                 hc.onUpdateSuccess();
             }
 
         },
         error : function(e) {
 
-            if (e.responseText == 'email-taken') {
+            if (e.responseText === 'email-taken') {
                 av.showInvalidEmail();
             }
-            else if (e.responseText == 'username-taken') {
+            else if (e.responseText === 'username-taken') {
                 av.showInvalidUserName();
             }
 
@@ -71,4 +71,4 @@ $(document).ready(function() {
     $('.modal-confirm .submit').html('Delete');
     $('.modal-confirm .submit').addClass('btn-danger');
 
-})
+});

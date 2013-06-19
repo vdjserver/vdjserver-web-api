@@ -39,7 +39,7 @@ function HomeController() {
                 console.log(jqXHR.responseText + ' :: ' + jqXHR.statusText);
             }
         });
-    }
+    };
 
     this.attemptLogout = function() {
         var that = this;
@@ -54,14 +54,13 @@ function HomeController() {
                 console.log(jqXHR.responseText+' :: '+jqXHR.statusText);
             }
         });
-    }
+    };
 
     this.showLockedAlert = function(msg) {
 
         $('.modal-alert').modal({ show     : false,
                                   keyboard : false,
-                                  backdrop : 'static'
-        });
+                                  backdrop : 'static'});
 
 
         $('.modal-alert .modal-header h3').text('Success!');
@@ -76,8 +75,8 @@ function HomeController() {
         setTimeout(function() {
             window.location.href = '/';
         }, 3000);
-    }
-}
+    };
+};
 
 HomeController.prototype.onUpdateSuccess = function() {
 
@@ -90,4 +89,4 @@ HomeController.prototype.onUpdateSuccess = function() {
     $('.modal-alert .modal-body p').html('Your account has been updated.');
     $('.modal-alert').modal('show');
     $('.modal-alert button').off('click');
-}
+};
