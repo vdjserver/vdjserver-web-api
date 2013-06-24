@@ -76,3 +76,7 @@ AccountSchema.methods.setDatestamp = function() {
 
 // Register with Mongoose
 mongoose.model(collection, AccountSchema);
+
+// Unit Testing Exports
+module.exports.generateSalt = generateSalt;
+module.exports.md5          = md5;
