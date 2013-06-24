@@ -6,7 +6,7 @@ mongoose.connect("mongodb://localhost/unitTest_db");
 describe("accountModel", function() {
 
     var testAccount = null;
-
+/*
     beforeEach(function(done) {
 
         testAccount = new account();
@@ -19,7 +19,7 @@ describe("accountModel", function() {
         testAccount.country   = "USA";
 
     });
-
+*/
     it('generates a salt sequence ten characters long', function() {
         var salt = account.generateSalt();
         salt.length.should.equal(10);
