@@ -7,7 +7,7 @@ module.exports = {
     agaveAuth           : '/auth-v2/',
 
     agaveHost           : 'iplant-dev.tacc.utexas.edu',
-    agaveRegInternal    : '/v2/profiles/wscarbor/users/',
+    agaveRegInternal    : '/v2',
     agaveUser           : 'USERNAME',
     agavePass           : 'PASSWORD',
     basicAuth           : 'Basic ' + new Buffer('USERNAME:PASSWORD').toString('base64')

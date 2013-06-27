@@ -4,7 +4,7 @@ module.exports = AG;
 
 var token = '';
 
-AG.authPostOptions = function(path) {
+AG.postOptionsAuth = function(path) {
     return {
         hostname:   AGS.agaveAuthHost,
         path:       path,
@@ -25,7 +25,7 @@ AG.postOptionsToken = function(path, token) {
 };
 
 AG.getToken = function(callback) {
-    var request = require('https').request(AG.authPostOptions(AGS.agaveAuth), function(response) {
+    var request = require('https').request(AG.postOptionsAuth(AGS.agaveAuth), function(response) {
 
         var output = '';
 
@@ -64,7 +64,7 @@ AG.createInternalUser = function(newAccount, callback) {
         console.log("Got token with " + token);
 
         // The API currently returns an error if city is blank...this is probably a bug.
-        var newUser = {
+        var newUserJson = {
             "username":     newAccount.username,
             "email":        newAccount.email,
             "firstName":    newAccount.firstname,
@@ -95,7 +95,13 @@ AG.createInternalUser = function(newAccount, callback) {
             "gender":       "MALE"
         };
 */
-        var postOptions = AG.postOptionsToken(AGS.agaveRegInternal, token);
+        var postOptions = AG.postOptionsToken(AGS.agaveRegInternal + '/profiles'
+                                                                   + '/'
+                                                                   + AGS.agaveUser
+                                                                   + '/users'
+                                                                   + '/',
+                                              token);
+
         console.log("postOptions: " + JSON.stringify(postOptions));
 
         var request = require('https').request(postOptions, function(response) {
@@ -128,10 +134,64 @@ AG.createInternalUser = function(newAccount, callback) {
         });
 
         //write the JSON of the internal user
-        request.write(JSON.stringify(newUser));
+        request.write(JSON.stringify(newUserJson));
         request.end();
 
         console.log("endOf createInternalUser");
+    });
+
+};
+
+AG.uploadFile = function(newFile, callback) {
+
+    AG.getToken(function(token) {
+
+        console.log("Got token with " + token);
+
+/*
+        var newFileJson = {
+            "":     newAccount.username,
+        };
+*/
+        var postOptions = AG.postOptionsToken(AGS.agaveRegInternal + '/files'
+                                                                   + '/media',
+                          token);
+        console.log("postOptions: " + JSON.stringify(postOptions));
+
+        var request = require('https').request(postOptions, function(response) {
+
+            var output = '';
+
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
+
+            response.on('end', function() {
+                var obj = JSON.parse(output);
+                console.log("Obj is: "   + JSON.stringify(obj));
+                console.log("Status: "   + obj.status);
+                console.log("Username: " + obj.result.username);
+
+                callback("", obj.status);
+                return obj;
+            });
+
+        });
+
+        request.on('error', function(error) {
+            console.log("Error message: " + postOptions + "\n" + error.message);
+            console.log( error.stack );
+
+            callback(error, "");
+
+            return false;
+        });
+
+        //write the JSON of the internal user
+        request.write(JSON.stringify(newFileJson));
+        request.end();
+
+        console.log("endOf uploadFile");
     });
 
 };
