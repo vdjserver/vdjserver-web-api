@@ -63,14 +63,12 @@ AG.createInternalUser = function(newAccount, callback) {
 
         console.log("Got token with " + token);
 
-        // The API currently returns an error if city is blank...this is probably a bug.
         var newUserJson = {
             "username":     newAccount.username,
             "email":        newAccount.email,
             "firstName":    newAccount.firstname,
             "lastName":     newAccount.lastname,
-            "country":      newAccount.country,
-            "city":         "testCity"
+            "country":      newAccount.country
         };
 
 /*
@@ -95,34 +93,54 @@ AG.createInternalUser = function(newAccount, callback) {
             "gender":       "MALE"
         };
 */
-        var postOptions = AG.postOptionsToken(AGS.agaveRegInternal + '/profiles'
-                                                                   + '/'
-                                                                   + AGS.agaveUser
-                                                                   + '/users'
-                                                                   + '/',
+
+        var postOptions = AG.postOptionsToken(AGS.agaveVersion + '/profiles' 
+                                                               + '/'
+                                                               + AGS.agaveUser
+                                                               + '/users'
+                                                               + '/',
                                               token);
 
         console.log("postOptions: " + JSON.stringify(postOptions));
 
         var request = require('https').request(postOptions, function(response) {
 
+            console.log("inside request. options are: " + JSON.stringify(postOptions));
+            //console.log("inside request. response is: " + JSON.stringify(response));
+
             var output = '';
 
             response.on('data', function(chunk) {
+                console.log("response output is: " + JSON.stringify(output));
+                console.log("chunk is: " + JSON.stringify(chunk));
                 output += chunk;
             });
 
             response.on('end', function() {
                 var obj = JSON.parse(output);
-                console.log("Obj is: "   + JSON.stringify(obj));
-                console.log("Status: "   + obj.status);
-                console.log("Username: " + obj.result.username);
+
+                console.log("obj is: " + JSON.stringify(obj));
+
+                if (obj &&
+                    obj.status &&
+                    obj.result &&
+                    obj.result.username)
+                {
+                    console.log("Obj is: "   + JSON.stringify(obj));
+                    console.log("Status: "   + obj.status);
+                    console.log("Username: " + obj.result.username);
+                }
+                else {
+                    console.log("agave registration error. obj is: " + JSON.stringify(obj));
+                }
+
 
                 callback("", obj.status);
                 return obj;
             });
 
         });
+
 
         request.on('error', function(error) {
             console.log("Error w/createInternalUser: " + postOptions + "\n" + error.message);
@@ -153,8 +171,7 @@ AG.uploadFile = function(newFile, callback) {
             "":     newAccount.username,
         };
 */
-        var postOptions = AG.postOptionsToken(AGS.agaveRegInternal + '/files'
-                                                                   + '/media',
+        var postOptions = AG.postOptionsToken(AGS.agaveVersion + '/files/media',
                           token);
         console.log("postOptions: " + JSON.stringify(postOptions));
 

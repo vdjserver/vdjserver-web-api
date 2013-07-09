@@ -69,7 +69,7 @@ $(document).ready(function(){
             ev.showEmailSuccess("Check your email on how to reset your password.");
         },
         error : function() {
-            ev.showEmailAlert("Sorry. There was a problem, please try again later.");
+            ev.showEmailAlert("Sorry, there was a problem sending out email. Please try again later.");
         }
     });
 
