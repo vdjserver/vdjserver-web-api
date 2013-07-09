@@ -2,12 +2,12 @@
 
 module.exports = {
 
-    agaveAuthHost       : 'iplant-vm.tacc.utexas.edu',
-    agaveAuthBase       : 'https://iplant-vm.tacc.utexas.edu/',
-    agaveAuth           : '/auth-v2/',
+    agaveAuthHost       : 'iplant-dev.tacc.utexas.edu',
+    agaveAuthBase       : 'https://iplant-dev.tacc.utexas.edu/',
+    agaveAuth           : '/v2/auth/',
 
     agaveHost           : 'iplant-dev.tacc.utexas.edu',
-    agaveRegInternal    : '/v2',
+    agaveVersion        : '/v2',
     agaveUser           : 'USERNAME',
     agavePass           : 'PASSWORD',
     basicAuth           : 'Basic ' + new Buffer('USERNAME:PASSWORD').toString('base64')
