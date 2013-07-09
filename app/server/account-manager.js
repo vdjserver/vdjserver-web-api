@@ -107,7 +107,7 @@ exports.addNewAccount = function(newAccount, callback) {
                                 }
                                 else {
                                     newAccount.remove();
-                                    callback('error');
+                                    callback('error-api');
                                 }
 
                             });
