@@ -5,16 +5,8 @@ var app     = express();
 var http    = require('http');
 
 
-// Mongoose
-var mongoose = require('mongoose');
-
-
 // Config
-var config = require('./config.js')(app, express, mongoose);
-
-
-// Models - (initialize here)
-require('./models/account');
+var config = require('./config.js')(app, express);
 
 
 // Router

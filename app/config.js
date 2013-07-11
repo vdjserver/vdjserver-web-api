@@ -1,5 +1,5 @@
 
-module.exports = function(app, express, mongoose) {
+module.exports = function(app, express) {
 
     var config = this;
 
@@ -25,7 +25,6 @@ module.exports = function(app, express, mongoose) {
     // Environment Specific Config
     app.configure('development', function() {
         app.use(express.errorHandler());
-        mongoose.connect('mongodb://localhost:27017/vdjserver-accounts');
     });
 
 

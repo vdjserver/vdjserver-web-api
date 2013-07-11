@@ -19,8 +19,6 @@
         "express":  "3.0.6",
         "jade":     "0.27.7",
         "moment" :  "1.7.2",
-        "mongodb":  "1.2.7",
-        "mongoose": "3.6.11",
         "stylus":   "0.31.0"
     },
     "devDependencies": {
