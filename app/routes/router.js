@@ -1,46 +1,52 @@
+// App
+var express = require ('express');
 
+// Processing
 var Agave = require('../server/agave');
+
+// Models
+var InternalUserAuth = require('../models/internalUserAuth');
+var ApiResponse      = require('../models/apiResponse');
+
 
 module.exports = function(app) {
 
-    // Request an Agave token
-    app.post('/token', function(request, response) {
-/*
-        AM.manualLogin(request.param('username'), request.param('password'), function(error, account) {
-            if (!account) {
-                response.send(error, 400);
+
+    // Verify user credentials via Agave
+    var auth = express.basicAuth(function(username, password, callback) {
+
+        //lookup auth via Agave
+        var result = {"username": username, "password": password};
+
+        callback(null /* error */, result);
+    });
+
+
+
+    // Request an Agave internalUsername token
+    app.post('/token', auth, function(request, response) {
+
+        Agave.getInternalUserToken(request.user.username, request.user.password, function(error, internalUserAuth) {
+                
+            var apiResponse = new ApiResponse.schema();
+
+            if (!error) {
+                apiResponse.setSuccess();
+                apiResponse.result = internalUserAuth;
             }
             else {
-                request.session.userAccountData = account;
-
-                if (request.param('remember-me') === 'true') {
-
-                    response.cookie('username',
-                                    account.username,
-                                    { maxAge: 900000 });
-
-                    response.cookie('password',
-                                    account.password,
-                                    { maxAge: 900000 });
-                }
-
-                response.send(account, 200);
+                apiResponse.setError();
+                apiResponse.message = "Unable to fetch Agave token for '" + request.user.username + "'";
             }
-       });
-*/
+            
+            response.send(apiResponse);
+        });
+
     });
 
 
 
     // Creating new accounts
-    app.post('/user', function(request, response) {
-
-        response.render('signup',
-                        {  title: 'Signup', countries : CT });
-
-    });
-
-
     app.post('/signup', function(request, response) {
 
         var newAccount = new accountCollection();

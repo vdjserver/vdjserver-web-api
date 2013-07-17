@@ -1,32 +1,43 @@
-var AGS = require('./agave-settings');
-var AG  = {};
-module.exports = AG;
+
+var Agave  = {};
+module.exports = Agave;
+
+
+// Models
+var InternalUserAuth = require('../models/internalUserAuth');
+
+
+// Settings
+var AgaveSettings = require('./agave-settings');
+
+
 
 var token = '';
 
-AG.postOptionsAuth = function(path) {
+// Includes general settings for internal user token requests
+Agave.internalUserTokenRequestSettings = function(internalUsername) {
+
+    var postData = "internalUsername=" + internalUsername;
+
     return {
-        hostname:   AGS.agaveAuthHost,
-        path:       path,
+        hostname:   AgaveSettings.agaveAuthHost,
         method:     'POST',
-        auth:       AGS.agaveUser + ':' + AGS.agavePass,
-        rejectUnauthorized: false
+        auth:       AgaveSettings.agaveUser + ':' + AgaveSettings.agavePass,
+        path:       AgaveSettings.agaveAuth,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':     'application/x-www-form-urlencoded',
+            'Content-Length':   postData.length 
+        }
     }
 };
 
-AG.postOptionsToken = function(path, token) {
-    return {
-        hostname:   AGS.agaveHost,
-        path:       path,
-        method:     'POST',
-        auth:       AGS.agaveUser + ':' + token,
-        rejectUnauthorized: false
-    }
-};
 
-AG.getToken = function(callback) {
-    var request = require('https').request(AG.postOptionsAuth(AGS.agaveAuth), function(response) {
+// Fetches an internal user token based on supplied credentials and returns an InternalUserAuth object on success
+Agave.getInternalUserToken = function(internalUsername, password, callback) {
 
+    var request = require('https').request(Agave.internalUserTokenRequestSettings(internalUsername), function(response) {
+        
         var output = '';
 
         response.on('data', function(chunk) {
@@ -34,32 +45,46 @@ AG.getToken = function(callback) {
         });
 
         response.on('end', function() {
+
             var obj = JSON.parse(output);
-            token   = obj.result.token;
 
-            console.log("Status: " + obj.status);
-            console.log("Token: "  + obj.result.token);
-
-            if (callback) {
-                callback(token);
+            if (obj.status === "success" &&
+                obj.result          &&
+                obj.result.token    &&
+                obj.result.username &&
+                obj.result.expires) 
+            {
+                internalUserAuth = new InternalUserAuth.schema();
+                
+                internalUserAuth.internalUsername = internalUsername;
+                internalUserAuth.token            = obj.result.token;
+                internalUserAuth.authUsername     = obj.result.username;
+                internalUserAuth.expires          = obj.result.expires;
+            
+                callback(null, internalUserAuth);
             }
+            else {
+                callback("error");
+            }
+
         });
     });
 
     request.on('error', function(error) {
-        console.log("Error: " + postOptions + "\n" + error.message);
-        console.log( error.stack );
-        return false;
+        console.log("getInternalUserToken error: " + error);
     });
+
+    // Request body parameters
+    request.write("internalUsername=" + internalUsername);
 
     request.end();
 };
 
-AG.createInternalUser = function(newAccount, callback) {
+Agave.createInternalUser = function(newAccount, callback) {
 
-    console.log('AG.createInternalUser called with ' + JSON.stringify(newAccount));
+    console.log('Agave.createInternalUser called with ' + JSON.stringify(newAccount));
 
-    AG.getToken(function(token) {
+    Agave.getToken(function(token) {
 
         console.log("Got token with " + token);
 
@@ -71,32 +96,10 @@ AG.createInternalUser = function(newAccount, callback) {
             "country":      newAccount.country
         };
 
-/*
-        var unshared = {
-            "username":     "gibberish",
-            "email":        "gibberish@example.com",
-            "firstName":    "Unshared",
-            "lastName":     "User",
-            "position":     "Consumer",
-            "institution":  "Example University",
-            "phone":        "512-555-5555",
-            "fax":          "512-555-5556",
-            "researchArea": "Software Engineering",
-            "department":   "QA",
-            "city":         "Anywhere",
-            "state":        "TX",
-            "country":      "USA",
-            "fundingAgencies": [
-                "Dad",
-                "Mom"
-            ],
-            "gender":       "MALE"
-        };
-*/
 
-        var postOptions = AG.postOptionsToken(AGS.agaveVersion + '/profiles' 
+        var postOptions = Agave.postOptionsToken(AgaveSettings.agaveVersion + '/profiles'
                                                                + '/'
-                                                               + AGS.agaveUser
+                                                               + AgaveSettings.agaveUser
                                                                + '/users'
                                                                + '/',
                                               token);
@@ -156,59 +159,6 @@ AG.createInternalUser = function(newAccount, callback) {
         request.end();
 
         console.log("endOf createInternalUser");
-    });
-
-};
-
-AG.uploadFile = function(newFile, callback) {
-
-    AG.getToken(function(token) {
-
-        console.log("Got token with " + token);
-
-/*
-        var newFileJson = {
-            "":     newAccount.username,
-        };
-*/
-        var postOptions = AG.postOptionsToken(AGS.agaveVersion + '/files/media',
-                          token);
-        console.log("postOptions: " + JSON.stringify(postOptions));
-
-        var request = require('https').request(postOptions, function(response) {
-
-            var output = '';
-
-            response.on('data', function(chunk) {
-                output += chunk;
-            });
-
-            response.on('end', function() {
-                var obj = JSON.parse(output);
-                console.log("Obj is: "   + JSON.stringify(obj));
-                console.log("Status: "   + obj.status);
-                console.log("Username: " + obj.result.username);
-
-                callback("", obj.status);
-                return obj;
-            });
-
-        });
-
-        request.on('error', function(error) {
-            console.log("Error message: " + postOptions + "\n" + error.message);
-            console.log( error.stack );
-
-            callback(error, "");
-
-            return false;
-        });
-
-        //write the JSON of the internal user
-        request.write(JSON.stringify(newFileJson));
-        request.end();
-
-        console.log("endOf uploadFile");
     });
 
 };
