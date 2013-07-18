@@ -1,0 +1,47 @@
+
+// Model
+var InternalUser = require('../app/models/internalUser');
+
+
+describe("internalUser", function() {
+
+    var internalUser = null;
+
+    beforeEach(function(done) {
+
+        internalUser = new InternalUser.schema();
+
+        internalUser.username  = "vanhalen";
+        internalUser.password  = "test123";
+        internalUser.email     = "eddievanhalen@test.com";
+
+        done();
+    });
+
+
+    it("generates a salt sequence ten characters long", function() {
+        var salt = InternalUser.generateSalt();
+        salt.length.should.equal(10);
+    });
+
+
+    it("generates an md5 sequence for 'abracadabra' that matches 'ec5287c45f0e70ec22d52e8bcbeeb640'", function() {
+        var md5 = InternalUser.md5('abracadabra');
+        md5.should.equal('ec5287c45f0e70ec22d52e8bcbeeb640');
+    });
+
+
+    it("should saltAndHash plaintext password 'test123'", function() {
+        internalUser.saltAndHash();
+        internalUser.password.should.not.equal('test123');
+    });
+
+
+    it("should validate plaintext password against salt/hash version", function() {
+        internalUser.saltAndHash();
+        var passwordIsValid = internalUser.validatePassword('test123');
+        passwordIsValid.should.be.true;
+    });
+
+
+});

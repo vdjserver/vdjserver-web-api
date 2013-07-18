@@ -5,8 +5,10 @@ var express = require ('express');
 var Agave = require('../server/agave');
 
 // Models
-var InternalUserAuth = require('../models/internalUserAuth');
 var ApiResponse      = require('../models/apiResponse');
+var InternalUserAuth = require('../models/internalUserAuth');
+var InternalUser     = require('../models/internalUser');
+
 
 
 module.exports = function(app) {
@@ -47,16 +49,26 @@ module.exports = function(app) {
 
 
     // Creating new accounts
-    app.post('/signup', function(request, response) {
+    app.post('/user', auth, function(request, response) {
 
+        var internalUser = new InternalUser.schema();
+
+        
+        internalUser.password = "abcdefg";
+
+        console.log("internalUser password is: " + internalUser.password);
+
+        internalUser.saltAndHash();
+
+        console.log("after hash, pswd is: " + internalUser.password);
+
+
+        /*
         var newAccount = new accountCollection();
 
-        newAccount.firstname = request.param('firstname');
-        newAccount.lastname  = request.param('lastname');
-        newAccount.email     = request.param('email');
         newAccount.username  = request.param('username');
         newAccount.password  = request.param('password');
-        newAccount.country   = request.param('country');
+        newAccount.email     = request.param('email');
 
         AM.addNewAccount(newAccount, function(error) {
 
@@ -71,6 +83,7 @@ module.exports = function(app) {
 
         });
 
+        */
     });
 
 
