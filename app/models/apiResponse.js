@@ -9,7 +9,6 @@ ApiResponse.schema = function() {
     this.status  = "";
 };
 
-
 ApiResponse.schema.prototype.setSuccess = function() {
     this.message = "";
     this.status  = "success";

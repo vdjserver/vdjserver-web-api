@@ -1,0 +1,26 @@
+
+/*
+    How To Setup agave-settings.js
+
+    Replace the following empty parameter strings with appropriate Agave 
+    authenticated user credentials: authenticatedUser, authenticatedUserPassword.
+
+    If you want to be able to run unit/integration tests, then also set
+    the following with test internal user credentials: testInternalUser, testInternalUserPassword.
+*/
+
+module.exports = {
+
+    // API Settings
+    host              : 'iplant-dev.tacc.utexas.edu',
+    apiVersion        : '/v2',
+    authenticatedUser : '',
+    authenticatedUserPassword : '',
+
+    // Endpoints
+    authEndpoint : '/auth/',
+
+    // Test Info
+    testInternalUser         : '',
+    testInternalUserPassword : ''
+};

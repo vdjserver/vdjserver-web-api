@@ -1,29 +1,25 @@
 
-var Agave  = {};
-module.exports = Agave;
-
-
 // Models
-var InternalUserAuth = require('../models/internalUserAuth');
-
+var InternalUserAuth = require('../../models/internalUserAuth');
 
 // Settings
-var AgaveSettings = require('./agave-settings');
+var agaveSettings = require('../../config/agave-settings');
 
 
+var agaveIO  = {};
+module.exports = agaveIO;
 
-var token = '';
 
-// Includes general settings for internal user token requests
-Agave.internalUserTokenRequestSettings = function(internalUsername) {
+// Sets up request settings for internal user token requests
+agaveIO.internalUserTokenRequestSettings = function(internalUsername) {
 
     var postData = "internalUsername=" + internalUsername;
 
     return {
-        hostname:   AgaveSettings.agaveAuthHost,
+        hostname:   agaveSettings.host,
         method:     'POST',
-        auth:       AgaveSettings.agaveUser + ':' + AgaveSettings.agavePass,
-        path:       AgaveSettings.agaveAuth,
+        auth:       agaveSettings.authenticatedUser + ':' + agaveSettings.authenticatedUserPassword,
+        path:       agaveSettings.apiVersion + agaveSettings.authEndpoint,
         rejectUnauthorized: false,
         headers: {
             'Content-Type':     'application/x-www-form-urlencoded',
@@ -34,9 +30,9 @@ Agave.internalUserTokenRequestSettings = function(internalUsername) {
 
 
 // Fetches an internal user token based on supplied credentials and returns an InternalUserAuth object on success
-Agave.getInternalUserToken = function(internalUsername, password, callback) {
+agaveIO.getInternalUserToken = function(internalUsername, password, callback) {
 
-    var request = require('https').request(Agave.internalUserTokenRequestSettings(internalUsername), function(response) {
+    var request = require('https').request(agaveIO.internalUserTokenRequestSettings(internalUsername), function(response) {
         
         var output = '';
 
@@ -80,11 +76,11 @@ Agave.getInternalUserToken = function(internalUsername, password, callback) {
     request.end();
 };
 
-Agave.createInternalUser = function(newAccount, callback) {
+agaveIO.createInternalUser = function(newAccount, callback) {
 
-    console.log('Agave.createInternalUser called with ' + JSON.stringify(newAccount));
+    console.log('agaveIO.createInternalUser called with ' + JSON.stringify(newAccount));
 
-    Agave.getToken(function(token) {
+    agaveIO.getToken(function(token) {
 
         console.log("Got token with " + token);
 
@@ -97,9 +93,9 @@ Agave.createInternalUser = function(newAccount, callback) {
         };
 
 
-        var postOptions = Agave.postOptionsToken(AgaveSettings.agaveVersion + '/profiles'
+        var postOptions = agaveIO.postOptionsToken(agaveSettings.agaveVersion + '/profiles'
                                                                + '/'
-                                                               + AgaveSettings.agaveUser
+                                                               + agaveSettings.agaveUser
                                                                + '/users'
                                                                + '/',
                                               token);

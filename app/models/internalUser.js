@@ -2,6 +2,7 @@
 // Required
 var crypto = require('crypto');
 
+
 var InternalUser = {};
 module.exports = InternalUser;
 

@@ -3,11 +3,10 @@ var express = require('express');
 var app     = express();
 //var http    = require('https');
 var http    = require('http');
-//app.use(express.bodyParser());
 
 
 // Config
-var config = require('./config.js')(app, express);
+var config = require('./config/config.js')(app, express);
 
 
 // Router
