@@ -1,7 +1,4 @@
 
-// Models
-var InternalUserAuth = require('../../models/internalUserAuth');
-
 // Settings
 var agaveSettings = require('../../config/agave-settings');
 
@@ -11,15 +8,13 @@ module.exports = agaveIO;
 
 
 // Sets up request settings for internal user token requests
-agaveIO.internalUserTokenRequestSettings = function(internalUsername) {
-
-    var postData = "internalUsername=" + internalUsername;
+agaveIO.internalUserTokenRequestSettings = function(postData) {
 
     return {
         hostname:   agaveSettings.host,
         method:     'POST',
         auth:       agaveSettings.authenticatedUser + ':' + agaveSettings.authenticatedUserPassword,
-        path:       agaveSettings.apiVersion + agaveSettings.authEndpoint,
+        path:       agaveSettings.authEndpoint,
         rejectUnauthorized: false,
         headers: {
             'Content-Type':     'application/x-www-form-urlencoded',
@@ -29,10 +24,14 @@ agaveIO.internalUserTokenRequestSettings = function(internalUsername) {
 };
 
 
-// Fetches an internal user token based on supplied credentials and returns an InternalUserAuth object on success
-agaveIO.getInternalUserToken = function(internalUsername, password, callback) {
+// Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
+agaveIO.getInternalUserToken = function(internalUserAuth, callback) {
 
-    var request = require('https').request(agaveIO.internalUserTokenRequestSettings(internalUsername), function(response) {
+    var postData = "internalUsername=" + internalUserAuth.internalUsername;
+
+    var requestSettings = agaveIO.internalUserTokenRequestSettings(postData);
+
+    var request = require('https').request(requestSettings, function(response) {
         
         var output = '';
 
@@ -44,15 +43,13 @@ agaveIO.getInternalUserToken = function(internalUsername, password, callback) {
 
             var obj = JSON.parse(output);
 
-            if (obj.status === "success" &&
+            if (obj &&
+                obj.status === "success" &&
                 obj.result          &&
                 obj.result.token    &&
                 obj.result.username &&
                 obj.result.expires) 
             {
-                internalUserAuth = new InternalUserAuth.schema();
-                
-                internalUserAuth.internalUsername = internalUsername;
                 internalUserAuth.token            = obj.result.token;
                 internalUserAuth.authUsername     = obj.result.username;
                 internalUserAuth.expires          = obj.result.expires;
@@ -68,93 +65,79 @@ agaveIO.getInternalUserToken = function(internalUsername, password, callback) {
 
     request.on('error', function(error) {
         console.log("getInternalUserToken error: " + error);
+
+        callback("error");
     });
 
     // Request body parameters
-    request.write("internalUsername=" + internalUsername);
+    request.write(postData);
 
+    // As Picard would say, 'Make it so'.
     request.end();
 };
 
-agaveIO.createInternalUser = function(newAccount, callback) {
 
-    console.log('agaveIO.createInternalUser called with ' + JSON.stringify(newAccount));
+// Sets up request settings for internal user token requests
+agaveIO.createInternalUserRequestSettings = function(postData) {
 
-    agaveIO.getToken(function(token) {
-
-        console.log("Got token with " + token);
-
-        var newUserJson = {
-            "username":     newAccount.username,
-            "email":        newAccount.email,
-            "firstName":    newAccount.firstname,
-            "lastName":     newAccount.lastname,
-            "country":      newAccount.country
-        };
-
-
-        var postOptions = agaveIO.postOptionsToken(agaveSettings.agaveVersion + '/profiles'
-                                                               + '/'
-                                                               + agaveSettings.agaveUser
-                                                               + '/users'
-                                                               + '/',
-                                              token);
-
-        console.log("postOptions: " + JSON.stringify(postOptions));
-
-        var request = require('https').request(postOptions, function(response) {
-
-            console.log("inside request. options are: " + JSON.stringify(postOptions));
-            //console.log("inside request. response is: " + JSON.stringify(response));
-
-            var output = '';
-
-            response.on('data', function(chunk) {
-                console.log("response output is: " + JSON.stringify(output));
-                console.log("chunk is: " + JSON.stringify(chunk));
-                output += chunk;
-            });
-
-            response.on('end', function() {
-                var obj = JSON.parse(output);
-
-                console.log("obj is: " + JSON.stringify(obj));
-
-                if (obj &&
-                    obj.status &&
-                    obj.result &&
-                    obj.result.username)
-                {
-                    console.log("Obj is: "   + JSON.stringify(obj));
-                    console.log("Status: "   + obj.status);
-                    console.log("Username: " + obj.result.username);
-                }
-                else {
-                    console.log("agave registration error. obj is: " + JSON.stringify(obj));
-                }
+    return {
+        hostname:   agaveSettings.host,
+        method:     'POST',
+        auth:       agaveSettings.authenticatedUser + ':' + agaveSettings.authenticatedUserPassword,
+        path:       agaveSettings.createInternalUserEndpoint,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':     'application/json',
+            'Content-Length':   JSON.stringify(postData).length 
+        }
+    }
+};
 
 
-                callback("", obj.status);
-                return obj;
-            });
+// Creates a new internal user through Agave based on the supplied internal user object. Returns the internal user object on success.
+agaveIO.createInternalUser = function(internalUser, callback) {
+
+    var postData = {
+        "username":     internalUser.username,
+        "email":        internalUser.email
+    };
+
+    var requestSettings = agaveIO.createInternalUserRequestSettings(postData);
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var obj = JSON.parse(output);
+
+            if (obj &&
+                obj.status === "success" &&
+                obj.result &&
+                obj.result.username === internalUser.username)
+            {
+                callback(null, internalUser);
+            }
+            else {
+                callback("error");
+            }
 
         });
 
-
-        request.on('error', function(error) {
-            console.log("Error w/createInternalUser: " + postOptions + "\n" + error.message);
-            console.log( error.stack );
-
-            callback(error, "");
-
-            return false;
-        });
-
-        //write the JSON of the internal user
-        request.write(JSON.stringify(newUserJson));
-        request.end();
-
-        console.log("endOf createInternalUser");
     });
 
+    request.on('error', function(error) {
+        console.log("createInternalUser error: " + error);
+        callback("error");
+    });
+
+    //write the JSON of the internal user
+    request.write(JSON.stringify(postData));
+
+    request.end();
 };

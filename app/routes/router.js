@@ -3,9 +3,12 @@
 var express = require ('express');
 
 // Controllers
-var tokenController = require('../controllers/tokenController');
-var errorController = require('../controllers/errorController');
+var tokenController        = require('../controllers/tokenController');
+var internalUserController = require('../controllers/internalUserController');
+var apiResponseController  = require('../controllers/apiResponseController');
 
+// Models
+var InternalUserAuth = require('../models/internalUserAuth');
 
 module.exports = function(app) {
 
@@ -16,26 +19,28 @@ module.exports = function(app) {
         console.log("app basic auth. username is: " + username);
 
         // TODO add lookup auth via storage (Agave?)
-        
-        var result = {"username": username, "password": password};
+       
+        var internalUserAuth = new InternalUserAuth.schema();
+        internalUserAuth.internalUsername = username;
+        internalUserAuth.password = password;
 
-        callback(null /* error */, result);
+        callback(null, internalUserAuth);
     });
 
 
     // Request an Agave internalUsername token
-    app.post('/token', auth, tokenController.retrieveInternalUserToken);
+    app.post('/token', auth, tokenController.getInternalUserToken);
 
 
     // Creating new accounts
-    app.post('/user', auth);
+    app.post('/user', internalUserController.createInternalUser);
 
 
     // Errors
-    app.get('*',    errorController.send404);
-    app.post('*',   errorController.send404);
-    app.put('*',    errorController.send404);
-    app.delete('*', errorController.send404);
+    app.get('*',    apiResponseController.send404);
+    app.post('*',   apiResponseController.send404);
+    app.put('*',    apiResponseController.send404);
+    app.delete('*', apiResponseController.send404);
 
 
 

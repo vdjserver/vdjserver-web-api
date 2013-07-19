@@ -1,4 +1,4 @@
-#### vdjserver-web
+#### VDJServer-Auth
 An auth service for the VDJServer.org project.
 
 Uses Node.js as the server.

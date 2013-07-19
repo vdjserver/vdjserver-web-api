@@ -1,10 +1,9 @@
 
+// Controllers
+var apiResponseController = require('./apiResponseController');
+
 // Processing
 var agaveIO = require('../vendor/agave/agaveIO');
-
-// Models
-var ApiResponse      = require('../models/apiResponse');
-var InternalUserAuth = require('../models/internalUserAuth');
 
 
 var TokenController = {};
@@ -12,23 +11,19 @@ module.exports = TokenController;
 
 
 // Retrieves an internal user token from Agave IO and returns it to the client
-TokenController.retrieveInternalUserToken = function(request, response) {
-    
-        console.log("app received request for " + request.user.username);
+TokenController.getInternalUserToken = function(request, response) {
 
-    agaveIO.getInternalUserToken(request.user.username, request.user.password, function(error, internalUserAuth) {
-            
-        var apiResponse = new ApiResponse.schema();
+    var internalUserAuth = request.user;
+
+    agaveIO.getInternalUserToken(internalUserAuth, function(error, internalUserAuth) {
 
         if (!error) {
-            apiResponse.setSuccess();
-            apiResponse.result = internalUserAuth;
+            apiResponseController.sendSuccess(internalUserAuth, response);
         }
         else {
-            apiResponse.setError();
-            apiResponse.message = "Unable to fetch Agave token for '" + request.user.username + "'";
+            apiResponseController.sendError("Unable to fetch Agave token for '" + request.user.username + "'", response);
         }
-        
-        response.send(apiResponse);
+
     });
+
 };

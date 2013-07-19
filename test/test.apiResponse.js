@@ -1,8 +1,12 @@
 
+// Controllers
+var apiResponseController = require('../app/controllers/apiResponseController');
+
 // Models
 var ApiResponse = require('../app/models/apiResponse');
 
-describe("apiResponse", function() {
+
+describe("apiResponse model functions", function() {
 
     var apiResponse = null;
 
@@ -22,5 +26,11 @@ describe("apiResponse", function() {
         apiResponse.setError();
         apiResponse.status.should.equal('error');
     });
+
+});
+
+
+describe("apiResponse controller functions", function() {
+
 
 });

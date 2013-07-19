@@ -8,9 +8,9 @@ module.exports = InternalUser;
 
 
 InternalUser.schema = function() {
-    this.internalUsername = "";
-    this.password         = "";
-    this.email            = "";
+    this.username = "";
+    this.password = "";
+    this.email    = "";
 
 };
 
