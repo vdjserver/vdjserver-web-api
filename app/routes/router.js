@@ -8,7 +8,7 @@ var internalUserController = require('../controllers/internalUserController');
 var apiResponseController  = require('../controllers/apiResponseController');
 
 // Models
-var InternalUserAuth = require('../models/internalUserAuth');
+var TokenAuth = require('../models/tokenAuth');
 
 module.exports = function(app) {
 
@@ -20,16 +20,19 @@ module.exports = function(app) {
 
         // TODO add lookup auth via storage (Agave?)
        
-        var internalUserAuth = new InternalUserAuth.schema();
-        internalUserAuth.internalUsername = username;
-        internalUserAuth.password = password;
+        var tokenAuth = new TokenAuth.schema();
+        tokenAuth.internalUsername = username;
+        tokenAuth.password         = password;
 
-        callback(null, internalUserAuth);
+        callback(null, tokenAuth);
     });
 
 
     // Request an Agave internalUsername token
     app.post('/token', auth, tokenController.getInternalUserToken);
+
+    // Refresh an Agave internalUsername token
+    //app.put('/token', auth, tokenController.refreshInternalUserToken);
 
 
     // Creating new accounts

@@ -14,7 +14,9 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
     apiResponse.setSuccess();
     apiResponse.result = successResultMessage;
 
-    response.send(apiResponse);
+    if (response) {
+        response.send(apiResponse);
+    }
 };
 
 
@@ -25,7 +27,9 @@ ApiResponseController.sendError = function(errorMessage, response) {
     apiResponse.setError();
     apiResponse.message = errorMessage;
 
-    response.send(apiResponse);
+    if (response) {
+        response.send(apiResponse);
+    }
 };
 
 // Sends a 404 response with an error message to the client
@@ -35,7 +39,8 @@ ApiResponseController.send404 = function(request, response) {
 
     apiResponse.setError();
     apiResponse.message = "The endpoint you are trying to reach either doesn't exist, or doesn't support the action that you're trying."; 
-    
-    response.send(404, apiResponse);
 
+    if (response) {
+        response.send(404, apiResponse);
+    }
 };

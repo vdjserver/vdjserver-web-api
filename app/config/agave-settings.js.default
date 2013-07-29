@@ -16,13 +16,16 @@ module.exports = {
 
     // API Settings
     host              : 'iplant-dev.tacc.utexas.edu',
-    apiVersion        : '/v2',
+    apiVersion        : apiVersion,
+
+    // Auth Settings
     authenticatedUser : authenticatedUser,
     authenticatedUserPassword : '',
+    tokenAuth: '',
 
     // Endpoints
     authEndpoint : apiVersion + '/auth/',
-    createInternalUserEndpoint: apiVersion + '/profiles/' + authenticatedUser + '/users/',
+    createInternalUserEndpoint: apiVersion + '/profiles/' + authenticatedUser + '/users',
 
     // Test Info
     testInternalUser         : '',

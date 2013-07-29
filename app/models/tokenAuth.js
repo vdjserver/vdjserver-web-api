@@ -1,12 +1,15 @@
 
-var InternalUserAuth = {};
-module.exports = InternalUserAuth;
+var TokenAuth = {};
+module.exports = TokenAuth;
 
 
-InternalUserAuth.schema = function() {
+TokenAuth.schema = function() {
+    this.token            = "";
+    this.username         = "";
+    this.created          = "";
+    this.expires          = "";
+    this.renewed          = "";
     this.internalUsername = "";
     this.password         = "";
-    this.token            = "";
-    this.authUsername     = "";
-    this.expires          = "";
+    this.remainingUses    = "";
 };

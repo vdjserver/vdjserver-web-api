@@ -23,14 +23,22 @@ describe("VDJAuth Integration Tests", function() {
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
+            
             body.result.token.should.not.equal("");
+            body.result.username.should.not.equal("");
+            body.result.created.should.not.equal("");
+            body.result.expires.should.not.equal("");
+            body.result.renewed.should.not.equal("");
             body.result.internalUsername.should.equal(agaveSettings.testInternalUser);
+            body.result.password.should.equal("");
+            body.result.remainingUses.should.not.equal("");
 
             done();
 
         });
 
     });
+
 
     it("should post to /user and create an internal user account for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
