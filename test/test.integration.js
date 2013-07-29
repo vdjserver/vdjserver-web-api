@@ -44,7 +44,7 @@ describe("VDJAuth Integration Tests", function() {
 
         var url = 'http://localhost:8443/user';
 
-        var postData = {"username":agaveSettings.testInternalUser, "password":agaveSettings.testInternalUserPassword, "email":agaveSettings.testInternalUserEmail};
+        var postData = {"internalUsername":agaveSettings.testInternalUser, "password":agaveSettings.testInternalUserPassword, "email":agaveSettings.testInternalUserEmail};
 
         var options = {
             url: url,
