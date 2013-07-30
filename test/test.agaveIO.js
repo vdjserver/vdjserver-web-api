@@ -66,7 +66,7 @@ describe("agaveIO token functions", function() {
 
         agaveIO.getNewVdjToken(tokenAuth, function(error, newTokenAuth) {
 
-            agaveIO.refreshVdjToken(newTokenAuth, function(error, refreshedTokenAuth) {
+            agaveIO.refreshToken(newTokenAuth, function(error, refreshedTokenAuth) {
                 should.not.exist(error);
                 refreshedTokenAuth.token.should.not.equal("");
                 refreshedTokenAuth.token.should.equal(newTokenAuth.token);

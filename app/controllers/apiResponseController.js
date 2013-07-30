@@ -20,7 +20,7 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
 };
 
 
-// Sends a 200 response with an error message to the client
+// Sends a 400 response with an error message to the client
 ApiResponseController.sendError = function(errorMessage, response) {
 
     var apiResponse = new ApiResponse.schema();
@@ -28,7 +28,7 @@ ApiResponseController.sendError = function(errorMessage, response) {
     apiResponse.message = errorMessage;
 
     if (response) {
-        response.send(apiResponse);
+        response.send(400, apiResponse);
     }
 };
 

@@ -175,7 +175,7 @@ agaveIO.getNewVdjToken = function(tokenAuth, callback) {
 };
 
 // Fetches an auth user token and returns it on success
-agaveIO.refreshVdjToken = function(tokenAuth, callback) {
+agaveIO.refreshToken = function(tokenAuth, callback) {
 
     var token = tokenAuth.token;
 
@@ -210,7 +210,7 @@ agaveIO.refreshVdjToken = function(tokenAuth, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("refreshVdjToken error: " + error);
+        console.log("refreshToken error: " + error);
 
         callback("error");
     });

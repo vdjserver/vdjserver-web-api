@@ -32,17 +32,17 @@ module.exports = function(app) {
     app.post('/token', auth, tokenController.getInternalUserToken);
 
     // Refresh an Agave internalUsername token
-    //app.put('/token', auth, tokenController.refreshInternalUserToken);
+    app.put('/token/*', auth, tokenController.refreshInternalUserToken);
 
 
-    // Creating new accounts
+    // Create a new account
     app.post('/user', internalUserController.createInternalUser);
 
 
     // Errors
-    app.get('*',    apiResponseController.send404);
-    app.post('*',   apiResponseController.send404);
-    app.put('*',    apiResponseController.send404);
+    app.get(   '*', apiResponseController.send404);
+    app.post(  '*', apiResponseController.send404);
+    app.put(   '*', apiResponseController.send404);
     app.delete('*', apiResponseController.send404);
 
 
