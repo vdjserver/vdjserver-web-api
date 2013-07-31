@@ -1,15 +1,6 @@
 
 module.exports = function(app, express, mongoose) {
 
-    //var config = this;
-
-    if (!app) {
-        app = {};
-        app.configure = {};
-    }
-    
-    app.configure.mongooseTest = "mongodb://localhost:27017/test_db";
-
     var allowCrossDomain = function(req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
@@ -43,6 +34,15 @@ module.exports = function(app, express, mongoose) {
 
     // Environment Specific Config
     app.configure('development', function() {
+        app.set('mongooseTest', 'abcd');
+        console.log("using dev settings");
+        app.use(express.errorHandler({ dumpExceptions: true, showStack: true}));
+        mongoose.connect('mongodb://localhost:27017/vdjserver_test');
+    });
+
+
+    app.configure('production', function() {
+        console.log("using prod settings");
         app.use(express.errorHandler());
         mongoose.connect('mongodb://localhost:27017/vdjserver');
     });
