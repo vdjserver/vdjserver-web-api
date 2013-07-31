@@ -12,7 +12,7 @@ describe("apiResponse model functions", function() {
 
     beforeEach(function(done) {
     
-        apiResponse = new ApiResponse.schema();
+        apiResponse = new ApiResponse();
 
         done();
     });
@@ -20,6 +20,8 @@ describe("apiResponse model functions", function() {
     it("should change status to success when setSuccess is called", function() {
         apiResponse.setSuccess();
         apiResponse.status.should.equal('success');
+        
+        // NOTE should also check status codes...
     });
 
     it("should change status to error when setError is called", function() {

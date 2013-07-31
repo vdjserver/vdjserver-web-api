@@ -1,7 +1,5 @@
 
 var ApiResponse = {};
-module.exports = ApiResponse;
-
 
 ApiResponse.schema = function() {
     this.message = "";
@@ -18,3 +16,5 @@ ApiResponse.schema.prototype.setError = function() {
     this.message = "";
     this.status  = "error";
 };
+
+module.exports = ApiResponse.schema;

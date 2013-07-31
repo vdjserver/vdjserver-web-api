@@ -96,6 +96,8 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
 
             var responseObject;
 
+            console.log("response obj is: " + output);
+
             if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }

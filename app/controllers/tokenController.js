@@ -1,5 +1,6 @@
 
 // Models
+var AppCredentials = require('../models/appCredentials');
 var TokenAuth = require('../models/tokenAuth');
 
 // Controllers
@@ -16,12 +17,19 @@ var TokenController = {};
 module.exports = TokenController;
 
 
+TokenController.getTokenAuthForAppCredentials = function(appCredentials) {
+
+    var tokenAuth = new TokenAuth();
+    tokenAuth.internalUsername = appCredentials.username;
+
+    return tokenAuth;
+
+};
+
 // Retrieves an internal user token from Agave IO and returns it to the client
 TokenController.getInternalUserToken = function(request, response) {
 
-    var tokenAuth = request.user;
-
-    console.log("tokenController getInternalUserToken for " + request.internalUsername + " or " + request.username);
+    var tokenAuth = TokenController.getTokenAuthForAppCredentials(request.user);
 
     agaveIO.getInternalUserToken(tokenAuth, function(error, returnedTokenAuth) {
 
@@ -43,7 +51,7 @@ TokenController.getInternalUserToken = function(request, response) {
 // Refreshes an internal user token and returns to client
 TokenController.refreshInternalUserToken = function(request, response) {
 
-    var tokenAuth = request.user;
+    var tokenAuth = TokenController.getTokenAuthForAppCredentials(request.user);
 
     tokenAuth.token = request.params[0];
 
@@ -53,7 +61,6 @@ TokenController.refreshInternalUserToken = function(request, response) {
 
         if (!error && refreshedTokenAuth.internalUsername === tokenAuth.internalUsername) {
             console.log("token refresh - no error and tokenAuth is: " + refreshedTokenAuth);
-            refreshedTokenAuth.password = "";
             apiResponseController.sendSuccess(refreshedTokenAuth, response);
         }
         else {
@@ -136,7 +143,7 @@ TokenController.refreshToken = function(tokenAuth, callback) {
 // Retrieves a vdj token from Agave IO
 TokenController.getNewVdjToken = function(callback) {
 
-    var tokenAuth = new TokenAuth.schema();
+    var tokenAuth = new TokenAuth();
 
     agaveIO.getNewVdjToken(tokenAuth, function(error, newTokenAuth) {
 

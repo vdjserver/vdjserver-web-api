@@ -10,14 +10,8 @@ var agaveSettings = require('../app/config/agave-settings');
 var tokenController = require('../app/controllers/tokenController');
 
 // Models
-var TokenAuth        = require('../app/models/tokenAuth');
-var InternalUser     = require('../app/models/internalUser');
-
-// Mongoose
-var mongoose = require('mongoose');
-mongoose.connect(config.mongooseTest);
-
-console.log("mongoose test is: " + JSON.stringify(config));
+var TokenAuth    = require('../app/models/tokenAuth');
+var InternalUser = require('../app/models/internalUser');
 
 // Testing
 var should = require('should');
@@ -34,7 +28,7 @@ describe("agaveIO token functions", function() {
 
     it("should be able to retrieve a token from Agave for internal username '" + agaveSettings.testInternalUser + "'", function(done) {
        
-        var tokenAuth = new TokenAuth.schema();
+        var tokenAuth = new TokenAuth();
         tokenAuth.internalUsername = agaveSettings.testInternalUser;
 
         agaveIO.getInternalUserToken(tokenAuth, function(error, tokenAuth) {
@@ -47,7 +41,7 @@ describe("agaveIO token functions", function() {
 
     it("should return an error message when retrieving a token from Agave for bad internal username 'testBiffTannen'", function(done) {
        
-        var tokenAuth = new TokenAuth.schema();
+        var tokenAuth = new TokenAuth();
         tokenAuth.internalUsername = "testBiffTannen";
 
         agaveIO.getInternalUserToken(tokenAuth, function(error, tokenAuth) {
@@ -59,7 +53,7 @@ describe("agaveIO token functions", function() {
 
     it("should be able to retrieve a VDJ Auth token from Agave", function(done) {
        
-        var tokenAuth = new TokenAuth.schema();
+        var tokenAuth = new TokenAuth();
 
         agaveIO.getNewVdjToken(tokenAuth, function(error, tokenAuth) {
             should.not.exist(error);
@@ -71,7 +65,7 @@ describe("agaveIO token functions", function() {
 
     it("should be able to refresh a VDJ Auth token from Agave", function(done) {
        
-        var tokenAuth = new TokenAuth.schema();
+        var tokenAuth = new TokenAuth();
 
         agaveIO.getNewVdjToken(tokenAuth, function(error, newTokenAuth) {
 

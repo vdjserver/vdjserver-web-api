@@ -1,7 +1,5 @@
 
 var TokenAuth = {};
-module.exports = TokenAuth;
-
 
 TokenAuth.schema = function() {
     this.token            = "";
@@ -10,6 +8,7 @@ TokenAuth.schema = function() {
     this.expires          = "";
     this.renewed          = "";
     this.internalUsername = "";
-    this.password         = "";
     this.remainingUses    = "";
 };
+
+module.exports = TokenAuth.schema;

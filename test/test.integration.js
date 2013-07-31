@@ -34,7 +34,6 @@ describe("VDJAuth Integration Tests", function() {
             body.result.expires.should.not.equal("");
             body.result.renewed.should.not.equal("");
             body.result.internalUsername.should.equal(agaveSettings.testInternalUser);
-            body.result.password.should.equal("");
             body.result.remainingUses.should.not.equal("");
 
             // Save the token for the refresh test
@@ -66,6 +65,8 @@ describe("VDJAuth Integration Tests", function() {
 
             var body = JSON.parse(body);
 
+            console.log("body is: " + JSON.stringify(body));
+
             body.status.should.equal("success");
            
             body.result.token.should.not.equal("");
@@ -74,7 +75,6 @@ describe("VDJAuth Integration Tests", function() {
             body.result.expires.should.not.equal("");
             body.result.renewed.should.not.equal("");
             body.result.internalUsername.should.equal(agaveSettings.testInternalUser);
-            body.result.password.should.equal("");
             body.result.remainingUses.should.not.equal("");
 
             // Save the token for the refresh test
@@ -124,4 +124,8 @@ describe("VDJAuth Integration Tests", function() {
         requestObj.end();
 
     });
+
+    // TODO:
+    
+    // test for errors
 });

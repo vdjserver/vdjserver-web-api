@@ -3,28 +3,37 @@
 var express = require ('express');
 
 // Controllers
+var authController         = require('../controllers/authController');
 var tokenController        = require('../controllers/tokenController');
 var internalUserController = require('../controllers/internalUserController');
 var apiResponseController  = require('../controllers/apiResponseController');
 
 // Models
-var TokenAuth = require('../models/tokenAuth');
+var AppCredentials = require('../models/appCredentials');
 
 module.exports = function(app) {
 
 
     // Verify user credentials via Agave
-    var auth = express.basicAuth(function(username, password, callback) {
+    var auth = express.basicAuth(function(username, password, next) {
 
         console.log("app basic auth. username is: " + username);
 
-        // TODO add lookup auth via storage (Agave?)
-       
-        var tokenAuth = new TokenAuth.schema();
-        tokenAuth.internalUsername = username;
-        tokenAuth.password         = password;
+        var appCredentials = new AppCredentials();
+        appCredentials.username = username;
+        appCredentials.password = password;
 
-        callback(null, tokenAuth);
+        authController.validateCredentials(appCredentials, function(validity) {
+
+            if (validity === true) {
+                next(null, appCredentials);
+            }
+            else {
+                next('error');
+            }
+
+        });
+
     });
 
 
