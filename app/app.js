@@ -4,9 +4,11 @@ var app     = express();
 //var http    = require('https');
 var http    = require('http');
 
+// Mongoose
+var mongoose = require('mongoose');
 
 // Config
-var config = require('./config/config.js')(app, express);
+var config = require('./config/config.js')(app, express, mongoose);
 
 
 // Router

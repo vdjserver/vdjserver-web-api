@@ -1,4 +1,7 @@
 
+// Config
+var config = require('../app/config/config');
+
 // Processing
 var agaveIO       = require('../app/vendor/agave/agaveIO');
 var agaveSettings = require('../app/config/agave-settings');
@@ -9,6 +12,12 @@ var tokenController = require('../app/controllers/tokenController');
 // Models
 var TokenAuth        = require('../app/models/tokenAuth');
 var InternalUser     = require('../app/models/internalUser');
+
+// Mongoose
+var mongoose = require('mongoose');
+mongoose.connect(config.mongooseTest);
+
+console.log("mongoose test is: " + JSON.stringify(config));
 
 // Testing
 var should = require('should');
@@ -94,7 +103,7 @@ describe("agaveIO create internal user functions", function() {
 
     it("should be able to create an Agave account for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
         
-        var internalUser = new InternalUser.schema();
+        var internalUser = new InternalUser();
         internalUser.username = agaveSettings.testInternalUser;
         internalUser.password = agaveSettings.testInternalUserPassword;
         internalUser.email    = agaveSettings.testInternalUserEmail;

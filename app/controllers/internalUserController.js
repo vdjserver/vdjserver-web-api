@@ -19,30 +19,48 @@ InternalUserController.createInternalUser = function(request, response) {
 
     console.log("hit for internalUserController.createInternalUser. Attr are: " + JSON.stringify(request.body));
 
+    var genericError = "Unable to create a new Agave account for '" + request.body.internalUsername + "'.";
+
     if (request.body.internalUsername &&
         request.body.password &&
-        request.body.email) 
+        request.body.email)
     {
 
         tokenController.provideVdjToken(function(error, tokenAuth) {
             if (!error) {
-            
-                var internalUser = new InternalUser.schema();
-                 
+
+                var internalUser = new InternalUser();
+
                 internalUser.username = request.body.internalUsername;
                 internalUser.password = request.body.password;
                 internalUser.email    = request.body.email;
-                
-                console.log("internalUserController.createInternalUser - about to start agaveIO");
-                agaveIO.createInternalUser(internalUser, function(error, internalUser) {
 
-                    if (!error) {
-                        internalUser.password = "";
-                        console.log("internal user account for " + request.body.internalUsername + " was successfully created.");
-                        apiResponseController.sendSuccess(internalUser, response);
+
+                console.log("internalUserController.createInternalUser - about to start agaveIO");
+                agaveIO.createInternalUser(internalUser, function(agaveError, agaveSavedInternalUser) {
+
+                    if (!agaveError) {
+
+                        InternalUserController.saveNewInternalUser(agaveSavedInternalUser, function(saveError) {
+
+                            console.log("internal user save return");
+
+                            if (!saveError) {
+
+                                console.log("internal user final api output is: " + agaveSavedInternalUser.apiOutput());
+                                apiResponseController.sendSuccess(agaveSavedInternalUser.apiOutput(), response);
+                            }
+                            else {
+                                console.log("internal user fail");
+                                console.log("warning: error edge case");
+                                apiResponseController.sendError(genericError, response);
+                            }
+
+                        });
+
                     }
                     else {
-                        apiResponseController.sendError("Unable to create a new Agave account for '" + request.body.internalUsername + "'.", response);
+                        apiResponseController.sendError(genericError, response);
                     }
 
                 });
@@ -56,5 +74,34 @@ InternalUserController.createInternalUser = function(request, response) {
     else {
         apiResponseController.sendError("In order to create a new account, you must POST the following parameters JSON encoded: internalUsername, password, and email.", response);
     }
-    
+
+};
+
+InternalUserController.saveNewInternalUser = function(internalUser, callback) {
+
+    // Salt password
+    internalUser.saltAndHash();
+
+    console.log("starting to save internal user. obj looks like: " + JSON.stringify(internalUser));
+
+    internalUser.save(function(error, data) {
+
+        console.log("inside save function for internal user");
+
+        if (error) {
+
+            console.log("mayday mayday, error!");
+
+            callback("save-error");
+
+        }
+        else if (!error) {
+
+            console.log("no internal user save error. specific error is: " + error);
+
+            callback();
+
+        }
+    });
+
 };

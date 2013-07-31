@@ -2,13 +2,15 @@
 var request       = require('request');
 var agaveSettings = require('../app/config/agave-settings');
 
+var baseUrl = 'http://localhost:8443';
+
 describe("VDJAuth Integration Tests", function() {
 
     var token;
 
     it("should post to /token and receive an Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
-        var url = 'http://localhost:8443/token';
+        var url = baseUrl + '/token';
 
         var auth = "Basic " + new Buffer(agaveSettings.testInternalUser + ":" + agaveSettings.testInternalUserPassword).toString("base64");
 
@@ -47,7 +49,8 @@ describe("VDJAuth Integration Tests", function() {
 
     it("should put to /token and receive a refreshed Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
-        var url = 'http://localhost:8443/token' + '/' + token;
+        var url = baseUrl + '/token' 
+                          + '/' + token;
 
         var auth = "Basic " + new Buffer(agaveSettings.testInternalUser + ":" + agaveSettings.testInternalUserPassword).toString("base64");
 
@@ -86,9 +89,13 @@ describe("VDJAuth Integration Tests", function() {
 
     it("should post to /user and create an internal user account for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
-        var url = 'http://localhost:8443/user';
+        var url = baseUrl + '/user';
 
-        var postData = {"internalUsername":agaveSettings.testInternalUser, "password":agaveSettings.testInternalUserPassword, "email":agaveSettings.testInternalUserEmail};
+        var postData = {
+                            "internalUsername":agaveSettings.testInternalUser, 
+                            "password":        agaveSettings.testInternalUserPassword, 
+                            "email":           agaveSettings.testInternalUserEmail
+                       };
 
         var options = {
             url: url,
@@ -102,6 +109,7 @@ describe("VDJAuth Integration Tests", function() {
         var requestObj = request(options, function(error, response, body) {
 
             var body = JSON.parse(body);
+            console.log("body output is: " + JSON.stringify(body));
 
             body.status.should.equal("success");
             body.result.username.should.equal(agaveSettings.testInternalUser);

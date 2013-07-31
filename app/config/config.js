@@ -1,8 +1,14 @@
 
-module.exports = function(app, express) {
+module.exports = function(app, express, mongoose) {
 
-    var config = this;
+    //var config = this;
 
+    if (!app) {
+        app = {};
+        app.configure = {};
+    }
+    
+    app.configure.mongooseTest = "mongodb://localhost:27017/test_db";
 
     var allowCrossDomain = function(req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
@@ -38,6 +44,7 @@ module.exports = function(app, express) {
     // Environment Specific Config
     app.configure('development', function() {
         app.use(express.errorHandler());
+        mongoose.connect('mongodb://localhost:27017/vdjserver');
     });
 
 
@@ -49,5 +56,5 @@ module.exports = function(app, express) {
     };
 
 
-    return config;
+    return app.configure;
 };

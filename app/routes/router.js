@@ -28,15 +28,16 @@ module.exports = function(app) {
     });
 
 
+
     // Request an Agave internalUsername token
     app.post('/token', auth, tokenController.getInternalUserToken);
 
     // Refresh an Agave internalUsername token
     app.put('/token/*', auth, tokenController.refreshInternalUserToken);
 
-
     // Create a new account
     app.post('/user', internalUserController.createInternalUser);
+
 
 
     // Errors
@@ -45,28 +46,4 @@ module.exports = function(app) {
     app.put(   '*', apiResponseController.send404);
     app.delete('*', apiResponseController.send404);
 
-
-
-    // TEMP: misc. code that will help with creating a new account
-    /*
-    var newAccount = new accountCollection();
-
-    newAccount.username  = request.param('username');
-    newAccount.password  = request.param('password');
-    newAccount.email     = request.param('email');
-
-    AM.addNewAccount(newAccount, function(error) {
-
-        if (error) {
-            // Bad Request
-            response.send(error, 400);
-        }
-        else {
-            // Ok
-            response.send('ok', 200);
-        }
-
-    });
-
-    */
 };
