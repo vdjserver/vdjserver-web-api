@@ -1,4 +1,6 @@
 
+var config = require('./config');
+
 module.exports = function(app, express, mongoose) {
 
     var allowCrossDomain = function(req, res, next) {
@@ -19,32 +21,31 @@ module.exports = function(app, express, mongoose) {
     // General Config
     app.configure(function() {
 
-        app.set('port', 8443);
+        app.set('port', config.port);
         
         app.locals.pretty = true;
 
-        app.use(express.logger('dev'));
+        app.use(express.logger());
         app.use(express.bodyParser());
         app.use(allowCrossDomain);
-        app.use(express.cookieParser());
-        app.use(express.session({ secret: 'super-duper-secret-secret' }));
+        //app.use(express.cookieParser());
+        //app.use(express.session({ secret: config.sessionSecret }));
         app.use(express.methodOverride());
     });
 
 
     // Environment Specific Config
     app.configure('development', function() {
-        app.set('mongooseTest', 'abcd');
         console.log("using dev settings");
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true}));
-        mongoose.connect('mongodb://localhost:27017/vdjserver_test');
+        mongoose.connect(config.mongooseDevDbString);
     });
 
 
     app.configure('production', function() {
         console.log("using prod settings");
         app.use(express.errorHandler());
-        mongoose.connect('mongodb://localhost:27017/vdjserver');
+        mongoose.connect(config.mongooseProdDbString);
     });
 
 

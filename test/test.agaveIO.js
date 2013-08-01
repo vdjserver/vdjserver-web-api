@@ -1,7 +1,4 @@
 
-// Config
-var config = require('../app/config/config');
-
 // Processing
 var agaveIO       = require('../app/vendor/agave/agaveIO');
 var agaveSettings = require('../app/config/agave-settings');

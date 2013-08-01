@@ -8,8 +8,7 @@ var http    = require('http');
 var mongoose = require('mongoose');
 
 // Config
-var config = require('./config/config.js')(app, express, mongoose);
-
+var appSettings = require('./config/appSettings.js')(app, express, mongoose);
 
 // Router
 require('./routes/router')(app);
