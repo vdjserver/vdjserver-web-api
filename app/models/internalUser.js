@@ -1,15 +1,19 @@
 
 // Required
-var crypto     = require('crypto');
-var moment     = require('moment');
-var mongoose   = require('mongoose');
-var Schema     = mongoose.Schema;
+var crypto   = require('crypto');
+var moment   = require('moment');
+var mongoose = require('mongoose');
+var Schema   = mongoose.Schema;
+
+// Sub Docs
+var Profile = require('./profile');
 
 
 var InternalUserSchema = new Schema({
     username : { type: String, unique: true},
     password : String,
-    email    : String
+    email    : String,
+    children : [Profile]
 });
 
 InternalUserSchema.methods.generateSalt = function() {
@@ -54,15 +58,13 @@ InternalUserSchema.methods.validatePassword = function(plaintextPassword) {
     }
 };
 
-InternalUserSchema.methods.apiOutput = function() {
-    
-    var blankPassword = "";
+// Remove password from output json
+InternalUserSchema.methods.toJSON = function() {
 
-    return {
-        "email":    this.email,
-        "password": "",
-        "username": this.username
-    };
+    object = this.toObject();
+    delete object.password;
+    return object;
+
 };
 
 module.exports = mongoose.model('InternalUser', InternalUserSchema); 

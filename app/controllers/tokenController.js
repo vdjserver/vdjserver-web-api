@@ -29,6 +29,8 @@ TokenController.getTokenAuthForAppCredentials = function(appCredentials) {
 // Retrieves an internal user token from Agave IO and returns it to the client
 TokenController.getInternalUserToken = function(request, response) {
 
+    console.log("getting internal user token");
+
     var tokenAuth = TokenController.getTokenAuthForAppCredentials(request.user);
 
     agaveIO.getInternalUserToken(tokenAuth, function(error, returnedTokenAuth) {

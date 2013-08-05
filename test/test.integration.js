@@ -82,7 +82,6 @@ describe("VDJAuth Integration Tests", function() {
 
             body.status.should.equal("success");
             body.result.username.should.equal(agaveSettings.testInternalUser);
-            body.result.password.should.equal("");
 
             done();
 

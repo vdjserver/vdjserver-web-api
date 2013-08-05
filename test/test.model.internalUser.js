@@ -46,8 +46,10 @@ describe("internalUser", function() {
         passwordIsValid.should.be.true;
     });
 
-    it("should remove the password when apiOutput is called", function() {
-        internalUser.apiOutput().password.should.equal("");
+    it("should remove the password when converted to JSON", function() {
+        var json = internalUser.toJSON();
+        should.exist(json.username);
+        should.not.exist(json.password);
     });
 
 });

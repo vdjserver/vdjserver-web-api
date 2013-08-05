@@ -47,6 +47,8 @@ module.exports = function(app) {
     // Create a new account
     app.post('/user', internalUserController.createInternalUser);
 
+    // Update user profile
+    app.post('/user/profile', auth, internalUserController.updateUserProfile);
 
 
     // Errors

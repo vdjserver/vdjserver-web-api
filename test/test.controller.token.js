@@ -41,6 +41,7 @@ describe("tokenController functions", function() {
     it("should be able to provide a VDJ token", function() {
 
         agaveMocks.vdjTokenFetch(nock);
+        agaveMocks.vdjTokenRefresh(nock);
 
         tokenController.provideVdjToken(function(error, tokenAuth) {
 

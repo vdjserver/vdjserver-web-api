@@ -15,5 +15,5 @@ config.mongoosePort = 27017;
 config.mongooseDevDb  = 'vdjserver_test';
 config.mongooseProdDb = 'vdjserver';
 
-config.mongooseDevDbString = 'mongodb://localhost:' + config.mongoosePort + '/' + config.mongooseDevDb;
+config.mongooseDevDbString  = 'mongodb://localhost:' + config.mongoosePort + '/' + config.mongooseDevDb;
 config.mongooseProdDbString = 'mongodb://localhost:' + config.mongoosePort + '/' + config.mongooseProdDb;

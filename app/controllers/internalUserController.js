@@ -41,18 +41,15 @@ InternalUserController.createInternalUser = function(request, response) {
 
                     if (!agaveError) {
 
-                        InternalUserController.saveNewInternalUser(agaveSavedInternalUser, function(saveError) {
+                        // Salt password
+                        internalUser.saltAndHash();
 
-                            console.log("internal user save return");
+                        internalUser.save(function(error, data) {
 
-                            if (!saveError) {
-
-                                console.log("internal user final api output is: " + agaveSavedInternalUser.apiOutput());
-                                apiResponseController.sendSuccess(agaveSavedInternalUser.apiOutput(), response);
+                            if (!error) {
+                                apiResponseController.sendSuccess(agaveSavedInternalUser, response);
                             }
                             else {
-                                console.log("internal user fail");
-                                console.log("warning: error edge case");
                                 apiResponseController.sendError(genericError, response);
                             }
 
@@ -77,30 +74,25 @@ InternalUserController.createInternalUser = function(request, response) {
 
 };
 
-InternalUserController.saveNewInternalUser = function(internalUser, callback) {
+InternalUserController.updateUserProfile = function(request, response) {
 
-    // Salt password
-    internalUser.saltAndHash();
+    var appCredentials = request.user;
 
-    console.log("starting to save internal user. obj looks like: " + JSON.stringify(internalUser));
+    InternalUser.findOne({ 'username': appCredentials.username}, function(error, internalUser) {
 
-    internalUser.save(function(error, data) {
+        if (!error) {
+            internalUser.children.firstName = request.body.firstName;
+            internalUser.children.lastName  = request.body.lastName;
+            internalUser.children.city      = request.body.city;
+            internalUser.children.state     = request.body.state;
 
-        console.log("inside save function for internal user");
-
-        if (error) {
-
-            console.log("mayday mayday, error!");
-
-            callback("save-error");
+            internalUser.save(function (saveError, savedInternalUser) {
+                apiResponseController.sendSuccess(savedInternalUser, response);
+            });
 
         }
-        else if (!error) {
-
-            console.log("no internal user save error. specific error is: " + error);
-
-            callback();
-
+        else {
+            apiResponseController.sendError("Unable to find profile information for user '" + appCredentials.username + "'.", response);
         }
     });
 
