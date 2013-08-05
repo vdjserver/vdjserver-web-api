@@ -155,7 +155,7 @@ TokenController.getNewVdjToken = function(callback) {
         }
         else {
             console.log("vdj token fetch - error");
-            callback('error');
+            callback('get new token error');
         }
 
     });

@@ -5,6 +5,9 @@ var apiResponseController = require('../app/controllers/apiResponseController');
 // Models
 var ApiResponse = require('../app/models/apiResponse');
 
+// Testing
+var should = require('should');
+
 
 describe("apiResponse model functions", function() {
 

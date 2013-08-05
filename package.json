@@ -22,7 +22,9 @@
     "devDependencies": {
         "mocha":    "1.12.x",
         "request":  "2.22.x",
-        "should":   "1.2.x"
+        "should":   "1.2.x",
+        "sinon":    "1.7.x",
+        "nock":     "0.22.x"
     },
     "scripts": {
         "test": "make test"

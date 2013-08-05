@@ -2,6 +2,9 @@
 // Model
 var InternalUser = require('../app/models/internalUser');
 
+// Testing
+var should = require('should');
+
 
 describe("internalUser", function() {
 
@@ -43,5 +46,8 @@ describe("internalUser", function() {
         passwordIsValid.should.be.true;
     });
 
+    it("should remove the password when apiOutput is called", function() {
+        internalUser.apiOutput().password.should.equal("");
+    });
 
 });

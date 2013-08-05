@@ -10,7 +10,35 @@ var mongoose = require('mongoose');
 var config = require('../app/config/config');
 var agaveSettings = require('../app/config/agave-settings');
 
+// Testing
+var nock = require('nock');
+
+// Testing Fixtures
+var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
+
 var baseUrl = 'http://localhost:8443';
+
+/*
+        // Token Get / Refresh
+        nock('https://' + agaveSettings.host)
+            .post(agaveSettings.authEndpoint)
+            .reply(200, agaveTokenFixture.vdjResponse)
+        ;
+*/
+
+/*
+        nock('https://' + agaveSettings.host)
+            .put(agaveSettings.authEndpoint + '/tokens' + '/' + agaveTokenFixture.vdjToken)
+            .reply(200, agaveTokenFixture.vdjResponse)
+        ;
+*/
+    /*
+        // Create user request
+        nock('https://' + agaveSettings.host)
+            .post(agaveSettings.createInternalUserEndpoint, {"username": agaveSettings.testInternalUser, "email": agaveSettings.testInternalUserEmail})
+            .reply(200, agaveTokenFixture.internalUserResponse)
+        ;
+*/
 
 describe("VDJAuth Integration Tests", function() {
 
@@ -22,10 +50,10 @@ describe("VDJAuth Integration Tests", function() {
 
         // Clean up the db before we begin
         InternalUser.remove({username:agaveSettings.testInternalUser}, function(error) {
-            
+
             done();
         });
-        
+
     });
 
     it("should post to /user and create an internal user account for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
@@ -33,8 +61,8 @@ describe("VDJAuth Integration Tests", function() {
         var url = baseUrl + '/user';
 
         var postData = {
-                            "internalUsername":agaveSettings.testInternalUser, 
-                            "password":        agaveSettings.testInternalUserPassword, 
+                            "internalUsername":agaveSettings.testInternalUser,
+                            "password":        agaveSettings.testInternalUserPassword,
                             "email":           agaveSettings.testInternalUserEmail
                        };
 
@@ -50,6 +78,7 @@ describe("VDJAuth Integration Tests", function() {
         var requestObj = request(options, function(error, response, body) {
 
             var body = JSON.parse(body);
+            console.log("body check is: " + JSON.stringify(body));
 
             body.status.should.equal("success");
             body.result.username.should.equal(agaveSettings.testInternalUser);
@@ -64,6 +93,7 @@ describe("VDJAuth Integration Tests", function() {
         requestObj.end();
 
     });
+
 
     it("should post to /token and receive an Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
@@ -81,10 +111,12 @@ describe("VDJAuth Integration Tests", function() {
 
         var requestObj = request(options, function(error, response, body) {
 
+            console.log("body is: " + JSON.stringify(body));
+
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
-            
+
             body.result.token.should.not.equal("");
             body.result.username.should.not.equal("");
             body.result.created.should.not.equal("");
@@ -105,7 +137,7 @@ describe("VDJAuth Integration Tests", function() {
 
     it("should put to /token and receive a refreshed Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
-        var url = baseUrl + '/token' 
+        var url = baseUrl + '/token'
                           + '/' + token;
 
         var auth = "Basic " + new Buffer(agaveSettings.testInternalUser + ":" + agaveSettings.testInternalUserPassword).toString("base64");
@@ -123,7 +155,7 @@ describe("VDJAuth Integration Tests", function() {
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
-           
+
             body.result.token.should.not.equal("");
             body.result.username.should.not.equal("");
             body.result.created.should.not.equal("");
@@ -144,6 +176,6 @@ describe("VDJAuth Integration Tests", function() {
 
 
     // TODO:
-    
+
     // test for errors
 });
