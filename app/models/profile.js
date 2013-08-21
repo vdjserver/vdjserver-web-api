@@ -5,10 +5,11 @@ var Schema   = mongoose.Schema;
 
 
 var ProfileSchema = new Schema({
-    firstName : String,
+    firstName : 'String',
     lastName  : String,
     city      : String,
-    state     : String
+    state     : String,
+    email     : String
 });
 
-module.exports = mongoose.model('Profile', ProfileSchema);
+module.exports = ProfileSchema; //mongoose.model('Profile', ProfileSchema);

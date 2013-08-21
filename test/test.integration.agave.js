@@ -15,6 +15,7 @@ var agaveSettings = require('../app/config/agave-settings');
 var should = require('should');
 
 // Testing Fixtures
+var testData = require('./datasource/testData');
 //var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
 
 var baseUrl = 'http://localhost:8443';
@@ -36,12 +37,12 @@ var baseUrl = 'http://localhost:8443';
     /*
         // Create user request
         nock('https://' + agaveSettings.host)
-            .post(agaveSettings.createInternalUserEndpoint, {"username": agaveSettings.testInternalUser, "email": agaveSettings.testInternalUserEmail})
+            .post(agaveSettings.createInternalUserEndpoint, {"username": testData.internalUser, "email": testData.internalUserEmail})
             .reply(200, agaveTokenFixture.internalUserResponse)
         ;
 */
 
-describe("VDJAuth Integration Tests", function() {
+describe("VDJ/Agave Integration Tests", function() {
 
     var token;
 
@@ -50,21 +51,28 @@ describe("VDJAuth Integration Tests", function() {
         mongoose.connect(config.mongooseDevDbString);
 
         // Clean up the db before we begin
-        InternalUser.remove({username:agaveSettings.testInternalUser}, function(error) {
+        InternalUser.remove({username:testData.internalUser}, function(error) {
 
             done();
         });
 
     });
 
-    it("should post to /user and create an internal user account for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
+    after(function(done) {
+    
+        mongoose.connection.close();
+        done();
+
+    });
+
+    it("should post to /user and create an internal user account for internal user '" + testData.internalUser + "'", function(done) {
 
         var url = baseUrl + '/user';
 
         var postData = {
-                            "internalUsername":agaveSettings.testInternalUser,
-                            "password":        agaveSettings.testInternalUserPassword,
-                            "email":           agaveSettings.testInternalUserEmail
+                            "internalUsername":testData.internalUser,
+                            "password":        testData.internalUserPassword,
+                            "email":           testData.internalUserEmail
                        };
 
         var options = {
@@ -81,7 +89,7 @@ describe("VDJAuth Integration Tests", function() {
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
-            body.result.username.should.equal(agaveSettings.testInternalUser);
+            body.result.username.should.equal(testData.internalUser);
 
             done();
 
@@ -93,11 +101,11 @@ describe("VDJAuth Integration Tests", function() {
 
     });
 
-    it("should post to /token and receive an Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
+    it("should post to /token and receive an Agave token for internal user '" + testData.internalUser + "'", function(done) {
 
         var url = baseUrl + '/token';
 
-        var auth = "Basic " + new Buffer(agaveSettings.testInternalUser + ":" + agaveSettings.testInternalUserPassword).toString("base64");
+        var auth = "Basic " + new Buffer(testData.internalUser + ":" + testData.internalUserPassword).toString("base64");
 
         var options = {
             url: url,
@@ -118,7 +126,7 @@ describe("VDJAuth Integration Tests", function() {
             body.result.created.should.not.equal("");
             body.result.expires.should.not.equal("");
             body.result.renewed.should.not.equal("");
-            body.result.internalUsername.should.equal(agaveSettings.testInternalUser);
+            body.result.internalUsername.should.equal(testData.internalUser);
             body.result.remainingUses.should.not.equal("");
 
             // Save the token for the refresh test
@@ -131,12 +139,12 @@ describe("VDJAuth Integration Tests", function() {
     });
 
 
-    it("should put to /token and receive a refreshed Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
+    it("should put to /token and receive a refreshed Agave token for internal user '" + testData.internalUser + "'", function(done) {
 
         var url = baseUrl + '/token'
                           + '/' + token;
 
-        var auth = "Basic " + new Buffer(agaveSettings.testInternalUser + ":" + agaveSettings.testInternalUserPassword).toString("base64");
+        var auth = "Basic " + new Buffer(testData.internalUser + ":" + testData.internalUserPassword).toString("base64");
 
         var options = {
             url: url,
@@ -157,7 +165,7 @@ describe("VDJAuth Integration Tests", function() {
             body.result.created.should.not.equal("");
             body.result.expires.should.not.equal("");
             body.result.renewed.should.not.equal("");
-            body.result.internalUsername.should.equal(agaveSettings.testInternalUser);
+            body.result.internalUsername.should.equal(testData.internalUser);
             body.result.remainingUses.should.not.equal("");
 
             // Save the token for the refresh test

@@ -2,7 +2,7 @@
 /*
     How To Setup agave-settings.js
 
-    Replace the following empty parameter strings with appropriate Agave 
+    Replace the following empty parameter strings with appropriate Agave
     authenticated user credentials: authenticatedUser, authenticatedUserPassword.
 
     If you want to be able to run unit/integration tests, then also set
@@ -25,11 +25,6 @@ module.exports = {
 
     // Endpoints
     authEndpoint : apiVersion + '/auth/',
-    createInternalUserEndpoint: apiVersion + '/profiles/' + authenticatedUser + '/users',
-
-    // Test Info
-    testInternalUser         : '',
-    testInternalUserPassword : '',
-    testInternalUserEmail    : ''
+    createInternalUserEndpoint: apiVersion + '/profiles/' + authenticatedUser + '/users'
 
 };

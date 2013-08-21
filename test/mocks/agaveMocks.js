@@ -3,6 +3,7 @@
 var agaveSettings = require('../../app/config/agave-settings');
 
 // Fixtures
+var testData = require('../datasource/testData');
 var agaveTokenFixture = require('../fixtures/agaveTokenFixture');
 
 
@@ -13,7 +14,7 @@ module.exports = AgaveMocks;
 // Tokens - internal users
 AgaveMocks.internalUserTokenFetch = function(nock) {
     nock('https://' + agaveSettings.host)
-        .post(agaveSettings.authEndpoint, {"internalUsername" : agaveSettings.testInternalUser, "lifetime" : 10800})
+        .post(agaveSettings.authEndpoint, {"internalUsername" : testData.internalUser, "lifetime" : 10800})
         .reply(200, agaveTokenFixture.internalUserResponse)
     ;
 
@@ -54,7 +55,7 @@ AgaveMocks.vdjTokenRefresh = function(nock) {
 // Create Internal User
 AgaveMocks.createInternalUser = function(nock) {
     nock('https://' + agaveSettings.host)
-        .post(agaveSettings.createInternalUserEndpoint, {"username": agaveSettings.testInternalUser, "email": agaveSettings.testInternalUserEmail})
+        .post(agaveSettings.createInternalUserEndpoint, {"username": testData.internalUser, "email": testData.internalUserEmail})
         .reply(200, agaveTokenFixture.vdjResponse)
     ;
 

@@ -8,12 +8,10 @@ var Schema   = mongoose.Schema;
 // Sub Docs
 var Profile = require('./profile');
 
-
 var InternalUserSchema = new Schema({
     username : { type: String, unique: true},
     password : String,
-    email    : String,
-    children : [Profile]
+    profile  : [Profile]
 });
 
 InternalUserSchema.methods.generateSalt = function() {
@@ -59,6 +57,7 @@ InternalUserSchema.methods.validatePassword = function(plaintextPassword) {
 };
 
 // Remove password from output json
+
 InternalUserSchema.methods.toJSON = function() {
 
     object = this.toObject();
@@ -66,5 +65,6 @@ InternalUserSchema.methods.toJSON = function() {
     return object;
 
 };
+
 
 module.exports = mongoose.model('InternalUser', InternalUserSchema); 

@@ -21,8 +21,6 @@ module.exports = function(app) {
         appCredentials.username = username;
         appCredentials.password = password;
 
-        console.log("app creds are: " + JSON.stringify(appCredentials));
-
         authController.validateCredentials(appCredentials, function(validity) {
 
             if (validity === true) {

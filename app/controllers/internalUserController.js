@@ -30,10 +30,16 @@ InternalUserController.createInternalUser = function(request, response) {
 
                 var internalUser = new InternalUser();
 
+                // Add mongo sub doc right now to store email
+                var profile = internalUser.profile.create();
+                profile.email = request.body.email;
+
+                internalUser.profile.push(profile);
+
+
                 internalUser.username = request.body.internalUsername;
                 internalUser.password = request.body.password;
                 internalUser.email    = request.body.email;
-
 
                 agaveIO.createInternalUser(internalUser, function(agaveError, agaveSavedInternalUser) {
 
@@ -43,9 +49,11 @@ InternalUserController.createInternalUser = function(request, response) {
                         // Salt password
                         internalUser.saltAndHash();
 
+
                         internalUser.save(function(error, data) {
 
                             if (!error) {
+
                                 apiResponseController.sendSuccess(agaveSavedInternalUser, response);
                             }
                             else {
@@ -77,15 +85,14 @@ InternalUserController.updateUserProfile = function(request, response) {
 
     var appCredentials = request.user;
 
-    console.log("past auth and in update");
-
     InternalUser.findOne({ 'username': appCredentials.username}, function(error, internalUser) {
 
         if (!error) {
-            internalUser.children.firstName = request.body.firstName;
-            internalUser.children.lastName  = request.body.lastName;
-            internalUser.children.city      = request.body.city;
-            internalUser.children.state     = request.body.state;
+            internalUser.profile[0].firstName = request.body.firstName;
+            internalUser.profile[0].lastName  = request.body.lastName;
+            internalUser.profile[0].city      = request.body.city;
+            internalUser.profile[0].state     = request.body.state;
+
 
             internalUser.save(function (saveError, savedInternalUser) {
                 apiResponseController.sendSuccess(savedInternalUser, response);

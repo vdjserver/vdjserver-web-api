@@ -1,7 +1,4 @@
 
-// Processing
-var agaveSettings = require('../app/config/agave-settings');
-
 // Models
 var TokenAuth      = require('../app/models/tokenAuth');
 var InternalUser   = require('../app/models/internalUser');
@@ -21,7 +18,6 @@ var agaveMocks = require('./mocks/agaveMocks');
 describe("tokenController functions", function() {
 
     afterEach(function(done) {
-        console.log("calling afterEach");
         nock.cleanAll();
         done();
     });
@@ -45,7 +41,6 @@ describe("tokenController functions", function() {
 
         tokenController.provideVdjToken(function(error, tokenAuth) {
 
-            console.log("tokenAuth is: " + JSON.stringify(tokenAuth));
             should.not.exist(error);
             should.exist(tokenAuth);
             tokenAuth.token.should.not.equal("");

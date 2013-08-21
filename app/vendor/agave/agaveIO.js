@@ -219,7 +219,7 @@ agaveIO.createInternalUser = function(internalUser, callback) {
 
     var postData = {
         "username": internalUser.username,
-        "email":    internalUser.email
+        "email":    internalUser.profile[0].email
     };
 
     var requestSettings = agaveIO.createInternalUserRequestSettings(postData);
