@@ -17,11 +17,11 @@ module.exports = function(app) {
     // Verify user credentials via Agave
     var auth = express.basicAuth(function(username, password, next) {
 
-        console.log("app basic auth. username is: " + username);
-
         var appCredentials = new AppCredentials();
         appCredentials.username = username;
         appCredentials.password = password;
+
+        console.log("app creds are: " + JSON.stringify(appCredentials));
 
         authController.validateCredentials(appCredentials, function(validity) {
 

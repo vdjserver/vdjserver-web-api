@@ -17,8 +17,6 @@ module.exports = InternalUserController;
 // Creates an internal user account via Agave IO and returns it to the client
 InternalUserController.createInternalUser = function(request, response) {
 
-    console.log("hit for internalUserController.createInternalUser. Attr are: " + JSON.stringify(request.body));
-
     var genericError = "Unable to create a new Agave account for '" + request.body.internalUsername + "'.";
 
     if (request.body.internalUsername &&
@@ -27,6 +25,7 @@ InternalUserController.createInternalUser = function(request, response) {
     {
 
         tokenController.provideVdjToken(function(error, tokenAuth) {
+
             if (!error) {
 
                 var internalUser = new InternalUser();
@@ -36,8 +35,8 @@ InternalUserController.createInternalUser = function(request, response) {
                 internalUser.email    = request.body.email;
 
 
-                console.log("internalUserController.createInternalUser - about to start agaveIO");
                 agaveIO.createInternalUser(internalUser, function(agaveError, agaveSavedInternalUser) {
+
 
                     if (!agaveError) {
 
@@ -77,6 +76,8 @@ InternalUserController.createInternalUser = function(request, response) {
 InternalUserController.updateUserProfile = function(request, response) {
 
     var appCredentials = request.user;
+
+    console.log("past auth and in update");
 
     InternalUser.findOne({ 'username': appCredentials.username}, function(error, internalUser) {
 

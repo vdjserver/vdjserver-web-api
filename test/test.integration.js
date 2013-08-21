@@ -11,10 +11,11 @@ var config = require('../app/config/config');
 var agaveSettings = require('../app/config/agave-settings');
 
 // Testing
-var nock = require('nock');
+//var nock = require('nock');
+var should = require('should');
 
 // Testing Fixtures
-var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
+//var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
 
 var baseUrl = 'http://localhost:8443';
 
@@ -78,7 +79,6 @@ describe("VDJAuth Integration Tests", function() {
         var requestObj = request(options, function(error, response, body) {
 
             var body = JSON.parse(body);
-            console.log("body check is: " + JSON.stringify(body));
 
             body.status.should.equal("success");
             body.result.username.should.equal(agaveSettings.testInternalUser);
@@ -92,7 +92,6 @@ describe("VDJAuth Integration Tests", function() {
         requestObj.end();
 
     });
-
 
     it("should post to /token and receive an Agave token for internal user '" + agaveSettings.testInternalUser + "'", function(done) {
 
@@ -109,8 +108,6 @@ describe("VDJAuth Integration Tests", function() {
         };
 
         var requestObj = request(options, function(error, response, body) {
-
-            console.log("body is: " + JSON.stringify(body));
 
             var body = JSON.parse(body);
 
@@ -171,7 +168,6 @@ describe("VDJAuth Integration Tests", function() {
         });
 
     });
-
 
 
     // TODO:

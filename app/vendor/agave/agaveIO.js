@@ -97,8 +97,6 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
 
             var responseObject;
 
-            console.log("response obj is: " + output);
-
             if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }
@@ -116,8 +114,6 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("getInternalUserToken error: " + error);
-
         callback("error");
     });
 
@@ -131,8 +127,6 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
 
 // Fetches an auth user token and returns it on success
 agaveIO.getNewVdjToken = function(tokenAuth, callback) {
-
-    console.log("calling getNewVdjToken");
 
     var postData = "lifetime=10800";
 
@@ -151,11 +145,8 @@ agaveIO.getNewVdjToken = function(tokenAuth, callback) {
             var responseObject;
 
             if (output && IsJSON(output)) {
-                console.log("getNewVdjToken is JSON");
                 responseObject = JSON.parse(output);
             }
-
-            console.log("getNewToken output is: " + output);
 
             if (responseObject && responseObject.status === "success")
             {
@@ -170,8 +161,6 @@ agaveIO.getNewVdjToken = function(tokenAuth, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("getNewVdjToken error: " + error);
-
         callback("error");
     });
 
@@ -217,8 +206,6 @@ agaveIO.refreshToken = function(tokenAuth, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("refreshToken error: " + error);
-
         callback("error");
     });
 
@@ -250,16 +237,13 @@ agaveIO.createInternalUser = function(internalUser, callback) {
             var responseObject;
 
             if (output && IsJSON(output)) {
-                console.log('agave created internal user. output is: ' + output);
                 responseObject = JSON.parse(output);
             }
 
             if (responseObject && responseObject.status === "success") {
-                console.log("agave created internal user. response looks good: " + JSON.stringify(responseObject));
                 callback(null, internalUser);
             }
             else {
-                console.log("agave create internal user fail...");
                 callback("error");
             }
 
@@ -268,7 +252,6 @@ agaveIO.createInternalUser = function(internalUser, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("createInternalUser error: " + error);
         callback("error");
     });
 
