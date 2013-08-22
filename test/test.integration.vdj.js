@@ -34,7 +34,11 @@ describe("VDJServer Integration Tests", function() {
             testUser.password = testData.internalUserPassword;
 
             profile = testUser.profile.create();
-            profile.email = testData.internalUserEmail;
+            profile.firstName = 'Ned';
+            profile.lastName  = 'Flanders';
+            profile.city      = 'Springfield';
+            profile.state     = 'IL';
+            profile.email     = 'ned@flanders.com';
             testUser.profile.push(profile);
 
             testUser.saltAndHash();

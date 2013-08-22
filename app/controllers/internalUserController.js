@@ -19,9 +19,11 @@ InternalUserController.createInternalUser = function(request, response) {
 
     var genericError = "Unable to create a new Agave account for '" + request.body.internalUsername + "'.";
 
-    if (request.body.internalUsername &&
-        request.body.password &&
-        request.body.email)
+    if (
+            request.body.internalUsername &&
+            request.body.password &&
+            request.body.email
+       )
     {
 
         tokenController.provideVdjToken(function(error, tokenAuth) {
@@ -92,6 +94,7 @@ InternalUserController.updateUserProfile = function(request, response) {
             internalUser.profile[0].lastName  = request.body.lastName;
             internalUser.profile[0].city      = request.body.city;
             internalUser.profile[0].state     = request.body.state;
+            internalUser.profile[0].email     = request.body.email;
 
 
             internalUser.save(function (saveError, savedInternalUser) {
