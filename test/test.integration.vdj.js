@@ -21,6 +21,12 @@ var baseUrl = 'http://localhost:8443';
 
 describe("VDJServer Integration Tests", function() {
 
+    var newProfileFirstName = 'Ned';
+    var newProfileLastName   = 'Flanders';
+    var newProfileCity      = 'Springfield';
+    var newProfileState     = 'IL';
+    var newProfileEmail     = 'ned@flanders.com';
+
     before(function(done) {
 
         mongoose.connect(config.mongooseDevDbString);
@@ -34,11 +40,11 @@ describe("VDJServer Integration Tests", function() {
             testUser.password = testData.internalUserPassword;
 
             profile = testUser.profile.create();
-            profile.firstName = 'Ned';
-            profile.lastName  = 'Flanders';
-            profile.city      = 'Springfield';
-            profile.state     = 'IL';
-            profile.email     = 'ned@flanders.com';
+            profile.firstName = newProfileFirstName;
+            profile.lastName  = newProfileLastName;
+            profile.city      = newProfileCity;
+            profile.state     = newProfileState;
+            profile.email     = newProfileEmail;
             testUser.profile.push(profile);
 
             testUser.saltAndHash();
@@ -55,6 +61,36 @@ describe("VDJServer Integration Tests", function() {
 
         mongoose.connection.close();
         done();
+
+    });
+
+    it("should get a user profile from /user/profile for '" + testData.internalUser + "'", function(done) {
+
+        var url = baseUrl + '/user/profile';
+
+        var options = {
+            url:    url,
+            headers: {
+                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + testData.internalUserPassword).toString('base64')
+            }
+        };
+
+        var requestObj = request(options, function(error, response, body) {
+
+            var body = JSON.parse(body);
+
+            body.status.should.equal("success");
+            body.result.firstName.should.equal(newProfileFirstName);
+            body.result.lastName.should.equal(newProfileLastName);
+            body.result.city.should.equal(newProfileCity);
+            body.result.state.should.equal(newProfileState);
+            body.result.email.should.equal(newProfileEmail);
+
+            done();
+
+        });
+
+        requestObj.end();
 
     });
 

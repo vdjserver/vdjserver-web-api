@@ -6,6 +6,7 @@ var express = require ('express');
 var authController         = require('../controllers/authController');
 var tokenController        = require('../controllers/tokenController');
 var internalUserController = require('../controllers/internalUserController');
+var profileController      = require('../controllers/profileController');
 var apiResponseController  = require('../controllers/apiResponseController');
 
 // Models
@@ -39,14 +40,21 @@ module.exports = function(app) {
     // Request an Agave internalUsername token
     app.post('/token', auth, tokenController.getInternalUserToken);
 
+
     // Refresh an Agave internalUsername token
     app.put('/token/*', auth, tokenController.refreshInternalUserToken);
+
 
     // Create a new account
     app.post('/user', internalUserController.createInternalUser);
 
+
+    // View user profile
+    app.get('/user/profile', auth, profileController.getUserProfile);
+
+
     // Update user profile
-    app.post('/user/profile', auth, internalUserController.updateUserProfile);
+    app.post('/user/profile', auth, profileController.updateUserProfile);
 
 
     // Errors
