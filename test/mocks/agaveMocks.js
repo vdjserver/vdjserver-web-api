@@ -1,6 +1,6 @@
 
 // Settings
-var agaveSettings = require('../../app/config/agave-settings');
+var agaveSettings = require('../../app/scripts/config/agave-settings');
 
 // Fixtures
 var testData = require('../datasource/testData');

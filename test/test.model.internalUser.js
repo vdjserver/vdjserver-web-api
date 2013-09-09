@@ -1,6 +1,6 @@
 
 // Model
-var InternalUser = require('../app/models/internalUser');
+var InternalUser = require('../app/scripts/models/internalUser');
 
 // Testing
 var should = require('should');

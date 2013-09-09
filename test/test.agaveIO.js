@@ -1,14 +1,14 @@
 
 // Processing
-var agaveIO       = require('../app/vendor/agave/agaveIO');
-var agaveSettings = require('../app/config/agave-settings');
+var agaveIO       = require('../app/scripts/vendor/agave/agaveIO');
+var agaveSettings = require('../app/scripts/config/agave-settings');
 
 // Controllers
-var tokenController = require('../app/controllers/tokenController');
+var tokenController = require('../app/scripts/controllers/tokenController');
 
 // Models
-var TokenAuth    = require('../app/models/tokenAuth');
-var InternalUser = require('../app/models/internalUser');
+var TokenAuth    = require('../app/scripts/models/tokenAuth');
+var InternalUser = require('../app/scripts/models/internalUser');
 
 // Testing
 var should = require('should');

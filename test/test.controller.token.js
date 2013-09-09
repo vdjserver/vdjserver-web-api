@@ -1,11 +1,11 @@
 
 // Models
-var TokenAuth      = require('../app/models/tokenAuth');
-var InternalUser   = require('../app/models/internalUser');
-var AppCredentials = require('../app/models/appCredentials');
+var TokenAuth      = require('../app/scripts/models/tokenAuth');
+var InternalUser   = require('../app/scripts/models/internalUser');
+var AppCredentials = require('../app/scripts/models/appCredentials');
 
 // Controllers
-var tokenController = require('../app/controllers/tokenController');
+var tokenController = require('../app/scripts/controllers/tokenController');
 
 // Testing
 var should = require('should');

@@ -1,9 +1,9 @@
 
 // Controllers
-var apiResponseController = require('../app/controllers/apiResponseController');
+var apiResponseController = require('../app/scripts/controllers/apiResponseController');
 
 // Models
-var ApiResponse = require('../app/models/apiResponse');
+var ApiResponse = require('../app/scripts/models/apiResponse');
 
 // Testing
 var should = require('should');

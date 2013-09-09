@@ -1,14 +1,14 @@
 
 // Models
-var InternalUser = require('../app/models/internalUser');
+var InternalUser = require('../app/scripts/models/internalUser');
 
 // Dependencies
 var request  = require('request');
 var mongoose = require('mongoose');
 
 // Settings
-var config = require('../app/config/config');
-var agaveSettings = require('../app/config/agave-settings');
+var config = require('../app/scripts/config/config');
+var agaveSettings = require('../app/scripts/config/agave-settings');
 
 // Testing
 //var nock = require('nock');
