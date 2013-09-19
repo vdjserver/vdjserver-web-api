@@ -1,5 +1,6 @@
 'use strict';
 
+var path = require('path');
 var LIVERELOAD_PORT = 35729;
 var lrSnippet = require('connect-livereload')({port: LIVERELOAD_PORT});
 var mountFolder = function (connect, dir) {
@@ -13,7 +14,7 @@ var mountFolder = function (connect, dir) {
 // 'test/spec/**/*.js'
 
 module.exports = function(grunt) {
-  
+
     // show elapsed time at the end
     require('time-grunt')(grunt);
 
@@ -27,6 +28,28 @@ module.exports = function(grunt) {
     };
 
     grunt.initConfig({
+        shell: {
+            mongod: {
+                command: 'mongod',
+                options: {
+                    async: true
+                }
+            }
+        },
+        express: {
+            options: {
+                port: 9000,
+                hostname: '*'
+            },
+            livereload: {
+                options: {
+                    server: path.resolve('./app/scripts'),
+                    livereload: true,
+                    serverreload: true,
+                    bases: path.resolve('./app/scripts')
+                }
+            }
+        },
         yeoman: yeomanConfig,
         watch: {
             options: {
@@ -93,12 +116,7 @@ module.exports = function(grunt) {
         },
         open: {
             server: {
-                path: 'http://localhost:<%= connect.options.port %>'
-            }
-        },
-        shell: {
-            mongo: {
-                command: 'mongod'
+                path: 'http://localhost:<%= connect.options.port %>/token'
             }
         },
         clean: {
@@ -174,70 +192,6 @@ module.exports = function(grunt) {
                 }
             }
         },
-        useminPrepare: {
-            html: '<%= yeoman.app %>/index.html',
-            options: {
-                dest: '<%= yeoman.dist %>'
-            }
-        },
-        usemin: {
-            html: ['<%= yeoman.dist %>/{,*/}*.html'],
-            css: ['<%= yeoman.dist %>/styles/{,*/}*.css'],
-            options: {
-                dirs: ['<%= yeoman.dist %>']
-            }
-        },
-        imagemin: {
-            dist: {
-                files: [{
-                    expand: true,
-                    cwd: '<%= yeoman.app %>/images',
-                    src: '{,*/}*.{png,jpg,jpeg}',
-                    dest: '<%= yeoman.dist %>/images'
-                }]
-            }
-        },
-        svgmin: {
-            dist: {
-                files: [{
-                    expand: true,
-                    cwd: '<%= yeoman.app %>/images',
-                    src: '{,*/}*.svg',
-                    dest: '<%= yeoman.dist %>/images'
-                }]
-            }
-        },
-        cssmin: {
-            dist: {
-                files: {
-                    '<%= yeoman.dist %>/styles/main.css': [
-                        '.tmp/styles/{,*/}*.css',
-                        '<%= yeoman.app %>/styles/{,*/}*.css'
-                    ]
-                }
-            }
-        },
-        htmlmin: {
-            dist: {
-                options: {
-                    /*removeCommentsFromCDATA: true,
-                    // https://github.com/yeoman/grunt-usemin/issues/44
-                    //collapseWhitespace: true,
-                    collapseBooleanAttributes: true,
-                    removeAttributeQuotes: true,
-                    removeRedundantAttributes: true,
-                    useShortDoctype: true,
-                    removeEmptyAttributes: true,
-                    removeOptionalTags: true*/
-                },
-                files: [{
-                    expand: true,
-                    cwd: '<%= yeoman.app %>',
-                    src: '*.html',
-                    dest: '<%= yeoman.dist %>'
-                }]
-            }
-        },
         // Put files not handled in other tasks here
         copy: {
             dist: {
@@ -266,14 +220,6 @@ module.exports = function(grunt) {
                     ]
                 }]
             }
-        },
-        bower: {
-            options: {
-                exclude: ['modernizr']
-            },
-            all: {
-                rjsConfig: '<%= yeoman.app %>/scripts/main.js'
-            }
         }
     });
 
@@ -285,10 +231,12 @@ module.exports = function(grunt) {
         }
 
         grunt.task.run([
+            'shell',
             'clean:server',
-            'coffee:dist',
-            'connect:livereload',
-            'open',
+            //'coffee:dist',
+            //'connect:livereload',
+            'express',
+            //'open',
             'watch'
         ]);
     });
@@ -304,17 +252,9 @@ module.exports = function(grunt) {
     grunt.registerTask('build', [
         'clean:dist',
         'coffee',
-        'useminPrepare',
         'copy:prepareRequirejs',
         'requirejs',
-        'imagemin',
-        'svgmin',
-        'htmlmin',
-        'concat',
-        'cssmin',
-        'uglify',
-        'copy',
-        'usemin'
+        'copy'
     ]);
 
     grunt.registerTask('default', [
