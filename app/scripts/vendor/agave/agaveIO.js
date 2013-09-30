@@ -2,13 +2,15 @@
 // Settings
 var agaveSettings = require('../../config/agave-settings');
 
+// TokenAuth
+var TokenAuth = require('../../models/tokenAuth');
 
 var agaveIO  = {};
 module.exports = agaveIO;
 
 
 // Sets up request settings for new token requests
-agaveIO.tokenRequestSettings = function(postData) {
+agaveIO.createTokenSettings = function(postData) {
 
     return {
         hostname:   agaveSettings.host,
@@ -37,6 +39,19 @@ agaveIO.tokenRefreshSettings = function(token) {
 
 };
 
+// Sets up request settings for token validation requests
+agaveIO.internalUserTokenValidateSettings = function(token) {
+
+    return {
+        hostname:   agaveSettings.host,
+        method:     'GET',
+        auth:       agaveSettings.authenticatedUser + ':' + agaveSettings.authenticatedUserPassword,
+        path:       agaveSettings.authEndpoint + 'tokens' + '/' + token,
+        rejectUnauthorized: false
+    }
+
+};
+
 // Sets up request settings for internal user creation requests
 agaveIO.createInternalUserRequestSettings = function(postData) {
 
@@ -54,14 +69,19 @@ agaveIO.createInternalUserRequestSettings = function(postData) {
 };
 
 // A utility method to help map token responses onto the token object in order to help stay organized and consistent
-agaveIO.parseTokenResponse = function(tokenAuth, responseObject) {
+agaveIO.parseTokenResponse = function(responseObject) {
 
+    var tokenAuth = new TokenAuth();
     tokenAuth.token         = responseObject.result.token;
     tokenAuth.username      = responseObject.result.username;
     tokenAuth.created       = responseObject.result.created;
     tokenAuth.expires       = responseObject.result.expires;
     tokenAuth.renewed       = responseObject.result.renewed;
     tokenAuth.remainingUses = responseObject.result.remainingUses;
+
+    if (responseObject.result.internalUsername) {
+        tokenAuth.internalUsername = responseObject.result.internalUsername;
+    }
 
     return tokenAuth;
 };
@@ -78,12 +98,12 @@ var IsJSON = function(input) {
 }
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
-agaveIO.getInternalUserToken = function(tokenAuth, callback) {
+agaveIO.createInternalUserToken = function(internalUsername, callback) {
 
     // NOTE: lifetime should go into agave settings
-    var postData = "internalUsername=" + tokenAuth.internalUsername + '&lifetime=10800';
+    var postData = "internalUsername=" + internalUsername + '&lifetime=10800';
 
-    var requestSettings = agaveIO.tokenRequestSettings(postData);
+    var requestSettings = agaveIO.createTokenSettings(postData);
 
     var request = require('https').request(requestSettings, function(response) {
 
@@ -103,7 +123,7 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
 
             if (responseObject && responseObject.status === "success")
             {
-                tokenAuth = agaveIO.parseTokenResponse(tokenAuth, responseObject);
+                var tokenAuth = agaveIO.parseTokenResponse(responseObject);
                 callback(null, tokenAuth);
             }
             else {
@@ -124,13 +144,10 @@ agaveIO.getInternalUserToken = function(tokenAuth, callback) {
     request.end();
 };
 
+// Validates an auth user token and returns true/false depending on validation
+agaveIO.validateInternalUserToken = function(token, callback) {
 
-// Fetches an auth user token and returns it on success
-agaveIO.getNewVdjToken = function(tokenAuth, callback) {
-
-    var postData = "lifetime=10800";
-
-    var requestSettings = agaveIO.tokenRequestSettings(postData);
+    var requestSettings = agaveIO.internalUserTokenValidateSettings(token);
 
     var request = require('https').request(requestSettings, function(response) {
 
@@ -150,7 +167,7 @@ agaveIO.getNewVdjToken = function(tokenAuth, callback) {
 
             if (responseObject && responseObject.status === "success")
             {
-                tokenAuth = agaveIO.parseTokenResponse(tokenAuth, responseObject);
+                var tokenAuth = agaveIO.parseTokenResponse(responseObject);
                 callback(null, tokenAuth);
             }
             else {
@@ -164,16 +181,12 @@ agaveIO.getNewVdjToken = function(tokenAuth, callback) {
         callback("error");
     });
 
-    // Request body parameters
-    request.write(postData);
-
+    // As Picard would say, 'Make it so'.
     request.end();
 };
 
-// Fetches an auth user token and returns it on success
-agaveIO.refreshToken = function(tokenAuth, callback) {
-
-    var token = tokenAuth.token;
+// Refreshes a token and returns it on success
+agaveIO.refreshToken = function(token, callback) {
 
     var requestSettings = agaveIO.tokenRefreshSettings(token);
 
@@ -195,7 +208,7 @@ agaveIO.refreshToken = function(tokenAuth, callback) {
 
             if (responseObject && responseObject.status === "success")
             {
-                tokenAuth = agaveIO.parseTokenResponse(tokenAuth, responseObject);
+                var tokenAuth = agaveIO.parseTokenResponse(responseObject);
                 callback(null, tokenAuth);
             }
             else {
@@ -212,7 +225,6 @@ agaveIO.refreshToken = function(tokenAuth, callback) {
     // As Picard would say, 'Make it so'.
     request.end();
 };
-
 
 // Creates a new internal user through Agave based on the supplied internal user object. Returns the internal user object on success.
 agaveIO.createInternalUser = function(internalUser, callback) {
@@ -258,6 +270,53 @@ agaveIO.createInternalUser = function(internalUser, callback) {
 
     //write the JSON of the internal user
     request.write(JSON.stringify(postData));
+
+    request.end();
+};
+
+
+
+// Fetches an auth user token and returns it on success
+agaveIO.createVdjToken = function(callback) {
+
+    var postData = "lifetime=10800";
+
+    var requestSettings = agaveIO.createTokenSettings(postData);
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+
+            if (responseObject && responseObject.status === "success")
+            {
+                var tokenAuth = agaveIO.parseTokenResponse(responseObject);
+                callback(null, tokenAuth);
+            }
+            else {
+                callback("error");
+            }
+
+        });
+    });
+
+    request.on('error', function(error) {
+        callback("error");
+    });
+
+    // Request body parameters
+    request.write(postData);
 
     request.end();
 };

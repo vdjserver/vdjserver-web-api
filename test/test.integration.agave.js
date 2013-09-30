@@ -144,7 +144,7 @@ describe("VDJ/Agave Integration Tests", function() {
         var url = baseUrl + '/token'
                           + '/' + token;
 
-        var auth = "Basic " + new Buffer(testData.internalUser + ":" + testData.internalUserPassword).toString("base64");
+        var auth = "Basic " + new Buffer(testData.internalUser + ":" + token).toString("base64");
 
         var options = {
             url: url,

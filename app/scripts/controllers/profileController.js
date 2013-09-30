@@ -12,17 +12,13 @@ module.exports = ProfileController;
 
 ProfileController.getUserProfile = function(request, response) {
 
-    console.log("hit for getUserProfile");
-
-    var appCredentials = request.user;
-
-    InternalUser.findOne({ 'username': appCredentials.username}, function(error, internalUser) {
+    InternalUser.findOne({ 'username': request.auth.username}, function(error, internalUser) {
 
         if (!error) {
             apiResponseController.sendSuccess(internalUser.profile[0], response);
         }
         else {
-            apiResponseController.sendError("Unable to find profile information for user '" + appCredentials.username + "'.", response);
+            apiResponseController.sendError("Unable to find profile information for user '" + request.auth.username + "'.", response);
         }
     });
 
@@ -30,9 +26,7 @@ ProfileController.getUserProfile = function(request, response) {
 
 ProfileController.updateUserProfile = function(request, response) {
 
-    var appCredentials = request.user;
-
-    InternalUser.findOne({ 'username': appCredentials.username}, function(error, internalUser) {
+    InternalUser.findOne({ 'username': request.auth.username}, function(error, internalUser) {
 
         if (!error) {
             internalUser.profile[0].firstName = request.body.firstName;
@@ -48,7 +42,7 @@ ProfileController.updateUserProfile = function(request, response) {
 
         }
         else {
-            apiResponseController.sendError("Unable to find profile information for user '" + appCredentials.username + "'.", response);
+            apiResponseController.sendError("Unable to find profile information for user '" + request.auth.username + "'.", response);
         }
     });
 

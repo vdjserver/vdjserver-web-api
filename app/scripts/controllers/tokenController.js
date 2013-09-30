@@ -1,6 +1,5 @@
 
 // Models
-var AppCredentials = require('../models/appCredentials');
 var TokenAuth = require('../models/tokenAuth');
 
 // Controllers
@@ -17,24 +16,13 @@ var TokenController = {};
 module.exports = TokenController;
 
 
-TokenController.getTokenAuthForAppCredentials = function(appCredentials) {
-
-    var tokenAuth = new TokenAuth();
-    tokenAuth.internalUsername = appCredentials.username;
-
-    return tokenAuth;
-
-};
-
 // Retrieves an internal user token from Agave IO and returns it to the client
-TokenController.getInternalUserToken = function(request, response) {
+TokenController.createInternalUserToken = function(request, response) {
 
-    var tokenAuth = TokenController.getTokenAuthForAppCredentials(request.user);
+    agaveIO.createInternalUserToken(request.auth.username, function(error, returnedTokenAuth) {
 
-    agaveIO.getInternalUserToken(tokenAuth, function(error, returnedTokenAuth) {
-
-        if (!error && returnedTokenAuth.internalUsername === tokenAuth.internalUsername) {
-            returnedTokenAuth.password = "";
+        if (!error && returnedTokenAuth.internalUsername === request.auth.username) {
+            //returnedTokenAuth.password = "";
             apiResponseController.sendSuccess(returnedTokenAuth, response);
         }
         else {
@@ -48,17 +36,13 @@ TokenController.getInternalUserToken = function(request, response) {
 // Refreshes an internal user token and returns to client
 TokenController.refreshInternalUserToken = function(request, response) {
 
-    var tokenAuth = TokenController.getTokenAuthForAppCredentials(request.user);
+    agaveIO.refreshToken(request.auth.password, function(error, refreshedTokenAuth) {
 
-    tokenAuth.token = request.params[0];
-
-    agaveIO.refreshToken(tokenAuth, function(error, refreshedTokenAuth) {
-
-        if (!error && refreshedTokenAuth.internalUsername === tokenAuth.internalUsername) {
+        if (!error && refreshedTokenAuth.internalUsername === request.auth.username) {
             apiResponseController.sendSuccess(refreshedTokenAuth, response);
         }
         else {
-            apiResponseController.sendError("Unable to refresh agave token for '" + request.user.username + "'", response);
+            apiResponseController.sendError("Unable to refresh agave token for '" + request.auth.username + "'", response);
         }
 
     });
@@ -66,11 +50,53 @@ TokenController.refreshInternalUserToken = function(request, response) {
 };
 
 
+
+
+
+// Refreshes a vdj token with Agave IO
+TokenController.refreshVdjToken = function(tokenAuth, callback) {
+
+    agaveIO.refreshToken(tokenAuth.token, function(error, refreshedTokenAuth) {
+
+        if (!error) {
+
+            callback(null, refreshedTokenAuth);
+        }
+        else {
+            callback('error');
+        }
+
+    });
+
+};
+
+// Retrieves a vdj token from Agave IO
+TokenController.createVdjToken = function(callback) {
+
+    agaveIO.createVdjToken(function(error, newTokenAuth) {
+
+        if (!error) {
+            agaveSettings.tokenAuth = newTokenAuth;
+
+            callback(null, newTokenAuth);
+        }
+        else {
+            callback('get new token error');
+        }
+
+    });
+
+};
+
+/* 
+    Attempts to refresh the current VDJ token and verify that it's available for use.
+    If the refresh fails, then it automatically fetches a new one.
+*/
 TokenController.provideVdjToken = function(callback) {
 
     if (agaveSettings.tokenAuth) {
 
-        TokenController.refreshToken(agaveSettings.tokenAuth, function(refreshError, refreshedTokenAuth) {
+        TokenController.refreshVdjToken(agaveSettings.tokenAuth, function(refreshError, refreshedTokenAuth) {
 
             if (!refreshError) {
 
@@ -80,7 +106,7 @@ TokenController.provideVdjToken = function(callback) {
             }
             else {
 
-                TokenController.getNewVdjToken(function(getNewError, newTokenAuth) {
+                TokenController.createVdjToken(function(getNewError, newTokenAuth) {
 
                     if (getNewError) {
                         callback(getNewError);
@@ -98,7 +124,7 @@ TokenController.provideVdjToken = function(callback) {
     }
     else {
 
-        TokenController.getNewVdjToken(function(error, newTokenAuth) {
+        TokenController.createVdjToken(function(error, newTokenAuth) {
 
             if (!error) {
                 callback(null, newTokenAuth);
@@ -110,42 +136,5 @@ TokenController.provideVdjToken = function(callback) {
         });
 
     }
-
-};
-
-// Refreshes a vdj token with Agave IO
-TokenController.refreshToken = function(tokenAuth, callback) {
-
-    agaveIO.refreshToken(tokenAuth, function(error, refreshedTokenAuth) {
-
-        if (!error) {
-
-            callback(null, refreshedTokenAuth);
-        }
-        else {
-            callback('error');
-        }
-
-    });
-
-};
-
-// Retrieves a vdj token from Agave IO
-TokenController.getNewVdjToken = function(callback) {
-
-    var tokenAuth = new TokenAuth();
-
-    agaveIO.getNewVdjToken(tokenAuth, function(error, newTokenAuth) {
-
-        if (!error) {
-            agaveSettings.tokenAuth = newTokenAuth;
-
-            callback(null, newTokenAuth);
-        }
-        else {
-            callback('get new token error');
-        }
-
-    });
 
 };

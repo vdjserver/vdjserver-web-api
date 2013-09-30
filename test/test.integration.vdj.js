@@ -26,6 +26,7 @@ describe("VDJServer Integration Tests", function() {
     var newProfileCity      = 'Springfield';
     var newProfileState     = 'IL';
     var newProfileEmail     = 'ned@flanders.com';
+    var token;
 
     before(function(done) {
 
@@ -50,7 +51,28 @@ describe("VDJServer Integration Tests", function() {
             testUser.saltAndHash();
 
             testUser.save(function(error, savedTestUser) {
-                done();
+
+                // Token Fetch
+                var tokenUrl = baseUrl + '/token';
+                var tokenOptions = {
+                    url: tokenUrl,
+                    method: 'post',
+                    headers: {
+                        "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + testData.internalUserPassword).toString('base64')
+                    }
+                };
+
+                var tokenRequestObj = request(tokenOptions, function(error, response, body) {
+
+                    var body = JSON.parse(body);
+                    token = body.result.token;
+
+                    done();
+
+                });
+
+                tokenRequestObj.end();
+
             });
 
         });
@@ -71,7 +93,7 @@ describe("VDJServer Integration Tests", function() {
         var options = {
             url:    url,
             headers: {
-                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + testData.internalUserPassword).toString('base64')
+                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + token).toString('base64')
             }
         };
 
@@ -110,7 +132,7 @@ describe("VDJServer Integration Tests", function() {
             url:    url,
             method: 'post',
             headers: {
-                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + testData.internalUserPassword).toString('base64'),
+                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + token).toString('base64'),
                 "Content-Type":"application/json",
                 "Content-Length":JSON.stringify(postData).length
             }

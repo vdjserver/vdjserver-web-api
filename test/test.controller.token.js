@@ -2,7 +2,6 @@
 // Models
 var TokenAuth      = require('../app/scripts/models/tokenAuth');
 var InternalUser   = require('../app/scripts/models/internalUser');
-var AppCredentials = require('../app/scripts/models/appCredentials');
 
 // Controllers
 var tokenController = require('../app/scripts/controllers/tokenController');
@@ -21,18 +20,6 @@ describe("tokenController functions", function() {
         nock.cleanAll();
         done();
     });
-
-    it("should be able to provide a tokenAuth for appCredentials", function() {
-
-        var appCredentials = new AppCredentials();
-        appCredentials.username = "David Lee Roth";
-
-        var tokenAuth = tokenController.getTokenAuthForAppCredentials(appCredentials);
-
-        tokenAuth.internalUsername.should.equal(appCredentials.username);
-
-    });
-
 
     it("should be able to provide a VDJ token", function() {
 

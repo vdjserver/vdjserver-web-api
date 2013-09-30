@@ -9,23 +9,16 @@ var internalUserController = require('../controllers/internalUserController');
 var profileController      = require('../controllers/profileController');
 var apiResponseController  = require('../controllers/apiResponseController');
 
-// Models
-var AppCredentials = require('../models/appCredentials');
-
 module.exports = function(app) {
 
 
     // Verify user credentials via Agave
-    var auth = express.basicAuth(function(username, password, next) {
+    var passwordAuth = express.basicAuth(function(username, password, next) {
 
-        var appCredentials = new AppCredentials();
-        appCredentials.username = username;
-        appCredentials.password = password;
-
-        authController.validateCredentials(appCredentials, function(validity) {
+        authController.validateCredentials(username, password, function(validity) {
 
             if (validity === true) {
-                next(null, appCredentials);
+                next(null, username);
             }
             else {
                 next('error');
@@ -35,26 +28,48 @@ module.exports = function(app) {
 
     });
 
+    // tokenAuth
+    var tokenAuth = express.basicAuth(function(username, token, next) {
 
+        authController.validateToken(username, token, function(validity) {
 
-    // Request an Agave internalUsername token
-    app.post('/token', auth, tokenController.getInternalUserToken);
+            if (validity === true) {
+                next(null, username, token);
+            }
+            else {
+                next('error');
+            }
 
+        });
 
-    // Refresh an Agave internalUsername token
-    app.put('/token/*', auth, tokenController.refreshInternalUserToken);
+    });
 
+    // tokenAuthNoValidation
+    var tokenAuthNoValidation = express.basicAuth(function(username, token, next) {
+        next(null, username, token);
+    });
 
     // Create a new account
     app.post('/user', internalUserController.createInternalUser);
 
 
-    // View user profile
-    app.get('/user/profile', auth, profileController.getUserProfile);
 
+    // Request an Agave internalUsername token
+    app.post('/token', passwordAuth, tokenController.createInternalUserToken);
+
+    // Refresh an Agave internalUsername token
+    app.put('/token/*', tokenAuthNoValidation, tokenController.refreshInternalUserToken);
+
+    // Delete an Agave internalUsername token
+    //app.delete('/token/*', tokenAuthNoValidation, tokenController.deleteInternalUserToken);
+
+
+
+    // View user profile
+    app.get('/user/profile', tokenAuth, profileController.getUserProfile);
 
     // Update user profile
-    app.post('/user/profile', auth, profileController.updateUserProfile);
+    app.post('/user/profile', tokenAuth, profileController.updateUserProfile);
 
 
     // Errors

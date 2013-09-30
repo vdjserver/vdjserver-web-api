@@ -34,7 +34,7 @@ describe("agaveIO token functions", function() {
 
     it("should be able to calculate post length for token request for internal username 'testMartyMcFly'", function() {
 
-        var data = agaveIO.tokenRequestSettings(testData.internalUser);
+        var data = agaveIO.createTokenSettings(testData.internalUser);
         data.headers['Content-Length'].should.equal(14);
 
     });
@@ -43,10 +43,7 @@ describe("agaveIO token functions", function() {
 
         agaveMocks.internalUserTokenFetch(nock);
 
-        var tokenAuth = new TokenAuth();
-        tokenAuth.internalUsername = testData.internalUser;
-
-        agaveIO.getInternalUserToken(tokenAuth, function(error, tokenAuth) {
+        agaveIO.createInternalUserToken(testData.internalUser, function(error, tokenAuth) {
             should.not.exist(error);
             tokenAuth.token.should.not.equal("");
             done();
@@ -61,7 +58,7 @@ describe("agaveIO token functions", function() {
         var tokenAuth = new TokenAuth();
         tokenAuth.internalUsername = "testBiffTannen";
 
-        agaveIO.getInternalUserToken(tokenAuth, function(error, tokenAuth) {
+        agaveIO.createInternalUserToken(tokenAuth, function(error, tokenAuth) {
             should.exist(error);
             done();
         });
@@ -72,9 +69,7 @@ describe("agaveIO token functions", function() {
 
         agaveMocks.vdjTokenFetch(nock);
 
-        var tokenAuth = new TokenAuth();
-
-        agaveIO.getNewVdjToken(tokenAuth, function(error, tokenAuth) {
+        agaveIO.createVdjToken(function(error, tokenAuth) {
             should.not.exist(error);
             tokenAuth.token.should.not.equal("");
             done();
@@ -87,11 +82,9 @@ describe("agaveIO token functions", function() {
         agaveMocks.vdjTokenFetch(nock);
         agaveMocks.vdjTokenRefresh(nock);
 
-        var tokenAuth = new TokenAuth();
+        agaveIO.createVdjToken(function(error, newTokenAuth) {
 
-        agaveIO.getNewVdjToken(tokenAuth, function(error, newTokenAuth) {
-
-            agaveIO.refreshToken(newTokenAuth, function(error, refreshedTokenAuth) {
+            agaveIO.refreshToken(newTokenAuth.token, function(error, refreshedTokenAuth) {
                 should.not.exist(error);
                 refreshedTokenAuth.token.should.not.equal("");
                 refreshedTokenAuth.token.should.equal(newTokenAuth.token);
