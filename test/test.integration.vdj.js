@@ -12,9 +12,13 @@ var agaveSettings = require('../app/scripts/config/agave-settings');
 
 // Testing
 var should = require('should');
+var nock   = require('nock');
 
 // Testing Fixtures
 var testData = require('./datasource/testData');
+
+//var agaveMocks = require('./mocks/agaveMocks');
+//var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
 
 var baseUrl = 'http://localhost:8443';
 
@@ -79,12 +83,25 @@ describe("VDJServer Integration Tests", function() {
 
     });
 
+
     after(function(done) {
 
         mongoose.connection.close();
         done();
 
     });
+
+    /*
+    beforeEach(function(done) {
+        // Token Get / Refresh
+        done();
+    });
+
+    afterEach(function(done) {
+        //nock.cleanAll();
+        done();
+    });
+    */
 
     it("should get a user profile from /user/profile for '" + testData.internalUser + "'", function(done) {
 
@@ -121,12 +138,12 @@ describe("VDJServer Integration Tests", function() {
         var url = baseUrl + '/user/profile';
 
         var postData = {
-                            "firstName": testData.internalUserFirstName,
-                            "lastName":  testData.internalUserLastName,
-                            "city":      testData.internalUserCity,
-                            "state":     testData.internalUserState,
-                            "email":     testData.internalUserEmail
-                       };
+            "firstName": testData.internalUserFirstName,
+            "lastName":  testData.internalUserLastName,
+            "city":      testData.internalUserCity,
+            "state":     testData.internalUserState,
+            "email":     testData.internalUserEmail
+        };
 
         var options = {
             url:    url,
@@ -143,18 +160,80 @@ describe("VDJServer Integration Tests", function() {
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
-            body.result.username.should.equal(testData.internalUser);
-            body.result.profile[0].firstName.should.equal(testData.internalUserFirstName);
-            body.result.profile[0].lastName.should.equal(testData.internalUserLastName);
-            body.result.profile[0].city.should.equal(testData.internalUserCity);
-            body.result.profile[0].state.should.equal(testData.internalUserState);
-            body.result.profile[0].email.should.equal(testData.internalUserEmail);
+            body.result.firstName.should.equal(testData.internalUserFirstName);
+            body.result.lastName.should.equal(testData.internalUserLastName);
+            body.result.city.should.equal(testData.internalUserCity);
+            body.result.state.should.equal(testData.internalUserState);
+            body.result.email.should.equal(testData.internalUserEmail);
 
             done();
 
         });
 
         requestObj.write(JSON.stringify(postData));
+
+        requestObj.end();
+
+    });
+
+    it("should post to /project and create a new project", function(done) {
+
+        var url = baseUrl + '/project';
+
+        var postData = {
+            "name":    'Amazing Project',
+            "members": [testData.internalUser]
+        };
+
+        var options = {
+            url:    url,
+            method: 'post',
+            headers: {
+                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + token).toString('base64'),
+                "Content-Type":"application/json",
+                "Content-Length":JSON.stringify(postData).length
+            }
+        };
+
+        var requestObj = request(options, function(error, response, body) {
+
+            var body = JSON.parse(body);
+
+            body.status.should.equal("success");
+            body.result.name.should.equal('Amazing Project');
+            body.result.members[0]['username'].should.equal(testData.internalUser);
+            //body.result.created.sho;
+            done();
+
+        });
+
+        requestObj.write(JSON.stringify(postData));
+
+        requestObj.end();
+
+    });
+
+    it("should get a user project list from /user/projects", function(done) {
+
+        var url = baseUrl + '/user/projects';
+
+        var options = {
+            url:    url,
+            method: 'get',
+            headers: {
+                "Authorization":"Basic " + new Buffer(testData.internalUser + ':' + token).toString('base64')
+            }
+        };
+
+        var requestObj = request(options, function(error, response, body) {
+
+            var body = JSON.parse(body);
+
+            body.status.should.equal("success");
+            body.result[0].name.should.equal('Amazing Project');
+            done();
+
+        });
 
         requestObj.end();
 

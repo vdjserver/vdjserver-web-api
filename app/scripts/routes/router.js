@@ -7,6 +7,7 @@ var authController         = require('../controllers/authController');
 var tokenController        = require('../controllers/tokenController');
 var internalUserController = require('../controllers/internalUserController');
 var profileController      = require('../controllers/profileController');
+var projectController      = require('../controllers/projectController');
 var apiResponseController  = require('../controllers/apiResponseController');
 
 module.exports = function(app) {
@@ -71,6 +72,12 @@ module.exports = function(app) {
     // Update user profile
     app.post('/user/profile', tokenAuth, profileController.updateUserProfile);
 
+
+    // Create project
+    app.post('/project', tokenAuth, projectController.createProject);
+    
+    // Get projects by user
+    app.get('/user/projects', tokenAuth, projectController.getUserProjectList);
 
     // Errors
     app.get(   '*', apiResponseController.send404);

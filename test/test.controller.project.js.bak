@@ -1,0 +1,38 @@
+
+// Models
+var Project        = require('../app/scripts/models/project');
+var InternalUser   = require('../app/scripts/models/internalUser');
+
+// Controllers
+var projectController = require('../app/scripts/controllers/projectController');
+
+// Testing
+var should = require('should');
+var nock   = require('nock');
+
+// Testing Fixtures
+var agaveMocks = require('./mocks/agaveMocks');
+
+
+describe("projectController functions", function() {
+
+    afterEach(function(done) {
+        nock.cleanAll();
+        done();
+    });
+
+    it("should be able to create a project", function() {
+
+        agaveMocks.vdjTokenFetch(nock);
+        agaveMocks.vdjTokenRefresh(nock);
+
+        tokenController.provideVdjToken(function(error, tokenAuth) {
+
+            should.not.exist(error);
+            should.exist(tokenAuth);
+            tokenAuth.token.should.not.equal("");
+        });
+
+    });
+
+});

@@ -37,7 +37,7 @@ ProfileController.updateUserProfile = function(request, response) {
 
 
             internalUser.save(function (saveError, savedInternalUser) {
-                apiResponseController.sendSuccess(savedInternalUser, response);
+                apiResponseController.sendSuccess(savedInternalUser.profile[0], response);
             });
 
         }

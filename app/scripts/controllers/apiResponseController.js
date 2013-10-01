@@ -9,10 +9,14 @@ module.exports = ApiResponseController;
 
 // Sends a 200 response with a success message to the client
 ApiResponseController.sendSuccess = function(successResultMessage, response) {
-    
+
+    console.log("api success - msg is: " + JSON.stringify(successResultMessage));
+
     var apiResponse = new ApiResponse();
     apiResponse.setSuccess();
     apiResponse.result = successResultMessage;
+
+    console.log("apiResp result is: " + JSON.stringify(apiResponse.result));
 
     if (response) {
         response.send(apiResponse);
@@ -38,7 +42,7 @@ ApiResponseController.send404 = function(request, response) {
     var apiResponse = new ApiResponse();
 
     apiResponse.setError();
-    apiResponse.message = "The endpoint you are trying to reach either doesn't exist, or doesn't support the action that you're trying."; 
+    apiResponse.message = "The endpoint you are trying to reach either doesn't exist, or doesn't support the action that you're trying.";
 
     if (response) {
         response.send(404, apiResponse);
