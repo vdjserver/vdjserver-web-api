@@ -32,6 +32,7 @@ module.exports = function(app) {
     // tokenAuth
     var tokenAuth = express.basicAuth(function(username, token, next) {
 
+
         authController.validateToken(username, token, function(validity) {
 
             if (validity === true) {
@@ -73,9 +74,16 @@ module.exports = function(app) {
     app.post('/user/profile', tokenAuth, profileController.updateUserProfile);
 
 
+
     // Create project
     app.post('/project', tokenAuth, projectController.createProject);
+
+    // Get project
+    app.get('/project/*', tokenAuth, projectController.getProject);
     
+    // Delete project
+    app.delete('/project/*', tokenAuth, projectController.deleteProject);
+
     // Get projects by user
     app.get('/user/projects', tokenAuth, projectController.getUserProjectList);
 
