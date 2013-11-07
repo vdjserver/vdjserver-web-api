@@ -26,7 +26,7 @@ module.exports = function(app, express, mongoose) {
         app.locals.pretty = true;
 
         app.use(express.logger());
-        app.use(express.bodyParser());
+        app.use([express.json(), express.urlencoded()]);
         app.use(allowCrossDomain);
         //app.use(express.cookieParser());
         //app.use(express.session({ secret: config.sessionSecret }));
