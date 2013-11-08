@@ -9,6 +9,7 @@ var internalUserController = require('../controllers/internalUserController');
 var profileController      = require('../controllers/profileController');
 var projectController      = require('../controllers/projectController');
 var apiResponseController  = require('../controllers/apiResponseController');
+var uuidController         = require('../controllers/uuidController');
 
 module.exports = function(app) {
 
@@ -80,12 +81,19 @@ module.exports = function(app) {
 
     // Get project
     app.get('/project/*', tokenAuth, projectController.getProject);
-    
+
     // Delete project
     app.delete('/project/*', tokenAuth, projectController.deleteProject);
 
     // Get projects by user
     app.get('/user/projects', tokenAuth, projectController.getUserProjectList);
+
+
+
+    // Uuids
+    app.get('/uuid/schemata', uuidController.getSchemataUuids);
+
+
 
     // Errors
     app.get(   '*', apiResponseController.send404);

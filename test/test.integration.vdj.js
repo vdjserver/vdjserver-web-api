@@ -238,4 +238,27 @@ describe("VDJServer Integration Tests", function() {
         requestObj.end();
 
     });
+
+    it("should get a schemata uuid list from /uuid/schemata", function(done) {
+
+        var url = baseUrl + '/uuid/schemata';
+
+        var options = {
+            url:    url,
+            method: 'get'
+        };
+
+        var requestObj = request(options, function(error, response, body) {
+
+            var body = JSON.parse(body);
+
+            body.status.should.equal("success");
+            body.result.should.ownProperty('profile');
+            done();
+
+        });
+
+        requestObj.end();
+
+    });
 });
