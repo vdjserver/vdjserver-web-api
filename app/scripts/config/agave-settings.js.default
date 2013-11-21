@@ -9,22 +9,15 @@
     the following with test internal user credentials: testInternalUser, testInternalUserPassword.
 */
 
-var authenticatedUser = '';
-var apiVersion        = '/v2';
-
 module.exports = {
 
-    // API Settings
-    host              : 'iplant-dev.tacc.utexas.edu',
-    apiVersion        : apiVersion,
-
     // Auth Settings
-    authenticatedUser : authenticatedUser,
-    authenticatedUserPassword : '',
-    tokenAuth: '',
+    clientKey:    '',
+    clientSecret: '',
+
+    // API Settings
+    hostname:   '',
 
     // Endpoints
-    authEndpoint : apiVersion + '/auth/',
-    createInternalUserEndpoint: apiVersion + '/profiles/' + authenticatedUser + '/users'
-
+    authEndpoint: ''
 };

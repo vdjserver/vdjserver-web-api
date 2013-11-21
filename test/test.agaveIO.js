@@ -7,16 +7,16 @@ var agaveSettings = require('../app/scripts/config/agave-settings');
 var tokenController = require('../app/scripts/controllers/tokenController');
 
 // Models
-var TokenAuth    = require('../app/scripts/models/tokenAuth');
-var InternalUser = require('../app/scripts/models/internalUser');
+var AgaveToken    = require('../app/scripts/models/agaveToken');
 
 // Testing
 var should = require('should');
 var nock   = require('nock');
 
 // Testing Fixtures
-var testData   = require('./datasource/testData');
-var agaveMocks = require('./mocks/agaveMocks');
+var agaveMocks           = require('./mocks/agaveMocks');
+var agaveRequestFixture  = require('./fixtures/agaveRequestFixture');
+var agaveResponseFixture = require('./fixtures/agaveResponseFixture');
 
 
 describe("agaveIO token functions", function() {
@@ -32,137 +32,60 @@ describe("agaveIO token functions", function() {
     });
 
 
-    it("should be able to calculate post length for token request for internal username 'testMartyMcFly'", function() {
+    it("should be able to calculate post length for getToken", function() {
 
-        var data = agaveIO.createTokenSettings(testData.internalUser);
+        var data = agaveIO.getTokenSettings(agaveRequestFixture.username);
         data.headers['Content-Length'].should.equal(14);
 
     });
 
-    it("should be able to retrieve a token from Agave for internal username '" + testData.internalUser + "'", function(done) {
+    it("should get a new Agave Token", function(done) {
 
-        agaveMocks.internalUserTokenFetch(nock);
+        //agaveMocks.getToken(nock);
+    nock('https://' + agaveSettings.hostname)
+        .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
+        .reply(200, agaveResponseFixture.success)
+    ;
 
-        agaveIO.createInternalUserToken(testData.internalUser, function(error, tokenAuth) {
+        agaveIO.getToken(agaveRequestFixture.auth, function(error, agaveToken) {
+            console.log("error is: " + error);
+            console.log("agaveToken is: " + agaveToken);
             should.not.exist(error);
-            tokenAuth.token.should.not.equal("");
+            agaveToken.token.should.not.equal("");
             done();
         });
 
     });
 
-    it("should return an error message when retrieving a token from Agave for bad internal username 'testBiffTannen'", function(done) {
+    it("should return an error message when unable to get a new Agave Token", function(done) {
 
-        agaveMocks.internalUserTokenFetchError(nock);
+        agaveMocks.getTokenError(nock);
 
-        var tokenAuth = new TokenAuth();
-        tokenAuth.internalUsername = "testBiffTannen";
-
-        agaveIO.createInternalUserToken(tokenAuth, function(error, tokenAuth) {
+        agaveIO.getToken(agaveRequestFixture.auth, function(error, agaveToken) {
             should.exist(error);
             done();
         });
 
     });
 
-    it("should be able to retrieve a VDJ Auth token from Agave", function(done) {
-
-        agaveMocks.vdjTokenFetch(nock);
-
-        agaveIO.createVdjToken(function(error, tokenAuth) {
-            should.not.exist(error);
-            tokenAuth.token.should.not.equal("");
-            done();
-        });
-
-    });
-
+/*
     it("should be able to refresh a VDJ Auth token from Agave", function(done) {
 
         agaveMocks.vdjTokenFetch(nock);
         agaveMocks.vdjTokenRefresh(nock);
 
-        agaveIO.createVdjToken(function(error, newTokenAuth) {
+        agaveIO.createVdjToken(function(error, newAgaveToken) {
 
-            agaveIO.refreshToken(newTokenAuth.token, function(error, refreshedTokenAuth) {
+            agaveIO.refreshToken(newAgaveToken.token, function(error, refreshedAgaveToken) {
                 should.not.exist(error);
-                refreshedTokenAuth.token.should.not.equal("");
-                refreshedTokenAuth.token.should.equal(newTokenAuth.token);
+                refreshedAgaveToken.token.should.not.equal("");
+                refreshedAgaveToken.token.should.equal(newAgaveToken.token);
                 done();
             });
 
         });
 
     });
-
-
-});
-
-describe("agaveIO create internal user functions", function() {
-
-
-    it("should be able to calculate post length for account creation for 'testMartyMcfly'", function() {
-
-        var postData = {"username":"testMartyMcfly", "password":"1985", "email":"testMartyMcfly@delorean.com"};
-
-        var returnData = agaveIO.createInternalUserRequestSettings(JSON.stringify(postData));
-
-        returnData.headers['Content-Length'].should.equal(99);
-
-    });
-
-    it("should be able to create an Agave account for internal user '" + testData.internalUser + "'", function(done) {
-
-        var internalUser = new InternalUser();
-        internalUser.username = testData.internalUser;
-        internalUser.password = testData.internalUserPassword;
-
-        profile = internalUser.profile.create();
-        profile.email = testData.internalUserEmail;
-        internalUser.profile.push(profile);
-
-
-        // Token Get / Refresh
-        agaveMocks.vdjTokenFetch(nock);
-        agaveMocks.vdjTokenRefresh(nock);
-
-        // Create user request
-        agaveMocks.createInternalUser(nock);
-
-        tokenController.provideVdjToken(function(tokenError, tokenAuth) {
-
-            agaveIO.createInternalUser(internalUser, function(error, newInternalUser) {
-
-                should.not.exist(error);
-                newInternalUser.username.should.equal(testData.internalUser);
-                done();
-
-            });
-
-        });
-
-    });
-
-
-    it("should return an error message when creating an account that's missing the email attribute for bad internal username 'testBiffTannen'", function(done) {
-
-        var internalUser = new InternalUser();
-        internalUser.username = "testBiffTannen";
-        internalUser.password = "shazam";
-
-        profile = internalUser.profile.create();                              
-        internalUser.profile.push(profile); 
-
-        // Create user request
-        agaveMocks.createInternalUserError(nock, internalUser.username);
-
-        agaveIO.createInternalUser(internalUser, function(error, internalUser) {
-
-            should.exist(error);
-            should.not.exist(internalUser);
-            done();
-
-        });
-    });
+*/
 
 });

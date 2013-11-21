@@ -1,7 +1,6 @@
 
 // Models
-var TokenAuth      = require('../app/scripts/models/tokenAuth');
-var InternalUser   = require('../app/scripts/models/internalUser');
+var AgaveToken = require('../app/scripts/models/agaveToken');
 
 // Controllers
 var tokenController = require('../app/scripts/controllers/tokenController');
@@ -12,6 +11,7 @@ var nock   = require('nock');
 
 // Testing Fixtures
 var agaveMocks = require('./mocks/agaveMocks');
+var agaveRequestFixture = require('./fixtures/agaveRequestFixture');
 
 
 describe("tokenController functions", function() {
@@ -21,16 +21,26 @@ describe("tokenController functions", function() {
         done();
     });
 
-    it("should be able to provide a VDJ token", function() {
+    it("should be able to get a token", function() {
 
-        agaveMocks.vdjTokenFetch(nock);
-        agaveMocks.vdjTokenRefresh(nock);
+        agaveMocks.getToken(nock);
 
-        tokenController.provideVdjToken(function(error, tokenAuth) {
+        console.log('request fixture is: ' + JSON.stringify(agaveRequestFixture.auth));
+
+        tokenController.getToken(agaveRequestFixture, function(response) {
+        //});
+
+        //tokenController.getToken(function(error, tokenAuth) {
+
+            var send = function() {
+                console.log("calling send");
+            }
+
+            console.log("agaveToken is: " + JSON.stringify(agaveToken));
 
             should.not.exist(error);
-            should.exist(tokenAuth);
-            tokenAuth.token.should.not.equal("");
+            should.exist(agaveToken);
+            agaveToken.token.should.not.equal("");
         });
 
     });

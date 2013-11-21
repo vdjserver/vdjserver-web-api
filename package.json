@@ -46,7 +46,7 @@
 
         "mocha":    "1.14.x",
         "request":  "2.27.x",
-        "should":   "2.0.x",
+        "should":   "2.1.x",
         "sinon":    "1.7.x",
         "nock":     "0.22.x"
     },

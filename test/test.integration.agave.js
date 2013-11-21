@@ -1,107 +1,60 @@
 
-// Models
-var InternalUser = require('../app/scripts/models/internalUser');
+var agaveSettings = require('../app/scripts/config/agave-settings');
 
 // Dependencies
 var request  = require('request');
-var mongoose = require('mongoose');
-
-// Settings
-var config = require('../app/scripts/config/config');
-var agaveSettings = require('../app/scripts/config/agave-settings');
 
 // Testing
-//var nock = require('nock');
 var should = require('should');
+var nock   = require('nock');
 
 // Testing Fixtures
-var testData = require('./datasource/testData');
-//var agaveTokenFixture = require('./fixtures/agaveTokenFixture');
+var agaveMocks           = require('./mocks/agaveMocks');
+var agaveRequestFixture  = require('./fixtures/agaveRequestFixture');
+var agaveResponseFixture = require('./fixtures/agaveResponseFixture');
 
 var baseUrl = 'http://localhost:8443';
 
-/*
-        // Token Get / Refresh
-        nock('https://' + agaveSettings.host)
-            .post(agaveSettings.authEndpoint)
-            .reply(200, agaveTokenFixture.vdjResponse)
-        ;
-*/
-
-/*
-        nock('https://' + agaveSettings.host)
-            .put(agaveSettings.authEndpoint + '/tokens' + '/' + agaveTokenFixture.vdjToken)
-            .reply(200, agaveTokenFixture.vdjResponse)
-        ;
-*/
-    /*
-        // Create user request
-        nock('https://' + agaveSettings.host)
-            .post(agaveSettings.createInternalUserEndpoint, {"username": testData.internalUser, "email": testData.internalUserEmail})
-            .reply(200, agaveTokenFixture.internalUserResponse)
-        ;
-*/
 
 describe("VDJ/Agave Integration Tests", function() {
 
-    var token;
+    it("should get a new Agave token", function(done) {
 
-    before(function(done) {
+        nock('https://' + agaveSettings.hostname)
+            .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
+            .reply(200, agaveResponseFixture.success)
+        ;
 
-        mongoose.connect(config.mongooseDevDbString);
-
-        // Clean up the db before we begin
-        InternalUser.remove({username:testData.internalUser}, function(error) {
-
-            done();
-        });
-
-    });
-
-    after(function(done) {
-    
-        mongoose.connection.close();
-        done();
-
-    });
-
-    it("should post to /user and create an internal user account for internal user '" + testData.internalUser + "'", function(done) {
-
-        var url = baseUrl + '/user';
-
-        var postData = {
-                            "internalUsername":testData.internalUser,
-                            "password":        testData.internalUserPassword,
-                            "email":           testData.internalUserEmail
-                       };
+        var url = baseUrl + '/token';
 
         var options = {
-            url: url,
+            url:    url,
             method: 'post',
-            headers: {
-                "Content-Type":"application/json",
-                "Content-Length":JSON.stringify(postData).length
-            }
+            auth:   agaveRequestFixture.username + ':' + agaveRequestFixture.password
         };
 
+
         var requestObj = request(options, function(error, response, body) {
+
+            console.log("end requestObj");
 
             var body = JSON.parse(body);
 
             body.status.should.equal("success");
-            body.result.username.should.equal(testData.internalUser);
+            body.result.username.should.equal(agaveRequestFixture.auth.username);
 
             done();
 
         });
 
-        requestObj.write(JSON.stringify(postData));
+        requestObj.write(JSON.stringify(agaveRequestFixture.auth));
 
         requestObj.end();
 
     });
 
-    it("should post to /token and receive an Agave token for internal user '" + testData.internalUser + "'", function(done) {
+    /*
+    it("should return an error message when unable to get a new Agave Token", function(done) {
 
         var url = baseUrl + '/token';
 
@@ -137,48 +90,10 @@ describe("VDJ/Agave Integration Tests", function() {
         });
 
     });
-
-
-    it("should put to /token and receive a refreshed Agave token for internal user '" + testData.internalUser + "'", function(done) {
-
-        var url = baseUrl + '/token'
-                          + '/' + token;
-
-        var auth = "Basic " + new Buffer(testData.internalUser + ":" + token).toString("base64");
-
-        var options = {
-            url: url,
-            method: 'put',
-            headers: {
-                "Authorization": auth
-            }
-        };
-
-        var requestObj = request(options, function(error, response, body) {
-
-            var body = JSON.parse(body);
-
-            body.status.should.equal("success");
-
-            body.result.token.should.not.equal("");
-            body.result.username.should.not.equal("");
-            body.result.created.should.not.equal("");
-            body.result.expires.should.not.equal("");
-            body.result.renewed.should.not.equal("");
-            body.result.internalUsername.should.equal(testData.internalUser);
-            body.result.remainingUses.should.not.equal("");
-
-            // Save the token for the refresh test
-            token = body.result.token;
-
-            done();
-
-        });
-
-    });
-
+*/
 
     // TODO:
 
+    // test refresh
     // test for errors
 });
