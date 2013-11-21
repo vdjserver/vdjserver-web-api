@@ -1,4 +1,6 @@
 
+'use strict';
+
 // App
 var express = require('express');
 

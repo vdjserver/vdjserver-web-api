@@ -1,4 +1,6 @@
 
+'use strict';
+
 // Settings
 var agaveSettings = require('../../config/agave-settings');
 
@@ -22,7 +24,7 @@ agaveIO.getTokenSettings = function(postData) {
             'Content-Type':   'application/x-www-form-urlencoded',
             'Content-Length': postData.length
         }
-    }
+    };
 
 };
 
@@ -39,7 +41,7 @@ agaveIO.refreshTokenSettings = function(postData) {
             'Content-Type':   'application/x-www-form-urlencoded',
             'Content-Length': postData.length
         }
-    }
+    };
 
 };
 
@@ -65,7 +67,7 @@ var IsJSON = function(input) {
     }
 
     return true;
-}
+};
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.getToken = function(auth, callback) {
@@ -86,23 +88,23 @@ agaveIO.getToken = function(auth, callback) {
 
             var responseObject;
 
-            if (output && IsJSON(output)) {
+            if (output && new IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }
 
-            if (responseObject && responseObject.status === "success") {
+            if (responseObject && responseObject.status === 'success') {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }
             else {
-                callback("error");
+                callback('error');
             }
 
         });
     });
 
-    request.on('error', function(error) {
-        callback("error");
+    request.on('error', function(/*error*/) {
+        callback('error');
     });
 
     // Request body parameters
@@ -132,24 +134,24 @@ agaveIO.refreshToken = function(auth, callback) {
 
             var responseObject;
 
-            if (output && IsJSON(output)) {
+            if (output && new IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }
 
-            if (responseObject && responseObject.status === "success")
+            if (responseObject && responseObject.status === 'success')
             {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }
             else {
-                callback("error");
+                callback('error');
             }
 
         });
     });
 
-    request.on('error', function(error) {
-        callback("error");
+    request.on('error', function(/*error*/) {
+        callback('error');
     });
 
     // As Picard would say, 'Make it so'.

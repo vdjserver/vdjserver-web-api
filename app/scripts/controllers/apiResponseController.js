@@ -1,4 +1,6 @@
 
+'use strict';
+
 // Models
 var ApiResponse = require('../models/apiResponse');
 

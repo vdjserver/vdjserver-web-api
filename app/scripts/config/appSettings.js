@@ -1,4 +1,6 @@
 
+'use strict';
+
 var config = require('./config');
 
 module.exports = function(app, express) {
@@ -9,11 +11,11 @@ module.exports = function(app, express) {
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
 
         // intercept OPTIONS method
-        if ('OPTIONS' == req.method) {
-          res.send(200);
+        if ('OPTIONS' === req.method) {
+            res.send(200);
         }
         else {
-          next();
+            next();
         }
     };
 

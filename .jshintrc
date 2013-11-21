@@ -27,12 +27,13 @@
         "App":      true,
         "app":      true,
         "alert":    true,
-        "Backbone": true,
         "confirm":  true,
         "define":   true,
         "moment":   true,
         "prompt":   true,
         "saveAs":   true,
-        "Util":     true
+        "describe": true,
+        "it":       true,
+        "beforeEach": true
     }
 }

@@ -1,13 +1,11 @@
 
+'use strict';
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
 // Processing
 var agaveIO = require('../vendor/agave/agaveIO');
-
-// VDJ Token Storage
-var agaveSettings = require('../config/agave-settings');
-
 
 var TokenController = {};
 module.exports = TokenController;
