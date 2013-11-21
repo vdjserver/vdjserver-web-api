@@ -41,17 +41,17 @@ describe("agaveIO token functions", function() {
 
     it("should get a new Agave Token", function(done) {
 
-        //agaveMocks.getToken(nock);
-    nock('https://' + agaveSettings.hostname)
-        .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
-        .reply(200, agaveResponseFixture.success)
-    ;
+        agaveMocks.getToken(nock);
 
         agaveIO.getToken(agaveRequestFixture.auth, function(error, agaveToken) {
-            console.log("error is: " + error);
-            console.log("agaveToken is: " + agaveToken);
+
             should.not.exist(error);
-            agaveToken.token.should.not.equal("");
+
+            agaveToken.token_type.should.equal(agaveResponseFixture.tokenType);
+            agaveToken.expires_in.should.equal(agaveResponseFixture.expiresIn);
+            agaveToken.refresh_token.should.equal(agaveResponseFixture.refreshToken);
+            agaveToken.access_token.should.equal(agaveResponseFixture.accessToken);
+
             done();
         });
 

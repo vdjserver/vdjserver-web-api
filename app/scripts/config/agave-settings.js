@@ -6,8 +6,8 @@ module.exports = {
     clientSecret: 'clientSecretString',
 
     // API Settings
-    hostname:   'iplant-dev.tacc.utexas.edu/v2',
+    hostname: 'iplant-dev.tacc.utexas.edu',
 
     // Endpoints
-    authEndpoint: '/auth/'
+    authEndpoint: '/v2/auth/'
 };

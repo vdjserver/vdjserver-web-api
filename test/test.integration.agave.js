@@ -20,11 +20,6 @@ describe("VDJ/Agave Integration Tests", function() {
 
     it("should get a new Agave token", function(done) {
 
-        nock('https://' + agaveSettings.hostname)
-            .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
-            .reply(200, agaveResponseFixture.success)
-        ;
-
         var url = baseUrl + '/token';
 
         var options = {
@@ -34,9 +29,7 @@ describe("VDJ/Agave Integration Tests", function() {
         };
 
 
-        var requestObj = request(options, function(error, response, body) {
-
-            console.log("end requestObj");
+        var requestObj = require('https').request(options, function(error, response, body) {
 
             var body = JSON.parse(body);
 

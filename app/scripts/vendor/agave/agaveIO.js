@@ -13,7 +13,7 @@ module.exports = agaveIO;
 agaveIO.getTokenSettings = function(postData) {
 
     return {
-        hostname: agaveSettings.hostname,
+        host:     agaveSettings.hostname,
         method:   'POST',
         auth:     agaveSettings.clientKey + ':' + agaveSettings.clientSecret,
         path:     agaveSettings.authEndpoint,
@@ -30,7 +30,7 @@ agaveIO.getTokenSettings = function(postData) {
 agaveIO.refreshTokenSettings = function(postData) {
 
     return {
-        hostname: agaveSettings.hostname,
+        host:     agaveSettings.hostname,
         method:   'PUT',
         auth:     agaveSettings.clientKey + ':' + agaveSettings.clientSecret,
         path:     agaveSettings.authEndpoint,
@@ -45,8 +45,6 @@ agaveIO.refreshTokenSettings = function(postData) {
 
 // A utility method to help map token responses onto the token object in order to help stay organized and consistent
 agaveIO.parseTokenResponse = function(responseObject) {
-
-    console.log("responseObject is: " + JSON.stringify(responseObject));
 
     var agaveToken = new AgaveToken();
 
@@ -72,17 +70,11 @@ var IsJSON = function(input) {
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.getToken = function(auth, callback) {
 
-    console.log('agaveIO auth is: ' + JSON.stringify(auth));
-
     var postData = 'grant_type=password&scope=PRODUCTION&username=' + auth.username + '&password=' + auth.password;
 
     var requestSettings = agaveIO.getTokenSettings(postData);
 
-    console.log('requestSettings are: ' + JSON.stringify(requestSettings));
-
     var request = require('https').request(requestSettings, function(response) {
-
-        console.log("request over");
 
         var output = '';
 
@@ -98,10 +90,7 @@ agaveIO.getToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
 
-            console.log("request over - it is: " + JSON.stringify(responseObject));
-
-            if (responseObject && responseObject.status === "success")
-            {
+            if (responseObject && responseObject.status === "success") {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }

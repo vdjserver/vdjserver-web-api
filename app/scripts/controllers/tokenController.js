@@ -16,7 +16,6 @@ module.exports = TokenController;
 // Retrieves a new user token from Agave and returns it to the client
 TokenController.getToken = function(request, response) {
 
-    console.log('request is: ' + JSON.stringify(request.auth));
     agaveIO.getToken(request.auth, function(error, newToken) {
 
         if (!error && newToken.internalUsername === request.auth.username) {

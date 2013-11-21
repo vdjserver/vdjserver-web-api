@@ -37,13 +37,13 @@ module.exports = function(app, express) {
 
     // Environment Specific Config
     app.configure('development', function() {
-        console.log("using dev settings");
+        console.log('using dev settings');
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true}));
     });
 
 
     app.configure('production', function() {
-        console.log("using prod settings");
+        console.log('using prod settings');
         app.use(express.errorHandler());
     });
 

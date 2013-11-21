@@ -13,7 +13,7 @@ module.exports = AgaveMocks;
 
 // getToken
 AgaveMocks.getToken = function(nock) {
-    nock('http://' + agaveSettings.hostname)
+    nock('https://' + agaveSettings.hostname)
         .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
         .reply(200, agaveResponseFixture.success)
     ;
@@ -21,7 +21,6 @@ AgaveMocks.getToken = function(nock) {
     return nock;
 };
 
-/*
 AgaveMocks.getTokenError = function(nock) {
     nock('https://' + agaveSettings.hostname)
         .post(agaveSettings.authEndpoint)
@@ -31,6 +30,7 @@ AgaveMocks.getTokenError = function(nock) {
     return nock;
 };
 
+/*
 
 // refreshToken
 AgaveMocks.refreshToken = function(nock) {

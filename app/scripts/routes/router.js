@@ -3,14 +3,13 @@
 var express = require('express');
 
 // Controllers
-var tokenController        = require('../controllers/tokenController');
-var apiResponseController  = require('../controllers/apiResponseController');
+var tokenController       = require('../controllers/tokenController');
+var apiResponseController = require('../controllers/apiResponseController');
 
 module.exports = function(app) {
 
     // noValidation
     var noValidation = express.basicAuth(function(userKey, userSecret, next) {
-        console.log("validation");
         next(null, userKey, userSecret);
     });
 
@@ -28,8 +27,8 @@ module.exports = function(app) {
 
 
     // Errors
-    app.get(   '*', apiResponseController.send404);
-    app.post(  '*', apiResponseController.send404);
-    app.put(   '*', apiResponseController.send404);
+    app.get('*', apiResponseController.send404);
+    app.post('*', apiResponseController.send404);
+    app.put('*', apiResponseController.send404);
     app.delete('*', apiResponseController.send404);
 };
