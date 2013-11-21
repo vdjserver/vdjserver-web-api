@@ -4,11 +4,8 @@ var app     = express();
 //var http    = require('https');
 var http    = require('http');
 
-// Mongoose
-var mongoose = require('mongoose');
-
 // Config
-var appSettings = require('./config/appSettings.js')(app, express, mongoose);
+var appSettings = require('./config/appSettings.js')(app, express);
 
 // Router
 require('./routes/router')(app);

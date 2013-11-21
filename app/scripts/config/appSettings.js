@@ -1,7 +1,7 @@
 
 var config = require('./config');
 
-module.exports = function(app, express, mongoose) {
+module.exports = function(app, express) {
 
     var allowCrossDomain = function(req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
@@ -22,7 +22,7 @@ module.exports = function(app, express, mongoose) {
     app.configure(function() {
 
         app.set('port', config.port);
-        
+
         app.locals.pretty = true;
 
         app.use(express.logger());
@@ -39,14 +39,12 @@ module.exports = function(app, express, mongoose) {
     app.configure('development', function() {
         console.log("using dev settings");
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true}));
-        mongoose.connect(config.mongooseDevDbString);
     });
 
 
     app.configure('production', function() {
         console.log("using prod settings");
         app.use(express.errorHandler());
-        mongoose.connect(config.mongooseProdDbString);
     });
 
 
