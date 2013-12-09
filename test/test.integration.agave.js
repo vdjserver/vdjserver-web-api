@@ -1,5 +1,5 @@
 
-var agaveSettings = require('../app/scripts/config/agave-settings');
+var agaveSettings = require('../app/scripts/config/agaveSettings');
 
 // Dependencies
 var request  = require('request');

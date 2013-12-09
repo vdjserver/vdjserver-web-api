@@ -1,6 +1,6 @@
 
 /*
-    How To Setup agave-settings.js
+    How To Setup agaveSettings.js
 
     Replace the following empty parameter strings with appropriate Agave
     authenticated user credentials: authenticatedUser, authenticatedUserPassword.

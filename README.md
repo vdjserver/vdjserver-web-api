@@ -15,16 +15,16 @@ git clone git@bitbucket.org:taccaci/vdjserver-auth.git
 cd vdjserver-auth
 
 
-Copy the agave-settings.js.default file to agave-settings.js:  
+Copy the agaveSettings.js.default file to agaveSettings.js:  
 cd app/config  
-cp agave-settings.js.default agave-settings.js
+cp agaveSettings.js.default agaveSettings.js
 
-Edit agave-settings.js to add the following credentials:  
+Edit agaveSettings.js to add the following credentials:  
 * authenticatedUser  
 * authenticatedUserPassword  
 
 
-If you want to be able to run integration tests, then you should also add the following credentials to agave-settings.js:  
+If you want to be able to run integration tests, then you should also add the following credentials to agaveSettings.js:  
 * testInternalUser  
 * testInternalUserPassword  
 
@@ -48,7 +48,7 @@ Documentation on the v2 version of the Agave API that this project uses is avail
 #### Tests
 Unit tests use the mocha testing framework. They can be run with the commands 'make' or 'npm test' in the app root directory.
 
-Note: If you want to be able to run integration tests, then make sure that test internal user credentials have been added to app/config/agave-settings.js.
+Note: If you want to be able to run integration tests, then make sure that test internal user credentials have been added to app/config/agaveSettings.js.
 
 #### TODO:
 https://collab.tacc.utexas.edu/projects/vdjserver/issues

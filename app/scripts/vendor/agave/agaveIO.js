@@ -2,7 +2,7 @@
 'use strict';
 
 // Settings
-var agaveSettings = require('../../config/agave-settings');
+var agaveSettings = require('../../config/agaveSettings');
 
 // AgaveToken
 var AgaveToken = require('../../models/agaveToken');

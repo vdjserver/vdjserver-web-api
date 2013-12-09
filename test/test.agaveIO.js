@@ -1,7 +1,7 @@
 
 // Processing
 var agaveIO       = require('../app/scripts/vendor/agave/agaveIO');
-var agaveSettings = require('../app/scripts/config/agave-settings');
+var agaveSettings = require('../app/scripts/config/agaveSettings');
 
 // Controllers
 var tokenController = require('../app/scripts/controllers/tokenController');
