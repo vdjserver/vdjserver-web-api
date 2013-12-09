@@ -50,10 +50,10 @@ agaveIO.parseTokenResponse = function(responseObject) {
 
     var agaveToken = new AgaveToken();
 
-    agaveToken.token_type    = responseObject.result.token_type;
-    agaveToken.expires_in    = responseObject.result.expires_in;
-    agaveToken.refresh_token = responseObject.result.refresh_token;
-    agaveToken.access_token  = responseObject.result.access_token;
+    agaveToken.token_type    = responseObject.token_type;
+    agaveToken.expires_in    = responseObject.expires_in;
+    agaveToken.refresh_token = responseObject.refresh_token;
+    agaveToken.access_token  = responseObject.access_token;
 
     return agaveToken;
 };
@@ -92,7 +92,7 @@ agaveIO.getToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
 
-            if (responseObject && responseObject.status === 'success') {
+            if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }

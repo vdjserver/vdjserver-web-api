@@ -16,7 +16,7 @@ TokenController.getToken = function(request, response) {
 
     agaveIO.getToken(request.auth, function(error, newToken) {
 
-        if (!error && newToken.internalUsername === request.auth.username) {
+        if (!error) {
             apiResponseController.sendSuccess(newToken, response);
         }
         else {

@@ -16,8 +16,8 @@ module.exports = {
     clientSecret: '',
 
     // API Settings
-    hostname:   '',
+    hostname: '129.114.60.211',
 
     // Endpoints
-    authEndpoint: ''
+    authEndpoint: '/token'
 };

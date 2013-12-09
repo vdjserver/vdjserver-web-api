@@ -15,7 +15,7 @@ module.exports = AgaveMocks;
 AgaveMocks.getToken = function(nock) {
     nock('https://' + agaveSettings.hostname)
         .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
-        .reply(200, agaveResponseFixture.success)
+        .reply(200, JSON.stringify(agaveResponseFixture.success))
     ;
 
     return nock;
