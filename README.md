@@ -1,11 +1,10 @@
 #### VDJServer-Auth
 An auth service for the VDJServer.org project.
 
-Uses Node.js as the server.
-
-Uses Agave2.0 for community accounts, data IO, compute, etc...
-
-Uses Express.js as a backend framework.
+Uses:
+ * Node.js
+ * Express.js
+ * Agave 2.0
 
 #### Installation & Setup
 This assumes you already have node.js & npm installed.
@@ -14,35 +13,30 @@ This assumes you already have node.js & npm installed.
 git clone git@bitbucket.org:taccaci/vdjserver-auth.git
 cd vdjserver-auth
 
+Install NPM dependencies
+npm install -d
 
-Copy the agaveSettings.js.default file to agaveSettings.js:  
-cd app/config  
-cp agaveSettings.js.default agaveSettings.js
+Copy default agave settings:  
+cd app/scripts/config  
+cp agaveSettingsDefault.js agaveSettings.js
 
-Edit agaveSettings.js to add the following credentials:  
-* authenticatedUser  
-* authenticatedUserPassword  
-
-
-If you want to be able to run integration tests, then you should also add the following credentials to agaveSettings.js:  
-* testInternalUser  
-* testInternalUserPassword  
-
+Edit agaveSettings.js and add the following:  
+* clientKey  
+* clientSecret  
 
 Make sure that the following files are available:  
-* app/config/vdjserver.org.certificate/vdjserver.org.key  
-* app/config/vdjserver.org.certificate/vdjserver.org.cer  
+* app/scripts/config/vdjserver.org.certificate/vdjserver.org.key  
+* app/scripts/config/vdjserver.org.certificate/vdjserver.org.cer  
 
-
-npm install -d
-node app/app  
+Start App
+node app/scripts/app  
 ```  
 
 
 #### Documentation:
 Documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/document/d/1rg7AsLZEY_Kt73BAkOIPauN7v40CzAhjEOKv0loQKj8/edit](https://docs.google.com/a/tacc.utexas.edu/document/d/1rg7AsLZEY_Kt73BAkOIPauN7v40CzAhjEOKv0loQKj8/edit).  
 
-Documentation on the v2 version of the Agave API that this project uses is available at: [https://iplant-dev.tacc.utexas.edu/v2/docs/](https://iplant-dev.tacc.utexas.edu/v2/docs/).  
+Documentation on Agave v2 is available at: [http://agaveapi.co/live-docs/](http://agaveapi.co/live-docs/).  
 
 
 #### Tests
@@ -52,3 +46,4 @@ Note: If you want to be able to run integration tests, then make sure that test 
 
 #### TODO:
 https://collab.tacc.utexas.edu/projects/vdjserver/issues
+
