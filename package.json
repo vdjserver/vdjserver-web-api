@@ -16,14 +16,14 @@
     "private": true,
     "dependencies": {
         "express":  "3.4.x",
-        "moment" :  "2.4.x"
+        "moment" :  "2.5.x"
     },
     "devDependencies": {
-        "mocha":    "1.15.x",
-        "request":  "2.29.x",
+        "mocha":    "1.17.x",
+        "request":  "2.31.x",
         "should":   "2.1.x",
         "sinon":    "1.7.x",
-        "nock":     "0.25.x"
+        "nock":     "0.27.x"
     },
     "scripts": {
         "test": "make test"
