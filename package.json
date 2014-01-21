@@ -20,8 +20,8 @@
     },
     "devDependencies": {
         "mocha":    "1.17.x",
-        "request":  "2.31.x",
-        "should":   "2.1.x",
+        "request":  "2.33.x",
+        "should":   "3.0.x",
         "sinon":    "1.7.x",
         "nock":     "0.27.x"
     },
