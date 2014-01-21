@@ -66,8 +66,11 @@ agaveIO.getToken = function(auth, callback) {
 
             var responseObject;
 
-            if (output && new IsJSON(output)) {
+            if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
+            }
+            else {
+                callback('error');
             }
 
             console.log("getToken resp obj is: " + JSON.stringify(responseObject));
@@ -122,11 +125,14 @@ agaveIO.refreshToken = function(auth, callback) {
 
             var responseObject;
 
-            if (output && new IsJSON(output)) {
+            if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }
+            else {
+                callback('error');
+            }
 
-            if (responseObject && responseObject.status === 'success')
+            if (responseObject && responseObject.status && responseObject.status === 'success')
             {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
@@ -151,7 +157,6 @@ agaveIO.refreshToken = function(auth, callback) {
 agaveIO.deleteToken = function(auth, callback) {
 
     var postData = 'token=' + auth.password;
-    console.log("postData is: " + JSON.stringify(postData));
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -171,7 +176,6 @@ agaveIO.deleteToken = function(auth, callback) {
         var output = '';
 
         response.on('data', function(chunk) {
-            console.log("resp chunk");
             output += chunk;
         });
 
@@ -179,19 +183,19 @@ agaveIO.deleteToken = function(auth, callback) {
 
             var responseObject;
 
-            /*
-            if (output && new IsJSON(output)) {
+            if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
             }
-            */
+            else {
+                callback('error');
+            }
+
             console.log("responseObject is: " + JSON.stringify(responseObject));
             console.log("output is: " + JSON.stringify(output));
             console.log("resp status code is: " + JSON.stringify(response.status));
 
-            if (responseObject && responseObject.status === 'success')
+            if (responseObject && responseObject.status && responseObject.status === 'success')
             {
-                console.log("response actual is: " + JSON.stringify(responseObject));
-                //var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }
             else {
@@ -224,7 +228,7 @@ agaveIO.createUser = function(user, callback) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/users/1.0/',
+        path:     '/users/v1/',
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
@@ -245,14 +249,17 @@ agaveIO.createUser = function(user, callback) {
 
             var responseObject;
 
-            if (output && new IsJSON(output)) {
+            if (output && IsJSON(output)) {
                 responseObject = JSON.parse(output);
+            }
+            else {
+                callback('error');
             }
 
             console.log("acct create responseObj is: " + JSON.stringify(responseObject));
             console.log("acct create responseStatus is: " + response.statusCode);
 
-            if (responseObject && responseObject.status.toLowerCase() === 'success') {
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
                 callback(null, 'success');
             }
             else {
