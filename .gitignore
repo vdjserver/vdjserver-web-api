@@ -3,6 +3,7 @@
 app/scripts/config/agaveSettings.js
 app/scripts/config/config.js
 
+logs
 node_modules
 temp
 dist
