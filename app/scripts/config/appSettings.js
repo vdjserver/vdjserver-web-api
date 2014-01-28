@@ -25,6 +25,8 @@ module.exports = function(app, express) {
 
         app.set('port', config.port);
 
+        app.set('sslOptions', config.sslOptions);
+
         app.locals.pretty = true;
 
         app.use(express.logger());
@@ -50,12 +52,6 @@ module.exports = function(app, express) {
     });
 
 
-    // Server / SSL
-    var fs = require('fs');
-    app.sslOptions = {
-        key:  fs.readFileSync(__dirname + '/vdjserver.org.certificate/vdjserver.org.key'),
-        cert: fs.readFileSync(__dirname + '/vdjserver.org.certificate/vdjserver.org.cer')
-    };
 
 
     return app.configure;
