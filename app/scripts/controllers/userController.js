@@ -19,7 +19,6 @@ module.exports = UserController;
 
 UserController.createUser = function(request, response) {
 
-    console.log("request body is: " + JSON.stringify(request.body));
 /*
     if (!request.body.username || !request.body.password || !request.body.email || !request.body.firstName || !request.body.lastName) {
         apiResponseController.sendError('Username, password, email, first name and last name are required to create new accounts.');
@@ -34,8 +33,6 @@ UserController.createUser = function(request, response) {
     user.email     = request.body.email;
     user.password  = request.body.password;
     user.username  = request.body.username;
-
-
 
     var serviceAccountCredentials = {
         username: agaveSettings.serviceAccountKey,

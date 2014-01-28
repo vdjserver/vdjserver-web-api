@@ -38,8 +38,6 @@ var IsJSON = function(input) {
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.getToken = function(auth, callback) {
 
-    console.log("getToken auth is: " + JSON.stringify(auth));
-
     var postData = 'grant_type=password&scope=PRODUCTION&username=' + auth.username + '&password=' + auth.password;
 
     var requestSettings = {
@@ -72,8 +70,6 @@ agaveIO.getToken = function(auth, callback) {
             else {
                 callback('error');
             }
-
-            console.log("getToken resp obj is: " + JSON.stringify(responseObject));
 
             if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
@@ -190,10 +186,6 @@ agaveIO.deleteToken = function(auth, callback) {
                 callback('error');
             }
 
-            console.log("responseObject is: " + JSON.stringify(responseObject));
-            console.log("output is: " + JSON.stringify(output));
-            console.log("resp status code is: " + JSON.stringify(response.status));
-
             if (responseObject && responseObject.status && responseObject.status === 'success')
             {
                 callback(null, agaveToken);
@@ -206,7 +198,6 @@ agaveIO.deleteToken = function(auth, callback) {
     });
 
     request.on('error', function(error) {
-        console.log("request error is: " + JSON.stringify(error));
         callback('error');
     });
 
@@ -218,10 +209,8 @@ agaveIO.deleteToken = function(auth, callback) {
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.createUser = function(user, callback) {
 
-    console.log("user is: " + JSON.stringify(user));
-
-    var postData = 'email=' + user.email 
-                 + '&username=' + user.username 
+    var postData = 'email=' + user.email
+                 + '&username=' + user.username
                  + '&password=' + user.password;
 
 
@@ -255,9 +244,6 @@ agaveIO.createUser = function(user, callback) {
             else {
                 callback('error');
             }
-
-            console.log("acct create responseObj is: " + JSON.stringify(responseObject));
-            console.log("acct create responseStatus is: " + response.statusCode);
 
             if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
                 callback(null, 'success');

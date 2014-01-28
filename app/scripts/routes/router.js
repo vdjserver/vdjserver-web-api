@@ -13,7 +13,6 @@ module.exports = function(app) {
 
     // noValidation
     var noValidation = express.basicAuth(function(userKey, userSecret, next) {
-        console.log("noVal ok");
         next(null, userKey, userSecret);
     });
 
