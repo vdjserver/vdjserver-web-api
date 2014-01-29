@@ -99,7 +99,7 @@ agaveIO.refreshToken = function(auth, callback) {
 
     var requestSettings = {
         host:     agaveSettings.hostname,
-        method:   'PUT',
+        method:   'POST',
         auth:     agaveSettings.clientKey + ':' + agaveSettings.clientSecret,
         path:     '/token',
         rejectUnauthorized: false,
@@ -128,8 +128,7 @@ agaveIO.refreshToken = function(auth, callback) {
                 callback('error');
             }
 
-            if (responseObject && responseObject.status && responseObject.status === 'success')
-            {
+            if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
                 callback(null, agaveToken);
             }
@@ -242,6 +241,7 @@ agaveIO.createUser = function(user, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
+                console.log("agave response was not json");
                 callback('error');
             }
 
@@ -249,6 +249,7 @@ agaveIO.createUser = function(user, callback) {
                 callback(null, 'success');
             }
             else {
+                console.log("agave response was status != success");
                 callback('error');
             }
 
