@@ -55,7 +55,7 @@ UserController.createUser = function(request, response) {
                 else {
 
                     var userAccountCredentials = {
-                        username: user.password,
+                        username: user.username,
                         email: user.email
                     };
                     apiResponseController.sendSuccess(userAccountCredentials, response);
