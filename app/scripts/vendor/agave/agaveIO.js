@@ -208,15 +208,15 @@ agaveIO.deleteToken = function(auth, callback) {
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.createUser = function(user, callback) {
 
-    var postData = 'email=' + user.email
-                 + '&username=' + user.username
-                 + '&password=' + user.password;
+    var postData = 'username=' + user.username
+                 + '&password=' + user.password
+                 + '&email=' + user.email;
 
 
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/users/v1/',
+        path:     '/subscribers/v1/',
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
@@ -241,7 +241,6 @@ agaveIO.createUser = function(user, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                console.log("agave response was not json");
                 callback('error');
             }
 
@@ -249,7 +248,65 @@ agaveIO.createUser = function(user, callback) {
                 callback(null, 'success');
             }
             else {
-                console.log("agave response was status != success");
+                callback('error');
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        callback('error');
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+};
+
+agaveIO.createUserProfile = function(user, userAccessToken, callback) {
+
+    var postData = {
+        name: 'profile',
+        value: user
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + userAccessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                callback('error');
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                callback(null, 'success');
+            }
+            else {
                 callback('error');
             }
 
