@@ -6,12 +6,10 @@ var apiResponseController = require('./apiResponseController');
 
 // Models
 var User = require('../models/user');
+var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
 var agaveIO = require('../vendor/agave/agaveIO');
-
-// Settings
-var agaveSettings = require('../config/agaveSettings');
 
 // Utilities
 var _ = require('underscore');
@@ -38,23 +36,20 @@ UserController.createUser = function(request, response) {
     user.city      = request.body.city;
     user.state     = request.body.state;
 
-    var serviceAccountCredentials = {
-        username: agaveSettings.serviceAccountKey,
-        password: agaveSettings.serviceAccountSecret
-    };
+    var serviceAccount = new ServiceAccount();
 
     // 1.) get VDJAuth token
-    agaveIO.getToken(serviceAccountCredentials, function(error, newToken) {
+    agaveIO.getToken(serviceAccount, function(error, vdjauthToken) {
 
         if (error) {
             apiResponseController.sendError('Error 1 - Unable to create account for "' + user.username + '"', response);
         }
         else {
 
-            agaveSettings.serviceAccountToken = newToken.access_token;
+            serviceAccount.setToken(vdjauthToken);
 
             // 2.) create user
-            agaveIO.createUser(user.getCreateUserAttributes(), function(error, newUser) {
+            agaveIO.createUser(user.getCreateUserAttributes(), serviceAccount, function(error, newUser) {
 
                 if (error) {
                     apiResponseController.sendError('Error 2 - Unable to create account for "' + user.username + '"', response);

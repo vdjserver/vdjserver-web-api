@@ -68,6 +68,7 @@ agaveIO.getToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
+                console.log("getToken error resp is not json");
                 callback('error');
             }
 
@@ -76,6 +77,7 @@ agaveIO.getToken = function(auth, callback) {
                 callback(null, agaveToken);
             }
             else {
+                console.log("getToken error - resp is: " + JSON.stringify(responseObject));
                 callback('error');
             }
 
@@ -206,11 +208,11 @@ agaveIO.deleteToken = function(auth, callback) {
 };
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
-agaveIO.createUser = function(user, callback) {
+agaveIO.createUser = function(user, serviceAccount, callback) {
 
-    var postData = 'username=' + user.username
+    var postData = 'username='  + user.username
                  + '&password=' + user.password
-                 + '&email=' + user.email;
+                 + '&email='    + user.email;
 
 
     var requestSettings = {
@@ -221,7 +223,7 @@ agaveIO.createUser = function(user, callback) {
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
             'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + agaveSettings.serviceAccountToken
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
         }
     };
 
@@ -281,6 +283,65 @@ agaveIO.createUserProfile = function(user, userAccessToken, callback) {
             'Content-Type':   'application/json',
             'Content-Length': postData.length,
             'Authorization': 'Bearer ' + userAccessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                callback('error');
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                callback(null, 'success');
+            }
+            else {
+                callback('error');
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        callback('error');
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+};
+
+agaveIO.createProject = function(project, vdjauthAccessToken, callback) {
+
+    var postData = {
+        name: 'project',
+        value: project
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + vdjauthAccessToken
         }
     };
 
