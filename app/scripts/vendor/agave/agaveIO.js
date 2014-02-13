@@ -4,8 +4,12 @@
 // Settings
 var agaveSettings = require('../../config/agaveSettings');
 
-// AgaveToken
+// Models
 var AgaveToken = require('../../models/agaveToken');
+var ServiceAccount = require('../../models/serviceAccount');
+
+// Promises
+var Q = require('q');
 
 var agaveIO  = {};
 module.exports = agaveIO;
@@ -14,12 +18,12 @@ module.exports = agaveIO;
 // A utility method to help map token responses onto the token object in order to help stay organized and consistent
 agaveIO.parseTokenResponse = function(responseObject) {
 
-    var agaveToken = new AgaveToken();
-
-    agaveToken.token_type    = responseObject.token_type;
-    agaveToken.expires_in    = responseObject.expires_in;
-    agaveToken.refresh_token = responseObject.refresh_token;
-    agaveToken.access_token  = responseObject.access_token;
+    var agaveToken = new AgaveToken({
+        token_type:     responseObject.token_type,
+        expires_in:     responseObject.expires_in,
+        refresh_token:  responseObject.refresh_token,
+        access_token:   responseObject.access_token
+    });
 
     return agaveToken;
 };
@@ -36,7 +40,9 @@ var IsJSON = function(input) {
 };
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
-agaveIO.getToken = function(auth, callback) {
+agaveIO.getToken = function(auth) {
+
+    var deferred = Q.defer();
 
     var postData = 'grant_type=password&scope=PRODUCTION&username=' + auth.username + '&password=' + auth.password;
 
@@ -68,34 +74,36 @@ agaveIO.getToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                console.log("getToken error resp is not json");
-                callback('error');
+                deferred.reject(new Error('Agave response is not json'));
             }
 
             if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
-                callback(null, agaveToken);
+                deferred.resolve(agaveToken);
             }
             else {
-                console.log("getToken error - resp is: " + JSON.stringify(responseObject));
-                callback('error');
+                deferred.reject(new Error('Agave response returned an error'));
             }
 
         });
     });
 
-    request.on('error', function(/*error*/) {
-        callback('error');
+    request.on('error', function() {
+        deferred.reject(new Error('Agave connection error'));
     });
 
     // Request body parameters
     request.write(postData);
     request.end();
+
+    return deferred.promise;
 };
 
 
 // Refreshes a token and returns it on success
-agaveIO.refreshToken = function(auth, callback) {
+agaveIO.refreshToken = function(auth) {
+
+    var deferred = q.defer();
 
     var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.password;
 
@@ -127,31 +135,35 @@ agaveIO.refreshToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response is not json'));
             }
 
             if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
                 var agaveToken = agaveIO.parseTokenResponse(responseObject);
-                callback(null, agaveToken);
+                deferred.resolve(agaveToken);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response returned an error'));
             }
 
         });
     });
 
-    request.on('error', function(/*error*/) {
-        callback('error');
+    request.on('error', function() {
+        deferred.reject(new Error('Agave connection error'));
     });
 
     // Request body parameters
     request.write(postData);
     request.end();
+
+    return deferred.promise;
 };
 
 // Deletes a token
-agaveIO.deleteToken = function(auth, callback) {
+agaveIO.deleteToken = function(auth) {
+
+    var deferred = Q.defer();
 
     var postData = 'token=' + auth.password;
 
@@ -184,36 +196,42 @@ agaveIO.deleteToken = function(auth, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response is not json'));
             }
 
             if (responseObject && responseObject.status && responseObject.status === 'success')
             {
-                callback(null, agaveToken);
+                var agaveToken = agaveIO.parseTokenResponse(responseObject);
+                deferred.resolve(agaveToken);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response returned an error'));
             }
 
         });
     });
 
-    request.on('error', function(error) {
-        callback('error');
+    request.on('error', function() {
+        deferred.reject(new Error('Agave connection error'));
     });
 
     // Request body parameters
     request.write(postData);
     request.end();
+
+    return deferred.promise;
 };
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
-agaveIO.createUser = function(user, serviceAccount, callback) {
+agaveIO.createUser = function(user) {
+
+    var deferred = Q.defer();
 
     var postData = 'username='  + user.username
                  + '&password=' + user.password
                  + '&email='    + user.email;
 
+    var serviceAccount = new ServiceAccount();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -243,29 +261,33 @@ agaveIO.createUser = function(user, serviceAccount, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response is not json'));
             }
 
             if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-                callback(null, 'success');
+                deferred.resolve(responseObject.result);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response returned an error'));
             }
 
         });
     });
 
-    request.on('error', function(/*error*/) {
-        callback('error');
+    request.on('error', function() {
+        deferred.reject(new Error('Agave connection error'));
     });
 
     // Request body parameters
     request.write(postData);
     request.end();
+
+    return deferred.promise;
 };
 
-agaveIO.createUserProfile = function(user, userAccessToken, callback) {
+agaveIO.createUserProfile = function(user, userAccessToken) {
+
+    var deferred = Q.defer();
 
     var postData = {
         name: 'profile',
@@ -302,26 +324,28 @@ agaveIO.createUserProfile = function(user, userAccessToken, callback) {
                 responseObject = JSON.parse(output);
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response is not json'));
             }
 
             if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-                callback(null, 'success');
+                deferred.resolve('success');
             }
             else {
-                callback('error');
+                deferred.reject(new Error('Agave response returned an error'));
             }
 
         });
     });
 
     request.on('error', function(/*error*/) {
-        callback('error');
+        deferred.reject(new Error('Agave connection error'));
     });
 
     // Request body parameters
     request.write(postData);
     request.end();
+
+    return deferred.promise;
 };
 
 agaveIO.createProject = function(project, vdjauthAccessToken, callback) {

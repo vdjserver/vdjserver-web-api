@@ -3,18 +3,15 @@
 
 var _ = require('underscore');
 
-//var User = {};
+var User = function(attributes) {
+    this.username  = attributes.username || '';
+    this.password  = attributes.password || '';
 
-//User.schema = function() {
-var User = function() {
-    this.username  = '';
-    this.password  = '';
-
-    this.email      = '';
-    this.firstName  = '';
-    this.lastName   = '';
-    this.city       = '';
-    this.state      = '';
+    this.email      = attributes.email || '';
+    this.firstName  = attributes.firstName || '';
+    this.lastName   = attributes.lastName  || '';
+    this.city       = attributes.city  || '';
+    this.state      = attributes.state || '';
 };
 
 User.prototype.getSanitizedAttributes = function() {

@@ -14,47 +14,35 @@ module.exports = TokenController;
 // Retrieves a new user token from Agave and returns it to the client
 TokenController.getToken = function(request, response) {
 
-    agaveIO.getToken(request.auth, function(error, newToken) {
-
-        if (!error) {
-            apiResponseController.sendSuccess(newToken, response);
-        }
-        else {
-            apiResponseController.sendError('Unable to fetch Agave token for "' + request.auth.username + '"', response);
-        }
-
-    });
+    agaveIO.getToken(request.auth)
+        .then(function(agaveToken) {
+            apiResponseController.sendSuccess(agaveToken, response);
+        }, function(error) {
+            apiResponseController.sendError(error.message, response);
+        });
 
 };
 
 // Refreshes a user token from Agave and returns it to the client
 TokenController.refreshToken = function(request, response) {
 
-    agaveIO.refreshToken(request.auth, function(error, refreshToken) {
-
-        if (!error && refreshToken.internalUsername === request.auth.username) {
-            apiResponseController.sendSuccess(refreshToken, response);
-        }
-        else {
-            apiResponseController.sendError('Unable to refresh agave token for "' + request.auth.username + '"', response);
-        }
-
-    });
+    agaveIO.refreshToken(request.auth)
+        .then(function(agaveToken) {
+            apiResponseController.sendSuccess(agaveToken, response);
+        }, function(error) {
+            apiResponseController.sendError(error.message, response);
+        });
 
 };
 
-// Refreshes a user token from Agave and returns it to the client
+// Deletes a user token from Agave and returns it to the client
 TokenController.deleteToken = function(request, response) {
 
-    agaveIO.deleteToken(request.auth, function(error, deleteToken) {
-
-        if (!error && refreshToken.internalUsername === request.auth.username) {
-            apiResponseController.sendSuccess(refreshToken, response);
-        }
-        else {
-            apiResponseController.sendError('Unable to delete agave token for "' + request.auth.username + '"', response);
-        }
-
-    });
+    agaveIO.deleteToken(request.auth)
+        .then(function(agaveToken) {
+            apiResponseController.sendSuccess(agaveToken, response);
+        }, function(error) {
+            apiResponseController.sendError(error.message, response);
+        });
 
 };

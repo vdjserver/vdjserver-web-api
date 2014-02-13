@@ -6,7 +6,7 @@ var agaveSettings = require('../config/agaveSettings');
 var ServiceAccount = function() {
     this.username = agaveSettings.serviceAccountKey;
     this.password = agaveSettings.serviceAccountSecret;
-    this.accessToken = '';
+    this.accessToken = agaveSettings.serviceAccountToken;
 };
 
 ServiceAccount.prototype.setToken = function(vdjauthToken) {
