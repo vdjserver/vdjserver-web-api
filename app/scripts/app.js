@@ -3,8 +3,6 @@
 
 var express = require('express');
 var app     = express();
-//var https    = require('https');
-var http    = require('http');
 
 // Config
 require('./config/appSettings.js')(app, express);
@@ -13,7 +11,18 @@ require('./config/appSettings.js')(app, express);
 require('./routes/router')(app);
 
 // Server
-http.createServer(app).listen(app.get('port'), function() {
-//https.createServer(app.get('sslOptions'), app).listen(app.get('port'), function() {
-    console.log('Express server listening on port ' + app.get('port'));
+app.configure('development', function() {
+
+    var http = require('http');
+    http.createServer(app).listen(app.get('port'), function() {
+        console.log('Express Dev HTTP server listening on port ' + app.get('port'));
+    });
+});
+
+app.configure('production', function() {
+
+    var https = require('https');
+    https.createServer(app.get('sslOptions'), app).listen(app.get('port'), function() {
+        console.log('Express Prod HTTPS server listening on port ' + app.get('port'));
+    });
 });
