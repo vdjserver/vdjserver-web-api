@@ -7,7 +7,6 @@ var express = require('express');
 // Controllers
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
-var projectController     = require('../controllers/projectController');
 var apiResponseController = require('../controllers/apiResponseController');
 
 module.exports = function(app) {
@@ -26,13 +25,8 @@ module.exports = function(app) {
     // Delete an Agave internalUsername token
     app.delete('/token/*', noValidation, tokenController.deleteToken);
 
-
     // Create a user
     app.post('/user', userController.createUser);
-
-
-    // Create a project
-    app.post('/project', noValidation, projectController.createProject);
 
     // Errors
     app.get('*', apiResponseController.send404);
