@@ -3,7 +3,7 @@ module.exports = {
     // WSO2 Auth Settings
     clientKey:    '',
     clientSecret: '',
-    hostname: '',
+    hostname:     'agave-vdj.tacc.utexas.edu',
 
     // VDJ Service Account User
     serviceAccountKey: '',
