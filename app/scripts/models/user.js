@@ -12,6 +12,8 @@ var User = function(attributes) {
     this.lastName   = attributes.lastName  || '';
     this.city       = attributes.city  || '';
     this.state      = attributes.state || '';
+    this.country    = attributes.country || '';
+    this.affiliation = attributes.affiliation || '';
 };
 
 User.prototype.getSanitizedAttributes = function() {

@@ -22,7 +22,9 @@ UserController.createUser = function(request, response) {
         firstName:  request.body.firstName,
         lastName:   request.body.lastName,
         city:       request.body.city,
-        state:      request.body.state
+        state:      request.body.state,
+        country:    request.body.country,
+        affiliation: request.body.affiliation,
     });
 
 
