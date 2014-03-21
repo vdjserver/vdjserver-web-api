@@ -27,7 +27,7 @@
         "underscore": "1.6.x"
     },
     "devDependencies": {
-        "mocha":   "1.17.x",
+        "mocha":   "1.18.x",
         "nock":    "0.27.x",
         "request": "2.34.x",
         "should":  "3.1.x",
