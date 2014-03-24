@@ -16,6 +16,8 @@ module.exports = function(app) {
         next(null, userKey, userSecret);
     });
 
+    app.get('/', apiResponseController.confirmUpStatus);
+
     // Request an Agave internalUsername token
     app.post('/token', noValidation, tokenController.getToken);
 

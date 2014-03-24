@@ -46,3 +46,7 @@ ApiResponseController.send404 = function(request, response) {
         response.send(404, apiResponse);
     }
 };
+
+ApiResponseController.confirmUpStatus = function(request, response) {
+    ApiResponseController.sendSuccess('', response);
+};
