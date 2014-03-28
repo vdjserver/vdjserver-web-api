@@ -347,3 +347,375 @@ agaveIO.createUserProfile = function(user, userAccessToken) {
 
     return deferred.promise;
 };
+
+agaveIO.createProject = function(projectName) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'project',
+        value: {
+            "name": projectName
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject.result);
+            }
+            else {
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+
+    return deferred.promise;
+};
+
+agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid) {
+
+    console.log("username is: " + username);
+    console.log("token is: " + accessToken);
+    console.log("uuid is: " + uuid);
+
+    var deferred = Q.defer();
+
+    var postData = "username=" + username + "&permission=READ_WRITE";
+
+    //postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data/' + uuid + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            //'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve('success');
+            }
+            else {
+                console.log("agave says: " + JSON.stringify(responseObject));
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+
+    return deferred.promise;
+};
+
+agaveIO.getMetadataPermissions = function(accessToken, uuid) {
+
+    console.log("inside agaveIO. token is: " + accessToken + ' and uuid is: ' + uuid);
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data/' + uuid + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    console.log("requestSettings are: " + JSON.stringify(requestSettings));
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                console.log("agave response NOT json");
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject.result);
+            }
+            else {
+                console.log("agave says: " + JSON.stringify(responseObject));
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        console.log("getMetaPems gen error");
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    //request.write();
+    request.end();
+
+    return deferred.promise;
+};
+
+agaveIO.getFilePermissions = function(accessToken, filePath) {
+
+    console.log("token is: " + accessToken);
+    console.log("filePath is: " + filePath);
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/files/v2/pems/system/vdjIrods7' + filePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject.result);
+            }
+            else {
+                console.log("agave says: " + JSON.stringify(responseObject));
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    // Request body parameters
+    request.end();
+
+    return deferred.promise;
+};
+
+agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, filePath) {
+
+    console.log("username is: " + username);
+    console.log("token is: " + accessToken);
+    console.log("filePath is: " + filePath);
+
+    var deferred = Q.defer();
+
+    var postData = "username=" + username + "&all=true&recursive=true";
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/files/v2/pems/system/vdjIrods7' + filePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject.result);
+            }
+            else {
+                console.log("agave says: " + JSON.stringify(responseObject));
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+
+    return deferred.promise;
+};
+
+agaveIO.addUsernameToLimitedFilePermissions = function(username, accessToken, filePath) {
+
+    console.log("username is: " + username);
+    console.log("token is: " + accessToken);
+
+    var deferred = Q.defer();
+
+    var postData = "username=" + username + "&read=true&execute=true&recursive=true";
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/files/v2/pems/system/vdjIrods7' + filePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && IsJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject.result);
+            }
+            else {
+                console.log("agave says: " + JSON.stringify(responseObject));
+                deferred.reject(new Error('Agave response returned an error'));
+            }
+
+        });
+    });
+
+    request.on('error', function(/*error*/) {
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    // Request body parameters
+    request.write(postData);
+    request.end();
+
+    return deferred.promise;
+};
