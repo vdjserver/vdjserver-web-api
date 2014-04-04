@@ -4,7 +4,7 @@
 var _ = require('underscore');
 
 var FilePermissions = function(attributes) {
-    
+
     if (!attributes) {
         attributes = {};
     }
@@ -20,7 +20,7 @@ FilePermissions.prototype.getUsernamesFromMetadataResponse = function(metadata) 
         usernames.push(metadata[i].username);
     };
 
-    usernames = _.without(usernames, 'vdjauth', 'VDJAuth');
+    usernames = _.without(usernames, 'vdj');
     return usernames;
 }
 

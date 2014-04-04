@@ -6,7 +6,7 @@ var express = require('express');
 
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
-var fileController        = require('../controllers/fileController');
+var permissionsController = require('../controllers/permissionsController');
 var projectController     = require('../controllers/projectController');
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
@@ -24,10 +24,16 @@ module.exports = function(app) {
     app.post('/projects', projectController.createProject);
 
     // Update file permissions
-    app.post('/permissions/files/:projectUuid/files/:fileName', noValidation, permissionsController.syncFilePermissionsWithProject);
+    app.post('/permissions/files', noValidation, permissionsController.syncFilePermissionsWithProject);
 
     // Update metadata permissions
-    app.post('/permissions/metadata/:uuid', noValidation, permissionsController.updateMetadataPermissionsWithProject);
+    app.post('/permissions/metadata', noValidation, permissionsController.syncMetadataPermissionsWithProject);
+
+    // Add permissions for new user
+    app.post('/permissions/username', noValidation, permissionsController.addPermissionsForUsername);
+
+    // Remove all permissions for user
+    app.delete('/permissions/username', noValidation, permissionsController.removePermissionsForUser);
 
     // Request an Agave internalUsername token
     app.post('/token', noValidation, tokenController.getToken);
