@@ -33,7 +33,7 @@ module.exports = function(app) {
     app.post('/permissions/username', noValidation, permissionsController.addPermissionsForUsername);
 
     // Remove all permissions for user
-    app.delete('/permissions/username', noValidation, permissionsController.removePermissionsForUser);
+    app.delete('/permissions/username', noValidation, permissionsController.removePermissionsForUsername);
 
     // Request an Agave internalUsername token
     app.post('/token', noValidation, tokenController.getToken);

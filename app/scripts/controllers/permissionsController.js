@@ -135,7 +135,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 PermissionsController.addPermissionsForUsername = function(request, response) {
 
     console.log("calling addPermissionsForUsername");
-    
+
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
     var accessToken = request.auth.password;
@@ -149,7 +149,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
     // get file metadata pems
     // (loop) add to file metadata pems
 
-            
+
     // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
         // Add new username to project metadata pems
@@ -190,6 +190,78 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             for (var i = 0; i < uuids.length; i++) {
                 console.log("uuid is: " + uuids[i]);
                 promises.push(agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
+            }
+            console.log("postloop");
+
+            return Q.all(promises);
+        })
+        .then(function() {
+            return apiResponseController.sendSuccess('success', response);
+        })
+        .fail(function(error) {
+            console.log("calling fail");
+            apiResponseController.sendError(error.message, response);
+        });
+};
+
+PermissionsController.removePermissionsForUsername = function(request, response) {
+
+    console.log("calling removePermissionsForUsername");
+
+    var username    = request.body.username;
+    var projectUuid = request.body.projectUuid;
+    var accessToken = request.auth.password;
+
+    var serviceAccount = new ServiceAccount();
+
+    // check that token is on project
+    // remove from projectPems
+    // get file listing
+    // (loop) remove from file pems
+    // get file metadata pems
+    // (loop) remove from file metadata pems
+
+
+    // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
+    agaveIO.getMetadataPermissions(accessToken, projectUuid)
+        // Add new username to project metadata pems
+        .then(function() {
+            console.log("check 1");
+            return agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
+        })
+        // Get file listing
+        .then(function() {
+            console.log("check 2");
+            return agaveIO.getFileListings(serviceAccount.accessToken, projectUuid);
+        })
+        // Add new username to file pems
+        .then(function(fileListingsResponse) {
+
+            var fileListings = new FileListing();
+
+            var paths = fileListings.getFilePaths(fileListingsResponse);
+
+            console.log("preloop");
+            var promises = [];
+            for (var i = 0; i < paths.length; i++) {
+                console.log("path is: " + paths[i]);
+                promises.push(agaveIO.removeUsernameFromFilePermissions(username, serviceAccount.accessToken, paths[i]));
+            }
+            console.log("postloop");
+
+            return Q.all(promises);
+        })
+        .then(function() {
+            return agaveIO.getProjectFileMetadataPermissions(serviceAccount.accessToken, projectUuid);
+        })
+        .then(function(projectFileMetadataPermissions) {
+            var metadata = new MetadataPermissions();
+            var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
+
+            var promises = [];
+            for (var i = 0; i < uuids.length; i++) {
+                console.log("uuid is: " + uuids[i]);
+                promises.push(agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
             }
             console.log("postloop");
 

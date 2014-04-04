@@ -346,6 +346,31 @@ agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid)
     return deferred.promise;
 };
 
+agaveIO.removeUsernameFromMetadataPermissions = function(username, accessToken, uuid) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'DELETE',
+        path:     '/meta/v2/data/' + uuid + '/pems/' + username,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.getMetadataPermissions = function(accessToken, uuid) {
 
     var deferred = Q.defer();
@@ -532,6 +557,36 @@ agaveIO.addUsernameToLimitedFilePermissions = function(username, accessToken, fi
             deferred.resolve(responseObject.result);
         })
         .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, filePath) {
+
+    var deferred = Q.defer();
+
+    var postData = 'username=' + username + '&read=false&write=false&execute=false';
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/files/v2/pems/system/vdjIrods9/' + filePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            console.log("resolving filePem");
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            console.log("failing filePem");
             deferred.reject(errorObject);
         });
 
