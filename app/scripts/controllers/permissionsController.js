@@ -2,7 +2,7 @@
 'use strict';
 
 // Promises
-var Q = require('Q');
+var Q = require('q');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
