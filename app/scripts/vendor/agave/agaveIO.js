@@ -152,7 +152,7 @@ agaveIO.getToken = function(auth) {
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
 
-    var deferred = q.defer();
+    var deferred = Q.defer();
 
     var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.password;
 
