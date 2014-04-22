@@ -223,7 +223,7 @@ agaveIO.createUser = function(user) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/subscribers/v1/',
+        path:     '/profiles/v2/',
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
