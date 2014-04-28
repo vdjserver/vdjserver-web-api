@@ -20,6 +20,8 @@ ProjectController.createProject = function(request, response) {
     var projectName = request.body.projectName;
     var username    = request.body.username;
 
+    var serviceAccount = new ServiceAccount();
+
     var createdProjectPlaceholder;
 
     agaveIO.createProject(projectName)
@@ -28,16 +30,31 @@ ProjectController.createProject = function(request, response) {
             createdProjectPlaceholder = createdProject;
 
             var uuid = createdProject['uuid'];
-            var serviceAccount = new ServiceAccount();
 
             return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuid);
         })
-/*
- * create initial project dirs?
+        // create project directory
         .then(function() {
-        
+            var uuid = createdProjectPlaceholder['uuid'];
+            return agaveIO.createProjectDirectory(uuid);
         })
-*/
+        // set project directory permissions
+        .then(function() {
+            var uuid = createdProjectPlaceholder['uuid'];
+            //return agaveIO.createProjectDirectory(uuid);
+            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid);
+        })
+        // create project/files directory
+        .then(function() {
+            var uuid = createdProjectPlaceholder['uuid'];
+            return agaveIO.createProjectDirectory(uuid + '/files');
+        })
+        // set project/files directory permissions
+        .then(function() {
+            var uuid = createdProjectPlaceholder['uuid'];
+            //return agaveIO.createProjectDirectory(uuid);
+            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid + '/files');
+        })
         .then(function() {
             // End user should only see standard Agave meta output
             apiResponseController.sendSuccess(createdProjectPlaceholder, response);

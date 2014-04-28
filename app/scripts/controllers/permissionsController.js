@@ -24,69 +24,48 @@ module.exports = PermissionsController;
 // Intended to be used to make file pems match project metadata pems
 PermissionsController.syncFilePermissionsWithProject = function(request, response) {
 
-    console.log("calling syncFilePermissionsWithProject");
-
     var fileName    = request.body.fileName;
     var projectUuid = request.body.projectUuid;
-    var accessToken = request.auth.password;
 
     var filePath = projectUuid + '/files/' + fileName;
 
 
     var serviceAccount = new ServiceAccount();
 
-    // First, make sure serviceAccount has full pems
-    // Use the user's accessToken to set this since serviceAccount may not have full pems yet
-    agaveIO.addUsernameToFullFilePermissions(serviceAccount.username, accessToken, filePath)
-        // Next, fetch project metadata pems
-        .then(function() {
-            console.log("step 1 ok");
-            return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
-        })
+    /*
+       The service account should already have full pems thanks to iRods. 
+       So, go ahead and fetch project metadata pems
+    */
+    agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid)
         // Apply project pems to new file
         .then(function(projectPermissions) {
-            console.log("step 2 ok: " + JSON.stringify(projectPermissions));
 
             var filePermissions = new FilePermissions();
 
             var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-            /*
+            var promises = [];
             for (var i = 0; i < projectUsernames.length; i++) {
-                console.log("in loop. file path is: " + filePath);
-                console.log("in loop. username is: " + projectUsernames[i]);
-                console.log("in loop. token is: " + serviceAccount.accessToken);
-                var output = agaveIO.addUsernameToLimitedFilePermissions(projectUsernames[i], serviceAccount.accessToken, filePath);
+                promises.push(agaveIO.addUsernameToFullFilePermissions(projectUsernames[i], serviceAccount.accessToken, filePath));
+            }
 
-                console.log("output is: " + JSON.stringify(output));
-            };
-            */
-
-
-            return agaveIO.addUsernameToLimitedFilePermissions(projectUsernames[0], serviceAccount.accessToken, filePath);
-
+            return Q.all(promises);
         })
         // Get file pems listing to return to user
-        .then(function(filePermissions) {
-                console.log("output is: " + JSON.stringify(filePermissions));
-            console.log("step 3 ok");
+        .then(function() {
             return agaveIO.getFilePermissions(serviceAccount.accessToken, filePath);
         })
         // Finally send updated file pems back to user
         .then(function(updatedFilePermissions) {
-            console.log("step 4 ok: " + JSON.stringify(updatedFilePermissions));
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
-            console.log("epic fail");
             apiResponseController.sendError(error.message, response);
         });
 
 };
 
 PermissionsController.syncMetadataPermissionsWithProject = function(request, response) {
-
-    console.log("calling syncMetadataPermissionsWithProject");
 
     var uuid        = request.body.uuid;
     var projectUuid = request.body.projectUuid;
@@ -99,23 +78,21 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
     agaveIO.addUsernameToMetadataPermissions(serviceAccount.username, accessToken, uuid)
         // Next, fetch project metadata pems
         .then(function() {
-            console.log("check 1 ok");
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         // Apply project pems to new metadata
         .then(function(projectPermissions) {
-            console.log("permissions are: " + JSON.stringify(metadataPermissions))
 
             var metadataPermissions = new MetadataPermissions();
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
-            console.log("projUsernames are: " + JSON.stringify(projectUsernames));
 
+            var promises = [];
             for (var i = 0; i < projectUsernames.length; i++) {
-                agaveIO.addUsernameToMetadataPermissions(projectUsernames[i], serviceAccount.accessToken, uuid)
-            };
+                promises.push(agaveIO.addUsernameToMetadataPermissions(projectUsernames[i], serviceAccount.accessToken, uuid));
+            }
 
-            console.log("ending long function");
+            return Q.all(promises);
         })
         // Get fileMetadata pems listing to return to user
         .then(function() {
@@ -123,7 +100,6 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
         })
         // Finally send updated fileMetadata pems back to user
         .then(function(updatedFileMetadataPermissions) {
-            console.log("new fileMetadataPems are: " + updatedFileMetadataPermissions);
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
         .fail(function(error) {
@@ -133,8 +109,6 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 };
 
 PermissionsController.addPermissionsForUsername = function(request, response) {
-
-    console.log("calling addPermissionsForUsername");
 
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
@@ -154,12 +128,10 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
         // Add new username to project metadata pems
         .then(function() {
-            console.log("check 1");
             return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // Get file listing
         .then(function() {
-            console.log("check 2");
             return agaveIO.getFileListings(serviceAccount.accessToken, projectUuid);
         })
         // Add new username to file pems
@@ -169,13 +141,10 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             var paths = fileListings.getFilePaths(fileListingsResponse);
 
-            console.log("preloop");
             var promises = [];
             for (var i = 0; i < paths.length; i++) {
-                console.log("path is: " + paths[i]);
                 promises.push(agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, paths[i]));
             }
-            console.log("postloop");
 
             return Q.all(promises);
         })
@@ -188,10 +157,8 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             var promises = [];
             for (var i = 0; i < uuids.length; i++) {
-                console.log("uuid is: " + uuids[i]);
                 promises.push(agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
             }
-            console.log("postloop");
 
             return Q.all(promises);
         })
@@ -199,14 +166,11 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.log("calling fail");
             apiResponseController.sendError(error.message, response);
         });
 };
 
 PermissionsController.removePermissionsForUsername = function(request, response) {
-
-    console.log("calling removePermissionsForUsername");
 
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
@@ -226,12 +190,10 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
         // Add new username to project metadata pems
         .then(function() {
-            console.log("check 1");
             return agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // Get file listing
         .then(function() {
-            console.log("check 2");
             return agaveIO.getFileListings(serviceAccount.accessToken, projectUuid);
         })
         // Add new username to file pems
@@ -241,13 +203,10 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 
             var paths = fileListings.getFilePaths(fileListingsResponse);
 
-            console.log("preloop");
             var promises = [];
             for (var i = 0; i < paths.length; i++) {
-                console.log("path is: " + paths[i]);
                 promises.push(agaveIO.removeUsernameFromFilePermissions(username, serviceAccount.accessToken, paths[i]));
             }
-            console.log("postloop");
 
             return Q.all(promises);
         })
@@ -260,10 +219,8 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 
             var promises = [];
             for (var i = 0; i < uuids.length; i++) {
-                console.log("uuid is: " + uuids[i]);
                 promises.push(agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
             }
-            console.log("postloop");
 
             return Q.all(promises);
         })
@@ -271,7 +228,6 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.log("calling fail");
             apiResponseController.sendError(error.message, response);
         });
 };
