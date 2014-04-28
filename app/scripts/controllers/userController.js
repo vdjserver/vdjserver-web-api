@@ -10,6 +10,12 @@ var User = require('../models/user');
 // Processing
 var agaveIO = require('../vendor/agave/agaveIO');
 
+// Node Libraries
+var exec = require('child_process').exec;
+
+var Q = require('Q');
+
+
 var UserController = {};
 module.exports = UserController;
 
@@ -27,10 +33,21 @@ UserController.createUser = function(request, response) {
         affiliation: request.body.affiliation,
     });
 
-
     agaveIO.createUser(user.getCreateUserAttributes())
-        .then(function(createdUser) {
-            return agaveIO.getToken(createdUser);
+        .then(function() {
+            return exec(__dirname + '/../bash/create-irods-account.sh ' + user.username, function(error, stdout, stderr) {
+                console.log("script stderr is: " + stderr);
+                console.log("script stdout is: " + stdout);
+
+                if (error !== null) {
+                    return Q.reject(new Error('Account creation fail - iRods'));
+                }
+
+                return;
+            });
+        })
+        .then(function() {
+            return agaveIO.getToken(user);
         })
         .then(function(userToken) {
             return agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
