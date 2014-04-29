@@ -16,7 +16,9 @@ FileListing.prototype.getFilePaths = function(fileListings) {
 
     for (var i = 0; i < fileListings.length; i++) {
         if (fileListings[i].format !== 'folder') {
-            paths.push(fileListings[i].path);
+            var string = fileListings[i].path;
+            var split = string.split('/projects/');
+            paths.push(split[1]);
         }
     }
 
