@@ -8,6 +8,8 @@ module.exports = {
     // VDJ Service Account User
     serviceAccountKey: '',
     serviceAccountSecret: '',
-    serviceAccountToken: ''
+    serviceAccountToken: '',
 
+    // VDJ Backbone Location
+    vdjBackbone: 'https://vdj-dev.tacc.utexas.edu',
 };
