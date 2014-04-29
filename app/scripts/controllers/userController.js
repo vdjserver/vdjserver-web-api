@@ -13,7 +13,7 @@ var agaveIO = require('../vendor/agave/agaveIO');
 // Node Libraries
 var exec = require('child_process').exec;
 
-var Q = require('Q');
+var Q = require('q');
 
 
 var UserController = {};
