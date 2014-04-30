@@ -99,6 +99,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 deferred.resolve(responseObject);
             }
             else {
+                console.log('Agave returned an error. it is: ' + JSON.stringify(responseObject));
                 deferred.reject(new Error('Agave response returned an error'));
             }
 
@@ -152,6 +153,8 @@ agaveIO.getToken = function(auth) {
 
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
+
+    console.log("refreshToken auth is: " + JSON.stringify(auth));
 
     var deferred = Q.defer();
 
@@ -268,6 +271,33 @@ agaveIO.createUserProfile = function(user, userAccessToken) {
     };
 
     agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getUserProfile = function(username) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}'),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -605,6 +635,131 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
         headers: {
             'Content-Length': postData.length,
             'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createPasswordResetMetadata = function(username) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'passwordReset',
+        value: {
+            'username': username
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getPasswordResetMetadata = function(uuid) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"passwordReset", "uuid":"' + uuid + '", "owner":"' + serviceAccount.username + '"}'),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.deleteMetadata = function(uuid) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'DELETE',
+        path:     '/meta/v2/data/' + uuid,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.updateUserPassword = function(user) {
+
+    var deferred = Q.defer();
+
+    var postData = 'username='  + user.username
+                 + '&password=' + user.password
+                 + '&email='    + user.email;
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/profiles/v2/',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/x-www-form-urlencoded',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
         }
     };
 

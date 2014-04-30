@@ -6,6 +6,7 @@ var express = require('express');
 
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
+var passwordResetController = require('../controllers/passwordResetController');
 var permissionsController = require('../controllers/permissionsController');
 var projectController     = require('../controllers/projectController');
 var tokenController       = require('../controllers/tokenController');
@@ -46,6 +47,12 @@ module.exports = function(app) {
 
     // Create a user
     app.post('/user', userController.createUser);
+
+    // Initiate Password Reset
+    app.post('/user/reset-password', passwordResetController.createResetPasswordRequest);
+
+    // Verify Password Reset
+    app.post('/user/reset-password/verify', passwordResetController.processResetPasswordRequest);
 
     // Errors
     app.get('*', apiResponseController.send404);
