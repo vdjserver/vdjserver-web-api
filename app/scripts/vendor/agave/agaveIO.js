@@ -753,8 +753,8 @@ agaveIO.updateUserPassword = function(user) {
 
     var requestSettings = {
         host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/profiles/v2/',
+        method:   'PUT',
+        path:     '/profiles/v2/' + user.username + '/',
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
