@@ -17,12 +17,12 @@ module.exports = PasswordResetController;
 
 PasswordResetController.createResetPasswordRequest = function(request, response) {
 
-    var username = request.auth.username;
+    var username = request.body.username;
 
     // Generate random key by posting to metadata
     // Get email address from user profile
     // Send email
-    
+
     agaveIO.createPasswordResetMetadata(username)
         .then(function() {
             return agaveIO.getUserProfile(username);
@@ -51,8 +51,13 @@ PasswordResetController.processResetPasswordRequest = function(request, response
     // Reset password
     agaveIO.getPasswordResetMetadata(uuid)
         .then(function(passwordResetMetadata) {
-            if (username === passwordResetMetadata.value.username) {
-                return agaveIO.deleteMetadata(uuid);
+            if (username === passwordResetMetadata[0].value.username) {
+                /*
+                    while metadata is deleted, service returns 500 error;
+                    don't let this short-circuit the process
+                */
+                agaveIO.deleteMetadata(uuid);
+                /*return agaveIO.deleteMetadata(uuid);*/
             }
             else {
                 return Q.reject(new Error('Password reset fail. Uuid does not match.'));
@@ -70,5 +75,5 @@ PasswordResetController.processResetPasswordRequest = function(request, response
         .fail(function(error) {
             apiResponseController.sendError(error.message, response);
         });
-    
+
 };
