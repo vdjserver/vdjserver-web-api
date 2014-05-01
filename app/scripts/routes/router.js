@@ -48,6 +48,9 @@ module.exports = function(app) {
     // Create a user
     app.post('/user', userController.createUser);
 
+    // User change password
+    app.post('/user/change-password', noValidation, userController.changePassword);
+
     // Initiate Password Reset
     app.post('/user/reset-password', passwordResetController.createResetPasswordRequest);
 

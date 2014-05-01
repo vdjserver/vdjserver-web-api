@@ -60,3 +60,31 @@ UserController.createUser = function(request, response) {
         });
 
 };
+
+UserController.changePassword = function(request, response) {
+    var username = request.auth.username,
+        newPassword = request.body.newPassword;
+
+    // 1.  Get user profile
+    // 2.  Reset password
+    // 3.  Response
+    // 3a. Success
+    // 3b. Fail
+    agaveIO.getUserProfile(username) // 1.
+        .then(function(profile) {
+            if (profile && profile[0] && profile[0].value && profile[0].value.email) {
+                return agaveIO.updateUserPassword({ // 2.
+                    'username': username,
+                    'email': profile[0].value.email,
+                    'password': newPassword});
+            } else {
+                return Q.reject(new Error('Password change fail. User profile not found.'));
+            }
+        })
+        .then(function() {
+            apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
+        })
+        .fail(function(error) {
+            apiResponseController.sendError(error.message, response); // 3b.
+        });
+};
