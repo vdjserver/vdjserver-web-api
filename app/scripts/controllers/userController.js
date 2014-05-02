@@ -63,14 +63,21 @@ UserController.createUser = function(request, response) {
 
 UserController.changePassword = function(request, response) {
     var username = request.auth.username,
+        password = request.body.password,
         newPassword = request.body.newPassword;
 
+    // 0.  Verify old password
     // 1.  Get user profile
     // 2.  Reset password
     // 3.  Response
     // 3a. Success
     // 3b. Fail
-    agaveIO.getUserProfile(username) // 1.
+    var auth = {username: username, password: password};
+    agaveIO.getToken(auth) // 0.
+        .then(function(token) {
+            // current password verified
+            return agaveIO.getUserProfile(username) // 1.
+        })
         .then(function(profile) {
             if (profile && profile[0] && profile[0].value && profile[0].value.email) {
                 return agaveIO.updateUserPassword({ // 2.
