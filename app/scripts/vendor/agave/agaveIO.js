@@ -44,6 +44,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
                 responseObject = JSON.parse(output);
             }
             else {
+                console.log('Agave response is not json.');
                 deferred.reject(new Error('Agave response is not json'));
             }
 
@@ -52,6 +53,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
             }
             else {
                 console.log('Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                console.log('Agave returned an error. it is: ' + responseObject);
                 deferred.reject(new Error('Agave response returned an error.'));
             }
 
@@ -59,6 +61,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
     });
 
     request.on('error', function() {
+        console.log('Agave connection error.');
         deferred.reject(new Error('Agave connection error'));
     });
 
@@ -153,8 +156,6 @@ agaveIO.getToken = function(auth) {
 
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
-
-    console.log("refreshToken auth is: " + JSON.stringify(auth));
 
     var deferred = Q.defer();
 
@@ -567,7 +568,12 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
 
     var deferred = Q.defer();
 
-    var postData = 'username=' + username + '&all=true&recursive=true';
+    var postData = {
+        'username': username,
+        'permission': 'ALL',
+    };
+
+    postData = JSON.stringify(postData);
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -575,8 +581,9 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
         path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
+            'Content-Type': 'application/json',
             'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + accessToken
+            'Authorization': 'Bearer ' + accessToken,
         }
     };
 
@@ -625,7 +632,13 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
 
     var deferred = Q.defer();
 
-    var postData = 'username=' + username + '&read=false&write=false&execute=false';
+    //var postData = 'username=' + username + '&read=false&write=false&execute=false';
+    var postData = {
+        'username': username,
+        'permission': 'NONE',
+    };
+
+    postData = JSON.stringify(postData);
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -633,9 +646,10 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
         path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
+            'Content-Type': 'application/json',
             'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + accessToken
-        }
+            'Authorization': 'Bearer ' + accessToken,
+        },
     };
 
     agaveIO.sendRequest(requestSettings, postData)
