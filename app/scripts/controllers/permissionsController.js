@@ -119,6 +119,8 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
     // add to projectPems
     // get file listing
     // (loop) add to file pems
+    // add to files directory
+    // add to analyses directory
     // get file metadata pems
     // (loop) add to file metadata pems
 
@@ -147,6 +149,14 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             }
 
             return Q.all(promises);
+        })
+        // set project/files directory permissions
+        .then(function() {
+            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, projectUuid + '/files');
+        })
+        // set project/analyses directory permissions
+        .then(function() {
+            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, projectUuid + '/analyses');
         })
         .then(function() {
             return agaveIO.getProjectFileMetadataPermissions(serviceAccount.accessToken, projectUuid);
@@ -182,6 +192,8 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     // remove from projectPems
     // get file listing
     // (loop) remove from file pems
+    // remove from files directory
+    // remove from analyses directory
     // get file metadata pems
     // (loop) remove from file metadata pems
 
@@ -196,7 +208,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
         .then(function() {
             return agaveIO.getFileListings(serviceAccount.accessToken, projectUuid);
         })
-        // Add new username to file pems
+        // Remove new username to file pems
         .then(function(fileListingsResponse) {
 
             var fileListings = new FileListing();
