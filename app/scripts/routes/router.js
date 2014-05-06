@@ -1,9 +1,6 @@
 
 'use strict';
 
-// App
-var express = require('express');
-
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
 var passwordResetController = require('../controllers/passwordResetController');
@@ -12,54 +9,107 @@ var projectController     = require('../controllers/projectController');
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
 
+// Passport
+var passport      = require('passport');
+var BasicStrategy = require('passport-http').BasicStrategy;
+
+passport.use(new BasicStrategy(
+    function(userKey, userSecret, next) {
+        return next(null, {username: userKey, password: userSecret});
+    }
+));
+
 module.exports = function(app) {
 
-    // noValidation
-    var noValidation = express.basicAuth(function(userKey, userSecret, next) {
-        next(null, userKey, userSecret);
-    });
-
-    app.get('/', apiResponseController.confirmUpStatus);
+    app.get(
+        '/',
+        apiResponseController.confirmUpStatus
+    );
 
     // Create a project
-    app.post('/projects', projectController.createProject);
+    app.post(
+        '/projects',
+        projectController.createProject
+    );
 
     // Update file permissions
-    app.post('/permissions/files', noValidation, permissionsController.syncFilePermissionsWithProject);
+    app.post(
+        '/permissions/files',
+        passport.authenticate('basic', { session: false }),
+        permissionsController.syncFilePermissionsWithProject
+    );
 
     // Update metadata permissions
-    app.post('/permissions/metadata', noValidation, permissionsController.syncMetadataPermissionsWithProject);
+    app.post(
+        '/permissions/metadata',
+        passport.authenticate('basic', { session: false }),
+        permissionsController.syncMetadataPermissionsWithProject
+    );
 
     // Add permissions for new user
-    app.post('/permissions/username', noValidation, permissionsController.addPermissionsForUsername);
+    app.post(
+        '/permissions/username',
+        passport.authenticate('basic', { session: false }),
+        permissionsController.addPermissionsForUsername
+    );
 
     // Remove all permissions for user
-    app.delete('/permissions/username', noValidation, permissionsController.removePermissionsForUsername);
+    app.delete(
+        '/permissions/username',
+        passport.authenticate('basic', { session: false }),
+        permissionsController.removePermissionsForUsername
+    );
 
     // Request an Agave internalUsername token
-    app.post('/token', noValidation, tokenController.getToken);
+    app.post(
+        '/token',
+        passport.authenticate('basic', { session: false }),
+        tokenController.getToken
+    );
 
     // Refresh an Agave internalUsername token
-    app.put('/token/*', noValidation, tokenController.refreshToken);
+    app.put(
+        '/token/*',
+        passport.authenticate('basic', { session: false }),
+        tokenController.refreshToken
+    );
 
     // Delete an Agave internalUsername token
-    app.delete('/token/*', noValidation, tokenController.deleteToken);
+    app.delete(
+        '/token/*',
+        passport.authenticate('basic', { session: false }),
+        tokenController.deleteToken
+    );
 
     // Create a user
-    app.post('/user', userController.createUser);
+    app.post(
+        '/user',
+        userController.createUser
+    );
 
     // User change password
-    app.post('/user/change-password', noValidation, userController.changePassword);
+    app.post(
+        '/user/change-password',
+        passport.authenticate('basic', { session: false }),
+        userController.changePassword
+    );
 
     // Initiate Password Reset
-    app.post('/user/reset-password', passwordResetController.createResetPasswordRequest);
+    app.post(
+        '/user/reset-password',
+        passwordResetController.createResetPasswordRequest
+    );
 
     // Verify Password Reset
-    app.post('/user/reset-password/verify', passwordResetController.processResetPasswordRequest);
+    app.post(
+        '/user/reset-password/verify',
+        passwordResetController.processResetPasswordRequest
+    );
 
     // Errors
-    app.get('*', apiResponseController.send404);
-    app.post('*', apiResponseController.send404);
-    app.put('*', apiResponseController.send404);
-    app.delete('*', apiResponseController.send404);
+    app.route('*')
+        .get(apiResponseController.send404)
+        .post(apiResponseController.send404)
+        .put(apiResponseController.send404)
+        .delete(apiResponseController.send404);
 };

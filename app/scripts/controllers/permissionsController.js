@@ -68,7 +68,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 
     var uuid        = request.body.uuid;
     var projectUuid = request.body.projectUuid;
-    var accessToken = request.auth.password;
+    var accessToken = request.user.password;
 
     var serviceAccount = new ServiceAccount();
 
@@ -111,7 +111,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
-    var accessToken = request.auth.password;
+    var accessToken = request.user.password;
 
     var serviceAccount = new ServiceAccount();
 
@@ -184,7 +184,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
-    var accessToken = request.auth.password;
+    var accessToken = request.user.password;
 
     var serviceAccount = new ServiceAccount();
 

@@ -14,7 +14,7 @@ module.exports = TokenController;
 // Retrieves a new user token from Agave and returns it to the client
 TokenController.getToken = function(request, response) {
 
-    agaveIO.getToken(request.auth)
+    agaveIO.getToken(request.user)
         .then(function(agaveToken) {
             apiResponseController.sendSuccess(agaveToken, response);
         }, function(error) {
@@ -26,7 +26,7 @@ TokenController.getToken = function(request, response) {
 // Refreshes a user token from Agave and returns it to the client
 TokenController.refreshToken = function(request, response) {
 
-    agaveIO.refreshToken(request.auth)
+    agaveIO.refreshToken(request.user)
         .then(function(agaveToken) {
             apiResponseController.sendSuccess(agaveToken, response);
         }, function(error) {
@@ -38,7 +38,7 @@ TokenController.refreshToken = function(request, response) {
 // Deletes a user token from Agave and returns it to the client
 TokenController.deleteToken = function(request, response) {
 
-    agaveIO.deleteToken(request.auth)
+    agaveIO.deleteToken(request.user)
         .then(function(agaveToken) {
             apiResponseController.sendSuccess(agaveToken, response);
         }, function(error) {

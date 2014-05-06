@@ -62,7 +62,7 @@ UserController.createUser = function(request, response) {
 };
 
 UserController.changePassword = function(request, response) {
-    var username = request.auth.username,
+    var username = request.user.username,
         password = request.body.password,
         newPassword = request.body.newPassword;
 

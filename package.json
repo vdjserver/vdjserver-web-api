@@ -21,17 +21,22 @@
   },
   "private": true,
   "dependencies": {
-    "express": "3.5.x",
-    "moment": "2.5.x",
+    "body-parser": "1.0.x",
+    "errorhandler": "1.0.x",
+    "express": "4.1.x",
+    "moment": "2.6.x",
+    "morgan": "1.0.x",
+    "passport": "0.2.x",
+    "passport-http": "0.2.x",
     "q": "1.0.x",
     "underscore": "1.6.x",
-    "nodemailer": "^0.6.3"
+    "nodemailer": "0.6.x"
   },
   "devDependencies": {
     "mocha": "1.18.x",
-    "nock": "0.27.x",
+    "nock": "0.29.x",
     "request": "2.34.x",
-    "should": "3.1.x",
+    "should": "3.3.x",
     "sinon": "1.9.x"
   },
   "scripts": {
