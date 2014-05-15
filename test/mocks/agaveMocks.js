@@ -1,4 +1,6 @@
 
+'use strict';
+
 // Settings
 var agaveSettings = require('../../app/scripts/config/agaveSettings');
 
@@ -14,7 +16,7 @@ module.exports = AgaveMocks;
 // getToken
 AgaveMocks.getToken = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .post(agaveSettings.authEndpoint, 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
+        .post('/token', 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
         .reply(200, JSON.stringify(agaveResponseFixture.success))
     ;
 
@@ -23,7 +25,7 @@ AgaveMocks.getToken = function(nock) {
 
 AgaveMocks.getTokenError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .post(agaveSettings.authEndpoint)
+        .post('/token')
         .reply(401)
     ;
 
