@@ -3,6 +3,7 @@
 
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
+var notificationsController = require('../controllers/notificationsController');
 var passwordResetController = require('../controllers/passwordResetController');
 var permissionsController = require('../controllers/permissionsController');
 var projectController     = require('../controllers/projectController');
@@ -104,6 +105,12 @@ module.exports = function(app) {
     app.post(
         '/user/reset-password/verify',
         passwordResetController.processResetPasswordRequest
+    );
+
+    // Process Job Create Notification
+    app.post(
+        '/notifications/jobs',
+        notificationsController.processJobCreatedNotification
     );
 
     // Errors

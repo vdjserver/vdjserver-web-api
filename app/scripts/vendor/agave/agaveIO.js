@@ -787,3 +787,42 @@ agaveIO.updateUserPassword = function(user) {
 
     return deferred.promise;
 };
+
+agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'projectJob',
+        value: {
+            projectUuid: projectUuid,
+            jobUuid: jobUuid,
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization':  'Bearer ' + serviceAccount.accessToken
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
