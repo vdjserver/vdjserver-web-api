@@ -12,5 +12,5 @@ AgaveResponseFixture.success = {
     refresh_token: AgaveResponseFixture.refreshToken,
     access_token:  AgaveResponseFixture.accessToken,
     token_type:    AgaveResponseFixture.tokenType,
-    expires_in:    AgaveResponseFixture.expiresIn
+    expires_in:    AgaveResponseFixture.expiresIn,
 };

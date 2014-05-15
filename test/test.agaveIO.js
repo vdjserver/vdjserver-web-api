@@ -29,7 +29,7 @@ describe('agaveIO token functions', function() {
 
         agaveMocks.getToken(nock);
 
-        agaveIO.getToken(agaveRequestFixture.auth)
+        agaveIO.getToken(agaveRequestFixture.passwordAuth)
             .then(function(data) {
                 //console.log('data is: ' + JSON.stringify(data));
 
@@ -47,7 +47,35 @@ describe('agaveIO token functions', function() {
 
         agaveMocks.getTokenError(nock);
 
-        agaveIO.getToken(agaveRequestFixture.auth)
+        agaveIO.getToken(agaveRequestFixture.passwordAuth)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should refresh an Agave Token', function(done) {
+
+        agaveMocks.refreshToken(nock);
+
+        agaveIO.refreshToken(agaveRequestFixture.refreshTokenAuth)
+            .then(function(data) {
+                //console.log('data is: ' + JSON.stringify(data));
+
+                data.token_type.should.equal(agaveResponseFixture.tokenType);
+                data.expires_in.should.equal(agaveResponseFixture.expiresIn);
+                data.refresh_token.should.equal(agaveResponseFixture.refreshToken);
+                data.access_token.should.equal(agaveResponseFixture.accessToken);
+
+                done();
+            });
+
+    });
+
+    it('should fail a promise when unable to refresh an Agave Token', function(done) {
+
+        agaveMocks.refreshTokenError(nock);
+
+        agaveIO.refreshToken(agaveRequestFixture.refreshTokenAuth)
             .fail(function() {
                 done();
             });

@@ -32,13 +32,12 @@ AgaveMocks.getTokenError = function(nock) {
     return nock;
 };
 
-/*
 
 // refreshToken
 AgaveMocks.refreshToken = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .post(agaveSettings.authEndpoint, 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + agaveResponseFixture.refreshToken)
-        .reply(200, agaveResponseFixture.vdjResponse)
+        .post('/token', 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + agaveRequestFixture.refreshToken)
+        .reply(200, agaveResponseFixture.success)
     ;
 
     return nock;
@@ -46,10 +45,9 @@ AgaveMocks.refreshToken = function(nock) {
 
 AgaveMocks.refreshTokenError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .post(agaveSettings.authEndpoint)
+        .post('/token')
         .reply(401)
     ;
 
     return nock;
 };
-*/
