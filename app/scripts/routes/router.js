@@ -3,6 +3,7 @@
 
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
+var jobsController        = require('../controllers/jobsController');
 var notificationsController = require('../controllers/notificationsController');
 var passwordResetController = require('../controllers/passwordResetController');
 var permissionsController = require('../controllers/permissionsController');
@@ -111,6 +112,13 @@ module.exports = function(app) {
     app.post(
         '/notifications/jobs',
         notificationsController.processJobCreatedNotification
+    );
+        
+    // Create Job Metadata
+    app.post(
+        '/jobs/metadata',
+        passport.authenticate('basic', { session: false }),
+        jobsController.createJobMetadata
     );
 
     // Errors
