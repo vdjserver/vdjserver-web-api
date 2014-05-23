@@ -40,7 +40,7 @@ node app/scripts/app
 
 
 #### Documentation:
-Documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/document/d/1rg7AsLZEY_Kt73BAkOIPauN7v40CzAhjEOKv0loQKj8/edit](https://docs.google.com/a/tacc.utexas.edu/document/d/1rg7AsLZEY_Kt73BAkOIPauN7v40CzAhjEOKv0loQKj8/edit).
+Documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0](https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0).
 
 Documentation on Agave v2 is available at: [http://agaveapi.co/live-docs/](http://agaveapi.co/live-docs/).
 
@@ -51,5 +51,4 @@ Unit tests use the mocha testing framework. They can be run with the commands 'm
 Note: If you want to be able to run integration tests, then make sure that test internal user credentials have been added to app/config/agaveSettings.js.
 
 #### TODO:
-https://collab.tacc.utexas.edu/projects/vdjserver/issues
-
+Project Tickets/Issues are available at: [https://trello.com/b/xTS13xH7/vdj-server](https://trello.com/b/xTS13xH7/vdj-server).
