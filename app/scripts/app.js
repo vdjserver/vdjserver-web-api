@@ -40,7 +40,12 @@ app.use(passport.initialize());
 
 // Server
 var env = process.env.NODE_ENV || 'development';
-if (env === 'development') {
+if (env === 'test') {
+    require('http').createServer(app).listen(8442, function() {
+        console.log('Express Test HTTP server listening on port ' + app.get('port'));
+    });
+}
+else if (env === 'development') {
     app.use(errorHandler({
         dumpExceptions: true,
         showStack: true,

@@ -35,6 +35,7 @@ TokenController.refreshToken = function(request, response) {
 
 };
 
+/*
 // Deletes a user token from Agave and returns it to the client
 TokenController.deleteToken = function(request, response) {
 
@@ -46,3 +47,4 @@ TokenController.deleteToken = function(request, response) {
         });
 
 };
+*/

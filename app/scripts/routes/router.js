@@ -71,17 +71,19 @@ module.exports = function(app) {
 
     // Refresh an Agave internalUsername token
     app.put(
-        '/token/*',
+        '/token',
         passport.authenticate('basic', { session: false }),
         tokenController.refreshToken
     );
 
     // Delete an Agave internalUsername token
+    /*
     app.delete(
-        '/token/*',
+        '/token',
         passport.authenticate('basic', { session: false }),
         tokenController.deleteToken
     );
+    */
 
     // Create a user
     app.post(
@@ -113,7 +115,7 @@ module.exports = function(app) {
         '/notifications/jobs',
         notificationsController.processJobCreatedNotification
     );
-        
+
     // Create Job Metadata
     app.post(
         '/jobs/metadata',

@@ -5,7 +5,7 @@
 var ApiResponse = require('../app/scripts/models/apiResponse');
 
 // Testing
-var should = require('should');
+var chai = require('chai').should();
 
 
 describe('apiResponse model functions', function() {

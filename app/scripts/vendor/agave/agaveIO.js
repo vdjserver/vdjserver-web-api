@@ -95,6 +95,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 responseObject = JSON.parse(output);
             }
             else {
+                console.log('Agave token response is not json.');
                 deferred.reject(new Error('Agave response is not json'));
             }
 
@@ -102,7 +103,8 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 deferred.resolve(responseObject);
             }
             else {
-                console.log('Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                console.log('Agave returned a token error. it is: ' + JSON.stringify(responseObject));
+                console.log('Agave returned a token error. it is: ' + responseObject);
                 deferred.reject(new Error('Agave response returned an error'));
             }
 
@@ -110,6 +112,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
     });
 
     request.on('error', function() {
+        console.log('Agave token connection error.');
         deferred.reject(new Error('Agave connection error'));
     });
 
@@ -184,6 +187,7 @@ agaveIO.refreshToken = function(auth) {
     return deferred.promise;
 };
 
+/*
 // Deletes a token
 agaveIO.deleteToken = function(auth) {
 
@@ -213,6 +217,7 @@ agaveIO.deleteToken = function(auth) {
 
     return deferred.promise;
 };
+*/
 
 // Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.createUser = function(user) {
@@ -361,7 +366,6 @@ agaveIO.createProjectDirectory = function(directory) {
         path:     '/files/v2/media/system/data.vdjserver.org//projects/',
         rejectUnauthorized: false,
         headers: {
-            //'Content-Type':   'application/json',
             'Content-Length': postData.length,
             'Authorization': 'Bearer ' + serviceAccount.accessToken,
         }
@@ -384,17 +388,14 @@ agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid)
 
     var postData = 'username=' + username + '&permission=READ_WRITE';
 
-    //postData = JSON.stringify(postData);
-
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
         path:     '/meta/v2/data/' + uuid + '/pems',
         rejectUnauthorized: false,
         headers: {
-            //'Content-Type':   'application/json',
             'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + accessToken
+            'Authorization': 'Bearer ' + accessToken,
         }
     };
 
@@ -488,32 +489,6 @@ agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
-/*
-agaveIO.
-    var deferred = Q.defer();
-
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/meta/v2/data/' + uuid + '/pems',
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
-};
-*/
-
 agaveIO.getFilePermissions = function(accessToken, filePath) {
 
     var deferred = Q.defer();
@@ -597,37 +572,7 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
 
     return deferred.promise;
 };
-/*
-agaveIO.addUsernameToLimitedFilePermissions = function(username, accessToken, filePath) {
 
-    var deferred = Q.defer();
-
-    console.log("opening limitedFilePem. username is: " + username + " and accessToken is: " + accessToken + " and filePath is: " + filePath);
-
-    var postData = 'username=' + username + '&read=true&execute=true&recursive=true';
-
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
-};
-*/
 agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, filePath) {
 
     var deferred = Q.defer();

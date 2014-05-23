@@ -1,6 +1,5 @@
 test:
-	@./node_modules/.bin/mocha --ui tdd --reporter spec \
-		--require should \
+	@NODE_ENV=test ./node_modules/.bin/mocha \
 		--ui bdd \
 		--reporter spec \
 		--timeout 6s
