@@ -15,6 +15,8 @@ AgaveRequestFixture.state     = 'CA';
 
 AgaveRequestFixture.projectName = 'Fancy Project';
 AgaveRequestFixture.projectUuid = '0001400789295301-5056a550b8-0001-012';
+AgaveRequestFixture.metadataUuid = '0001400789292222-5056a550b8-0001-222';
+AgaveRequestFixture.jobId = '5056a550b834392Ab343';
 
 AgaveRequestFixture.passwordAuth = {
     username: AgaveRequestFixture.username,
@@ -57,3 +59,5 @@ AgaveRequestFixture.createProject = {
         name: 'Fancy Project',
     },
 };
+
+AgaveRequestFixture.filePath = '123123123/myFile.fastq';

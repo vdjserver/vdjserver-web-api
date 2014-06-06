@@ -191,3 +191,128 @@ AgaveMocks.getProjectFileMetadataPermissions = function(nock) {
 
     return nock;
 };
+
+AgaveMocks.getFilePermissions = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
+        .get('/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath)
+        .reply(200, agaveResponseFixture.getFilePermissionsSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.getFileListings = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
+        .get('/files/v2/listings/system/data.vdjserver.org//projects/' + agaveRequestFixture.projectUuid + '/files')
+        .reply(200, agaveResponseFixture.getFileListingsSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.addUsernameToFullFilePermissions = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
+        .post(
+            '/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath,
+            {
+                username: agaveRequestFixture.username,
+                'permission':'ALL'
+            }
+        )
+        .reply(200, agaveResponseFixture.addUsernameToFullFilePermissionsSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.removeUsernameFromFilePermissions = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
+        .post(
+            '/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath,
+            {
+                username: agaveRequestFixture.username,
+                'permission':'NONE'
+            }
+        )
+        .reply(200, agaveResponseFixture.removeUsernameFromFilePermissionsSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.createPasswordResetMetadata = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .post(
+            '/meta/v2/data',
+            {
+                name: 'passwordReset',
+                value: {
+                    username: agaveRequestFixture.username,
+                },
+            }
+        )
+        .reply(200, agaveResponseFixture.removeUsernameFromFilePermissionsSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.getPasswordResetMetadata = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .get('/meta/v2/data?q=' + encodeURIComponent('{"name":"passwordReset", "uuid":"' + agaveRequestFixture.metadataUuid + '", "owner":"' + agaveSettings.serviceAccountKey + '"}'))
+        .reply(200, agaveResponseFixture.getPasswordResetMetadataSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.deleteMetadata = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .delete('/meta/v2/data/' + agaveRequestFixture.metadataUuid)
+        .reply(200, agaveResponseFixture.deleteMetadataSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.updateUserPassword = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        //.matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .put(
+            '/profiles/v2/' + agaveRequestFixture.createUser.username + '/',
+
+            'username=' + agaveRequestFixture.createUser.username
+                        + '&password=' + agaveRequestFixture.createUser.password
+                        + '&email=' + agaveRequestFixture.createUser.email
+        )
+        .reply(200, agaveResponseFixture.updateUserPasswordSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.createJobMetadata = function(nock) {
+    nock('https://' + agaveSettings.hostname)
+        .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .post(
+            '/meta/v2/data',
+            {
+                name: 'projectJob',
+                value: {
+                    projectUuid: agaveRequestFixture.projectUuid,
+                    jobUuid: agaveRequestFixture.jobId,
+                },
+            }
+        )
+        .reply(200, agaveResponseFixture.createJobMetadataSuccess)
+    ;
+
+    return nock;
+};

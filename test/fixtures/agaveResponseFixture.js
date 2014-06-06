@@ -289,3 +289,84 @@ AgaveResponseFixture.getProjectFileMetadataPermissionsSuccess = {
         }
     ]
 };
+
+AgaveResponseFixture.getFilePermissionsSuccess = {
+    'message': null,
+    'result': [
+        {
+            'name': 'myFile.fastq',
+            'owner': 'wscarbor',
+            'permissions': [
+                {
+                    'username': 'wscarbor',
+                    'permission': {
+                        'execute': true,
+                        'read': true,
+                        'write': true
+                    }
+                }
+            ]
+        }
+    ],
+    'status': 'success'
+};
+
+AgaveResponseFixture.getFileListingsSuccess = {
+    'message': null,
+    'result': [
+        {
+            'format': 'string',
+            'lastModified': 'string',
+            'length': 'integer',
+            'mimeType': 'string',
+            'name': 'string',
+            'path': 'string',
+            'permissions': 'string',
+            'system': 'string',
+            'type': 'string'
+        }
+    ],
+    'status': 'success'
+};
+
+AgaveResponseFixture.addUsernameToFullFilePermissionsSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.removeUsernameFromFilePermissionsSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.createPasswordResetMetadataSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.getPasswordResetMetadataSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.deleteMetadataSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.updateUserPasswordSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};
+
+AgaveResponseFixture.createJobMetadataSuccess = {
+    'message': null,
+    'result': 'string',
+    'status': 'success'
+};

@@ -256,5 +256,193 @@ describe('agaveIO token functions', function() {
             });
     });
 
+    it('should fulfill a promise to get file permissions', function(done) {
+
+        agaveMocks.getFilePermissions(nock);
+
+        agaveIO.getFilePermissions(agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.getFilePermissionsSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to get file permissions', function(done) {
+
+        agaveMocks.genericGetError(nock);
+
+        agaveIO.getFilePermissions(agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to get file listings', function(done) {
+
+        agaveMocks.getFileListings(nock);
+
+        agaveIO.getFileListings(agaveRequestFixture.accessToken, agaveRequestFixture.projectUuid)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.getFileListingsSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to get file listings', function(done) {
+
+        agaveMocks.genericGetError(nock);
+
+        agaveIO.getFileListings(agaveRequestFixture.accessToken, agaveRequestFixture.projectUuid)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to give a user file permissions', function(done) {
+
+        agaveMocks.addUsernameToFullFilePermissions(nock);
+
+        agaveIO.addUsernameToFullFilePermissions(agaveRequestFixture.username, agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.addUsernameToFullFilePermissionsSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to give a user file permissions', function(done) {
+
+        agaveMocks.genericPostError(nock);
+
+        agaveIO.addUsernameToFullFilePermissions(agaveRequestFixture.username, agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to remove a user from file permissions', function(done) {
+
+        agaveMocks.removeUsernameFromFilePermissions(nock);
+
+        agaveIO.removeUsernameFromFilePermissions(agaveRequestFixture.username, agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.removeUsernameFromFilePermissionsSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to give a user file permissions', function(done) {
+
+        agaveMocks.genericPostError(nock);
+
+        agaveIO.removeUsernameFromFilePermissions(agaveRequestFixture.username, agaveRequestFixture.accessToken, agaveRequestFixture.filePath)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to create password reset metadata', function(done) {
+
+        agaveMocks.createPasswordResetMetadata(nock);
+
+        agaveIO.createPasswordResetMetadata(agaveRequestFixture.username)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.createPasswordResetMetadataSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to give a user file permissions', function(done) {
+
+        agaveMocks.genericPostError(nock);
+
+        agaveIO.createPasswordResetMetadata(agaveRequestFixture.username)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to get password reset metadata', function(done) {
+
+        agaveMocks.getPasswordResetMetadata(nock);
+
+        agaveIO.getPasswordResetMetadata(agaveRequestFixture.metadataUuid)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.getPasswordResetMetadataSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to create password reset metadata', function(done) {
+
+        agaveMocks.genericGetError(nock);
+
+        agaveIO.getPasswordResetMetadata(agaveRequestFixture.metadataUuid)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to delete metadata', function(done) {
+
+        agaveMocks.deleteMetadata(nock);
+
+        agaveIO.deleteMetadata(agaveRequestFixture.metadataUuid)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.deleteMetadataSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to create password reset metadata', function(done) {
+
+        agaveMocks.genericDeleteError(nock);
+
+        agaveIO.deleteMetadata(agaveRequestFixture.metadataUuid)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to update a user password', function(done) {
+
+        agaveMocks.updateUserPassword(nock);
+
+        agaveIO.updateUserPassword(agaveRequestFixture.createUser)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.updateUserPasswordSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to update a user password', function(done) {
+
+        agaveMocks.genericPutError(nock);
+
+        agaveIO.updateUserPassword(agaveRequestFixture.createUser)
+            .fail(function() {
+                done();
+            });
+    });
+
+    it('should fulfill a promise to create job metadata', function(done) {
+
+        agaveMocks.createJobMetadata(nock);
+
+        agaveIO.createJobMetadata(agaveRequestFixture.projectUuid, agaveRequestFixture.jobId)
+            .then(function(data) {
+                data.should.eql(agaveResponseFixture.updateUserPasswordSuccess.result);
+                done();
+            });
+    });
+
+    it('should fail a promise when unable to create job metadata', function(done) {
+
+        agaveMocks.genericPostError(nock);
+
+        agaveIO.createJobMetadata(agaveRequestFixture.projectUuid, agaveRequestFixture.jobId)
+            .fail(function() {
+                done();
+            });
+    });
 
 });
