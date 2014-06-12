@@ -25,7 +25,7 @@ describe('agaveIO token functions', function() {
         done();
     });
 
-    it('should fulfill a promiset to get a new Agave Token', function(done) {
+    it('should fulfill a promise to get a new Agave Token', function(done) {
 
         agaveMocks.getToken(nock);
 
