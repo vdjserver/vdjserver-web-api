@@ -112,8 +112,8 @@ module.exports = function(app) {
 
     // Process Job Create Notification
     app.post(
-        '/notifications/jobs',
-        notificationsController.processJobCreatedNotification
+        '/notifications/jobs/:jobId',
+        notificationsController.processJobNotifications
     );
 
     // Create Job Metadata

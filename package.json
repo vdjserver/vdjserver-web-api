@@ -26,11 +26,12 @@
     "express": "4.3.x",
     "moment": "2.6.x",
     "morgan": "1.1.x",
+    "nodemailer": "0.6.x",
     "passport": "0.2.x",
     "passport-http": "0.2.x",
     "q": "1.0.x",
-    "underscore": "1.6.x",
-    "nodemailer": "0.6.x"
+    "socket.io": "1.0.x",
+    "underscore": "1.6.x"
   },
   "devDependencies": {
     "chai": "1.9.x",

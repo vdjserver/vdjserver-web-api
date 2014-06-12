@@ -7,7 +7,7 @@ var morgan       = require('morgan');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
 var passport     = require('passport');
-var app          = express();
+var app          = module.exports = express();
 
 // Server Options
 var config = require('./config/config');
@@ -41,7 +41,7 @@ app.use(passport.initialize());
 // Server
 var env = process.env.NODE_ENV || 'development';
 if (env === 'test') {
-    require('http').createServer(app).listen(8442, function() {
+    app.server = require('http').createServer(app).listen(8442, function() {
         console.log('Express Test HTTP server listening on port ' + app.get('port'));
     });
 }
@@ -51,17 +51,20 @@ else if (env === 'development') {
         showStack: true,
     }));
 
-    require('http').createServer(app).listen(app.get('port'), function() {
+    app.server = require('http').createServer(app).listen(app.get('port'), function() {
         console.log('Express Dev HTTP server listening on port ' + app.get('port'));
     });
 }
 else if (env === 'production') {
     app.use(errorHandler());
 
-    require('https').createServer(app.get('sslOptions'), app).listen(app.get('port'), function() {
+    app.server = require('https').createServer(app.get('sslOptions'), app).listen(app.get('port'), function() {
         console.log('Express Prod HTTPS server listening on port ' + app.get('port'));
     });
 }
 
 // Router
 require('./routes/router')(app);
+
+// WebsocketIO
+require('./controllers/websocketController');
