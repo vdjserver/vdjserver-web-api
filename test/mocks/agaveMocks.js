@@ -126,12 +126,12 @@ AgaveMocks.getUserProfile = function(nock) {
     return nock;
 };
 
-AgaveMocks.createProject = function(nock) {
+AgaveMocks.createProjectMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
         .matchHeader('Content-Type', 'application/json')
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
-        .post('/meta/v2/data', agaveRequestFixture.createProject)
-        .reply(200, agaveResponseFixture.createProjectSuccess)
+        .post('/meta/v2/data', agaveRequestFixture.createProjectMetadata)
+        .reply(200, agaveResponseFixture.createProjectMetadataSuccess)
     ;
 
     return nock;
@@ -219,7 +219,8 @@ AgaveMocks.addUsernameToFullFilePermissions = function(nock) {
             '/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath,
             {
                 username: agaveRequestFixture.username,
-                'permission':'ALL'
+                'permission':'ALL',
+                'recursive': true,
             }
         )
         .reply(200, agaveResponseFixture.addUsernameToFullFilePermissionsSuccess)

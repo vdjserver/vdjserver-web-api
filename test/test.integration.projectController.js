@@ -29,7 +29,7 @@ describe('VDJ/Agave Project Integration Tests', function() {
 
     it('should create a new Agave project', function(done) {
 
-        agaveMocks.createProject(nock);
+        agaveMocks.createProjectMetadata(nock);
         agaveMocks.addUsernameToMetadataPermissions(nock);
         agaveMocks.createProjectDirectory(nock);
         agaveMocks.addUsernameToFullFilePermissions(nock);

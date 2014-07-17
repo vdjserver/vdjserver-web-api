@@ -314,7 +314,7 @@ agaveIO.getUserProfile = function(username) {
     return deferred.promise;
 };
 
-agaveIO.createProject = function(projectName) {
+agaveIO.createProjectMetadata = function(projectName) {
 
     var deferred = Q.defer();
 
@@ -546,6 +546,7 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
     var postData = {
         'username': username,
         'permission': 'ALL',
+        'recursive': true,
     };
 
     postData = JSON.stringify(postData);

@@ -53,7 +53,7 @@ AgaveRequestFixture.createUserProfile = {
     }
 };
 
-AgaveRequestFixture.createProject = {
+AgaveRequestFixture.createProjectMetadata = {
     name: 'project',
     value: {
         name: 'Fancy Project',

@@ -22,53 +22,33 @@ ProjectController.createProject = function(request, response) {
 
     var serviceAccount = new ServiceAccount();
 
-    var createdProjectPlaceholder;
+    var projectMetadata;
+    var uuid;
 
-    agaveIO.createProject(projectName)
-        .then(function(createdProject) {
+    agaveIO.createProjectMetadata(projectName)
+        .then(function(_projectMetadata) {
 
-            createdProjectPlaceholder = createdProject;
-
-            var uuid = createdProject['uuid'];
+            // Save these for later
+            projectMetadata = _projectMetadata;
+            uuid = projectMetadata.uuid;
 
             return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuid);
         })
-        // create project directory
-        .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
-            return agaveIO.createProjectDirectory(uuid);
-        })
-        // set project directory permissions
-        .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
-            //return agaveIO.createProjectDirectory(uuid);
-            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid);
-        })
         // create project/files directory
         .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
             return agaveIO.createProjectDirectory(uuid + '/files');
-        })
-        // set project/files directory permissions
-        .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
-            //return agaveIO.createProjectDirectory(uuid);
-            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid + '/files');
         })
         // create project/analyses directory
         .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
             return agaveIO.createProjectDirectory(uuid + '/analyses');
         })
-        // set project/analyses directory permissions
+        // set project directory permissions recursively
         .then(function() {
-            var uuid = createdProjectPlaceholder['uuid'];
-            //return agaveIO.createProjectDirectory(uuid);
-            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid + '/analyses');
+            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid);
         })
         .then(function() {
             // End user should only see standard Agave meta output
-            apiResponseController.sendSuccess(createdProjectPlaceholder, response);
+            apiResponseController.sendSuccess(projectMetadata, response);
         })
         .fail(function(error) {
             apiResponseController.sendError(error.message, response);

@@ -132,11 +132,11 @@ describe('agaveIO token functions', function() {
 
     it('should fulfill a promise to create a new VDJ project', function(done) {
 
-        agaveMocks.createProject(nock);
+        agaveMocks.createProjectMetadata(nock);
 
-        agaveIO.createProject(agaveRequestFixture.projectName)
+        agaveIO.createProjectMetadata(agaveRequestFixture.projectName)
             .then(function(data) {
-                data.should.eql(agaveResponseFixture.createProjectSuccess.result);
+                data.should.eql(agaveResponseFixture.createProjectMetadataSuccess.result);
                 done();
             });
     });
@@ -145,7 +145,7 @@ describe('agaveIO token functions', function() {
 
         agaveMocks.genericPostError(nock);
 
-        agaveIO.createProject(agaveRequestFixture.projectName)
+        agaveIO.createProjectMetadata(agaveRequestFixture.projectName)
             .fail(function() {
                 done();
             });
