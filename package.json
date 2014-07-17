@@ -21,12 +21,13 @@
   },
   "private": true,
   "dependencies": {
-    "body-parser": "1.2.x",
-    "errorhandler": "1.0.x",
-    "express": "4.3.x",
-    "moment": "2.6.x",
+    "body-parser": "1.4.x",
+    "errorhandler": "1.1.x",
+    "express": "4.6.x",
+    "moment": "2.7.x",
     "morgan": "1.1.x",
-    "nodemailer": "0.6.x",
+    "nodemailer": "1.0.x",
+    "nodemailer-sendmail-transport": "0.1.x",
     "passport": "0.2.x",
     "passport-http": "0.2.x",
     "q": "1.0.x",
@@ -35,11 +36,11 @@
   },
   "devDependencies": {
     "chai": "1.9.x",
-    "mocha": "1.19.x",
-    "nock": "0.31.x",
-    "request": "2.36.x",
+    "mocha": "1.20.x",
+    "nock": "0.42.x",
+    "request": "2.37.x",
     "sinon": "1.10.x",
-    "supertest": "0.12.x"
+    "supertest": "0.13.x"
   },
   "scripts": {
     "test": "make test"

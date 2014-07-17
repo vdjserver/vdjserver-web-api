@@ -31,7 +31,7 @@ var allowCrossDomain = function(request, response, next) {
 
 // Server Settings
 app.use(morgan());
-app.use(bodyParser());
+app.use(bodyParser.json());
 app.use(allowCrossDomain);
 app.use(passport.initialize());
 //app.use(express.methodOverride());

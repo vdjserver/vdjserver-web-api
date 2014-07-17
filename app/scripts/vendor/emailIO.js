@@ -1,10 +1,10 @@
 'use strict';
 
 var agaveSettings = require('../config/agaveSettings');
+var nodemailer    = require('nodemailer');
+var sendmailTransport = require('nodemailer-sendmail-transport');
 
-var nodemailer = require('nodemailer');
-
-var smtpTransport = nodemailer.createTransport('Sendmail');
+var transporter = nodemailer.createTransport(sendmailTransport());
 
 var emailIO = {};
 module.exports = emailIO;
@@ -25,5 +25,5 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 
     };
 
-    smtpTransport.sendMail(mailOptions);
+    transporter.sendMail(mailOptions);
 };
