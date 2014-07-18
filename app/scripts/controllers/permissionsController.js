@@ -8,7 +8,6 @@ var Q = require('q');
 var apiResponseController = require('./apiResponseController');
 
 // Models
-var FileListing = require('../models/fileListing');
 var FilePermissions = require('../models/filePermissions');
 var MetadataPermissions = require('../models/metadataPermissions');
 var ServiceAccount  = require('../models/serviceAccount');
@@ -191,6 +190,41 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             var promises = [];
             for (var i = 0; i < uuids.length; i++) {
                 promises.push(agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
+            }
+
+            return Q.all(promises);
+        })
+        .then(function() {
+            return apiResponseController.sendSuccess('success', response);
+        })
+        .fail(function(error) {
+            apiResponseController.sendError(error.message, response);
+        });
+};
+
+PermissionsController.addPermissionsForJob = function(request, response) {
+
+    var jobUuid = request.body.jobUuid;
+    var projectUuid = request.body.projectUuid;
+    var accessToken = request.user.password;
+
+    var serviceAccount = new ServiceAccount();
+
+    // Add service account to job pems
+    agaveIO.addUsernameToJobPermissions(serviceAccount.username, accessToken, jobUuid)
+        // Get project users
+        .then(function() {
+            return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
+        })
+        // (loop) add project users to job pems
+        .then(function(projectPermissions) {
+            var filePermissions = new FilePermissions();
+
+            var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+            var promises = [];
+            for (var i = 0; i < projectUsernames.length; i++) {
+                promises.push(agaveIO.addUsernameToJobPermissions(projectUsernames[i], serviceAccount.accessToken, jobUuid));
             }
 
             return Q.all(promises);

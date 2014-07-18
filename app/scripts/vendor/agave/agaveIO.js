@@ -539,6 +539,40 @@ agaveIO.getFileListings = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        'username': username,
+        'permission': 'ALL',
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/jobs/v2/' + jobId + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, filePath) {
 
     var deferred = Q.defer();

@@ -123,6 +123,13 @@ module.exports = function(app) {
         jobsController.createJobMetadata
     );
 
+    // Share Job With Project Member (update job permissions)
+    app.post(
+        '/permissions/jobs',
+        passport.authenticate('basic', { session: false }),
+        permissionsController.addPermissionsForJob
+    );
+
     // Errors
     app.route('*')
         .get(apiResponseController.send404)
