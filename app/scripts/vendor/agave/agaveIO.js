@@ -582,6 +582,7 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
     var postData = {
         'username': username,
         'permission': 'NONE',
+        'recursive': true,
     };
 
     postData = JSON.stringify(postData);
