@@ -30,7 +30,7 @@ var allowCrossDomain = function(request, response, next) {
 };
 
 // Server Settings
-app.use(morgan());
+app.use(morgan('combined'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(allowCrossDomain);
