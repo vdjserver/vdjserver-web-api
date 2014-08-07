@@ -22,7 +22,7 @@ var allowCrossDomain = function(request, response, next) {
 
     // intercept OPTIONS method
     if ('OPTIONS' === request.method) {
-        response.send(200);
+        response.status(200).end();
     }
     else {
         next();
