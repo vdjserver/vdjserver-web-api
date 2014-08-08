@@ -17,7 +17,7 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
     apiResponse.result = successResultMessage;
 
     if (response) {
-        response.send(apiResponse);
+        response.status(200).send(apiResponse);
     }
 };
 
@@ -30,7 +30,7 @@ ApiResponseController.sendError = function(errorMessage, response) {
     apiResponse.message = errorMessage;
 
     if (response) {
-        response.send(400, apiResponse);
+        response.status(400).send(apiResponse);
     }
 };
 
@@ -43,7 +43,7 @@ ApiResponseController.send404 = function(request, response) {
     apiResponse.message = 'The endpoint you are trying to reach either doesn\'t exist, or doesn\'t support the action that you\'re trying.';
 
     if (response) {
-        response.send(404, apiResponse);
+        response.status(404).send(apiResponse);
     }
 };
 
