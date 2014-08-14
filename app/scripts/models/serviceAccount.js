@@ -12,6 +12,6 @@ var ServiceAccount = function() {
 ServiceAccount.prototype.setToken = function(vdjauthToken) {
     this.accessToken = vdjauthToken.access_token;
     return;
-}
+};
 
 module.exports = ServiceAccount;

@@ -50,9 +50,9 @@ UserController.createUser = function(request, response) {
             return agaveIO.getToken(user);
         })
         .then(function(userToken) {
-            return agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
+            return agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token);
         })
-        .then(function(profileSuccess) {
+        .then(function(/*profileSuccess*/) {
             apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
         })
         .fail(function(error) {
@@ -74,9 +74,9 @@ UserController.changePassword = function(request, response) {
     // 3b. Fail
     var auth = {username: username, password: password};
     agaveIO.getToken(auth) // 0.
-        .then(function(token) {
+        .then(function(/*token*/) {
             // current password verified
-            return agaveIO.getUserProfile(username) // 1.
+            return agaveIO.getUserProfile(username); // 1.
         })
         .then(function(profile) {
             if (profile && profile[0] && profile[0].value && profile[0].value.email) {

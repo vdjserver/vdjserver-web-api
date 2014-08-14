@@ -18,10 +18,10 @@ FilePermissions.prototype.getUsernamesFromMetadataResponse = function(metadata) 
 
     for (var i = 0; i < metadata.length; i++) {
         usernames.push(metadata[i].username);
-    };
+    }
 
     usernames = _.without(usernames, 'vdj');
     return usernames;
-}
+};
 
 module.exports = FilePermissions;

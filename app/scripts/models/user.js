@@ -18,7 +18,7 @@ var User = function(attributes) {
 
 User.prototype.getSanitizedAttributes = function() {
     return _.omit(this, 'password');
-}
+};
 
 User.prototype.getCreateUserAttributes = function() {
 
@@ -27,6 +27,6 @@ User.prototype.getCreateUserAttributes = function() {
         password: this.password,
         email:    this.email
     };
-}
+};
 
 module.exports = User;
