@@ -26,7 +26,7 @@
     "express": "4.8.x",
     "moment": "2.8.x",
     "morgan": "1.2.x",
-    "nodemailer": "1.1.x",
+    "nodemailer": "1.2.x",
     "nodemailer-sendmail-transport": "1.0.x",
     "passport": "0.2.x",
     "passport-http": "0.2.x",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "chai": "1.9.x",
     "mocha": "1.21.x",
-    "nock": "0.44.x",
+    "nock": "0.45.x",
     "request": "2.40.x",
     "sinon": "1.10.x",
     "supertest": "0.13.x"
