@@ -18,10 +18,11 @@ var agaveIO = require('../vendor/agave/agaveIO');
 var PermissionsController = {};
 module.exports = PermissionsController;
 
-
 // Updates file permissions to match the given metadata permissions
 // Intended to be used to make file pems match project metadata pems
 PermissionsController.syncFilePermissionsWithProject = function(request, response) {
+
+    //console.log('syncFilePermissionsWithProject - request body is: ' + JSON.stringify(request.body));
 
     var projectUuid = request.body.projectUuid;
 
@@ -34,24 +35,63 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid)
         // Apply project pems to new file
         .then(function(projectPermissions) {
+            //console.log('syncFilePermissionsWithProject - metadataPems are: ' + JSON.stringify(projectPermissions));
 
             var filePermissions = new FilePermissions();
 
             var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
+
+            function createAgaveCall(username) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToFullFilePermissions(
+                        username,
+                        serviceAccount.accessToken,
+                        projectUuid
+                    );
+                }
+            };
+
             for (var i = 0; i < projectUsernames.length; i++) {
-                promises.push(agaveIO.addUsernameToFullFilePermissions(projectUsernames[i], serviceAccount.accessToken, projectUuid));
+
+                var username = projectUsernames[i];
+
+                //console.log("username is: " + username);
+                promises[i] = createAgaveCall(username);
             }
 
-            return Q.all(promises);
+            //console.log("promise array is: " + JSON.stringify(promises));
+
+            //console.log('syncFilePermissionsWithProject - about to run username promises');
+
+/*
+            promises.forEach(function(agaveIOCall) {
+                agaveIOCall();
+
+                console.log("starting loop for: " + f);
+                var promiseLink = function() {
+                    console.log("inside promiseLink");
+                    return agaveIOCall();
+                }
+
+            });
+*/
+
+            //console.log("past promises now");
+
+            return promises.reduce(Q.when, Q());
         })
         // Get file pems listing to return to user
         .then(function() {
+            console.log('syncFilePermissionsWithProject - getting file pems');
             return agaveIO.getFilePermissions(serviceAccount.accessToken, projectUuid);
         })
         // Finally send updated file pems back to user
         .then(function(updatedFilePermissions) {
+            console.log('syncFilePermissionsWithProject - sending pems back to client');
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
