@@ -32,7 +32,7 @@
     "passport-http": "0.2.x",
     "q": "1.0.x",
     "socket.io": "1.0.x",
-    "underscore": "1.6.x"
+    "underscore": "1.7.x"
   },
   "devDependencies": {
     "chai": "1.9.x",
