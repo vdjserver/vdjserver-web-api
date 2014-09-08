@@ -19,7 +19,7 @@ NotificationsController.processJobNotifications = function(request, response) {
     var jobUuid = request.query.uuid;
     var jobEvent  = request.query.event;
     var jobStatus = request.query.status;
-    var jobError  = request.query.error;
+    var jobMessage  = request.query.error;
 
     console.log("request body is: " + JSON.stringify(request.body));
     console.log("request param is: " + JSON.stringify(request.params));
@@ -29,7 +29,7 @@ NotificationsController.processJobNotifications = function(request, response) {
     console.log("jobUuid: " + jobUuid);
     console.log("jobEvent: " + jobEvent);
     console.log("jobStatus " + jobStatus);
-    console.log("jobError " + jobError);
+    console.log("jobMessage " + jobMessage);
 
     app.emit(
         'jobNotification',
@@ -37,7 +37,7 @@ NotificationsController.processJobNotifications = function(request, response) {
             jobId: jobId,
             jobEvent: jobEvent,
             jobStatus: jobStatus,
-            jobError: jobError,
+            jobMessage: jobMessage,
         }
     );
 
