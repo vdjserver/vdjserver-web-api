@@ -1,0 +1,20 @@
+{
+    "preset": "google",
+    "validateIndentation": 4,
+    "maximumLineLength": 120,
+    "requireOperatorBeforeLineBreak": [
+        "?",
+        "=",
+        "-",
+        "/",
+        "*",
+        "==",
+        "===",
+        "!=",
+        "!==",
+        ">",
+        ">=",
+        "<",
+        "<="
+    ]
+}
