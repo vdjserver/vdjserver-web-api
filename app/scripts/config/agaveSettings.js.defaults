@@ -12,4 +12,7 @@ module.exports = {
 
     // VDJ Backbone Location
     vdjBackbone: 'https://vdj-dev.tacc.utexas.edu',
+
+    // Agave Misc.
+    storageSystem: 'data.vdjserver.org',
 };

@@ -363,7 +363,7 @@ agaveIO.createProjectDirectory = function(directory) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'PUT',
-        path:     '/files/v2/media/system/data.vdjserver.org//projects/',
+        path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
         rejectUnauthorized: false,
         headers: {
             'Content-Length': postData.length,
@@ -496,7 +496,7 @@ agaveIO.getFilePermissions = function(accessToken, filePath) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'GET',
-        path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
+        path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + accessToken
@@ -521,7 +521,7 @@ agaveIO.getFileListings = function(accessToken, projectUuid) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'GET',
-        path:     '/files/v2/listings/system/data.vdjserver.org//projects/' + projectUuid + '/files',
+        path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + projectUuid + '/files',
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + accessToken
@@ -588,7 +588,7 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
+        path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',
@@ -624,7 +624,7 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/files/v2/pems/system/data.vdjserver.org//projects/' + filePath,
+        path:     '/files/v2/pems/system/' + agaveSettings.storageSytem + '//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',
