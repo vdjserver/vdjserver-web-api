@@ -42,6 +42,10 @@ ProjectController.createProject = function(request, response) {
         .then(function() {
             return agaveIO.createProjectDirectory(uuid + '/analyses');
         })
+        // create project/deleted directory
+        .then(function() {
+            return agaveIO.createProjectDirectory(uuid + '/deleted');
+        })
         // set project directory permissions recursively
         .then(function() {
             return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid);
