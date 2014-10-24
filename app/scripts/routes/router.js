@@ -62,21 +62,21 @@ module.exports = function(app) {
         permissionsController.removePermissionsForUsername
     );
 
-    // Request an Agave internalUsername token
+    // Request an Agave token
     app.post(
         '/token',
         passport.authenticate('basic', { session: false }),
         tokenController.getToken
     );
 
-    // Refresh an Agave internalUsername token
+    // Refresh an Agave token
     app.put(
         '/token',
         passport.authenticate('basic', { session: false }),
         tokenController.refreshToken
     );
 
-    // Delete an Agave internalUsername token
+    // Delete an Agave token
     /*
     app.delete(
         '/token',

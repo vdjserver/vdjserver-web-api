@@ -86,12 +86,10 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
         })
         // Get file pems listing to return to user
         .then(function() {
-            console.log('syncFilePermissionsWithProject - getting file pems');
             return agaveIO.getFilePermissions(serviceAccount.accessToken, projectUuid);
         })
         // Finally send updated file pems back to user
         .then(function(updatedFilePermissions) {
-            console.log('syncFilePermissionsWithProject - sending pems back to client');
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
@@ -151,11 +149,9 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
     var serviceAccount = new ServiceAccount();
 
-    // check that token is on project
-    // add to project metadata pems
-    // add to file pems recursively
-    // get file metadata pems
-    // (loop) add to file metadata pems
+
+    var jobMetadatas;
+
 
     // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
@@ -165,7 +161,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
         })
-        // set project directory + subdirectory permissions recursively
+        // set project file directory + subdirectory permissions recursively
         .then(function() {
             return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, projectUuid);
         })
@@ -181,6 +177,51 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             var promises = [];
             for (var i = 0; i < uuids.length; i++) {
                 promises.push(agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuids[i]));
+            }
+
+            return Q.all(promises);
+        })
+        // get job metadatas
+        .then(function() {
+            return agaveIO.getJobMetadataForProject(projectUuid);
+        })
+        // (loop) add to job metadata permissions
+        .then(function(tmpJobMetadatas) {
+
+            // cache for later
+            jobMetadatas = tmpJobMetadatas;
+
+            var metadata = new MetadataPermissions();
+            var uuids = metadata.getUuidsFromMetadataResponse(tmpJobMetadatas);
+
+            var promises = [];
+            for (var i = 0; i < uuids.length; i++) {
+                promises.push(
+                    agaveIO.addUsernameToMetadataPermissions(
+                        username,
+                        serviceAccount.accessToken,
+                        uuids[i]
+                    )
+                );
+            }
+
+            return Q.all(promises);
+        })
+        // (loop) add to job permissions
+        .then(function() {
+
+            var metadata = new MetadataPermissions();
+            var uuids = metadata.getJobUuidsFromMetadataResponse(jobMetadatas);
+
+            var promises = [];
+            for (var i = 0; i < uuids.length; i++) {
+                promises.push(
+                    agaveIO.addUsernameToJobPermissions(
+                        username,
+                        serviceAccount.accessToken,
+                        uuids[i]
+                    )
+                );
             }
 
             return Q.all(promises);
@@ -250,6 +291,8 @@ PermissionsController.addPermissionsForJob = function(request, response) {
 
     var serviceAccount = new ServiceAccount();
 
+    var projectUsernames;
+
     // Add service account to job pems
     agaveIO.addUsernameToJobPermissions(serviceAccount.username, accessToken, jobUuid)
         // Get project users
@@ -260,11 +303,49 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         .then(function(projectPermissions) {
             var filePermissions = new FilePermissions();
 
-            var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
+            projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
             for (var i = 0; i < projectUsernames.length; i++) {
                 promises.push(agaveIO.addUsernameToJobPermissions(projectUsernames[i], serviceAccount.accessToken, jobUuid));
+            }
+
+            return Q.all(promises);
+        })
+        // (loop) set job output file permissions
+        .then(function() {
+
+            var promises = [];
+
+            for (var i = 0; i < projectUsernames.length; i++) {
+                promises.push(
+                    agaveIO.addUsernameToFullFilePermissions(
+                        projectUsernames[i],
+                        serviceAccount.accessToken,
+                        projectUuid + '/analyses'
+                    )
+                );
+            }
+
+            return Q.all(promises);
+        })
+        // get job metadatas
+        .then(function() {
+            return agaveIO.getJobMetadataForProject(projectUuid);
+        })
+        // (loop) add to job metadata permissions
+        .then(function(tmpJobMetadata) {
+
+            var promises = [];
+
+            for (var i = 0; i < projectUsernames.length; i++) {
+                promises.push(
+                    agaveIO.addUsernameToMetadataPermissions(
+                        projectUsernames[i],
+                        serviceAccount.accessToken,
+                        tmpJobMetadata.uuid
+                    )
+                );
             }
 
             return Q.all(promises);
