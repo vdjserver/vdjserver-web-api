@@ -35,7 +35,6 @@ JobsController.createJobMetadata = function(request, response) {
     agaveIO.createJobMetadata(projectUuid, jobUuid) // 1.
         .then(function(jobMetadata) {
             jobMetadataUuid = jobMetadata.uuid;
-
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid); // 2.
         })
         // Apply project pems to new metadata
@@ -47,7 +46,13 @@ JobsController.createJobMetadata = function(request, response) {
 
             var promises = [];
             for (var i = 0; i < projectUsernames.length; i++) {
-                promises.push(agaveIO.addUsernameToMetadataPermissions(projectUsernames[i], serviceAccount.accessToken, jobMetadataUuid));
+                promises.push(
+                    agaveIO.addUsernameToMetadataPermissions(
+                        projectUsernames[i],
+                        serviceAccount.accessToken,
+                        jobMetadataUuid
+                    )
+                );
             }
 
             return Q.all(promises); // 3.

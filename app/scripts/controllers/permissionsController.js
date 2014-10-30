@@ -301,6 +301,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         })
         // (loop) add project users to job pems
         .then(function(projectPermissions) {
+
             var filePermissions = new FilePermissions();
 
             projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
@@ -336,6 +337,12 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         // (loop) add to job metadata permissions
         .then(function(tmpJobMetadata) {
 
+            var jobUuid = tmpJobMetadata.uuid;
+
+            if (!jobUuid || jobUuid.length === 0) {
+                jobUuid = tmpJobMetadata[0].uuid;
+            }
+
             var promises = [];
 
             for (var i = 0; i < projectUsernames.length; i++) {
@@ -343,7 +350,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
                     agaveIO.addUsernameToMetadataPermissions(
                         projectUsernames[i],
                         serviceAccount.accessToken,
-                        tmpJobMetadata.uuid
+                        jobUuid
                     )
                 );
             }
