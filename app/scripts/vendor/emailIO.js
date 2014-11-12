@@ -27,3 +27,18 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 
     transporter.sendMail(mailOptions);
 };
+
+emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
+  var mailOptions = {
+    to: recipientEmail,
+    subject: 'VDJServer.org Feedback',
+    text: feedback,
+  };
+  transporter.sendMail(mailOptions,
+    function(error, info){
+      if(error){
+          console.log('Error sending feedback email.', error);
+      }
+    }
+  );
+};

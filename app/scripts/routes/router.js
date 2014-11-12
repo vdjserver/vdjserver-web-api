@@ -4,6 +4,7 @@
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
 var jobsController        = require('../controllers/jobsController');
+var feedbackController    = require('../controllers/feedbackController');
 var notificationsController = require('../controllers/notificationsController');
 var passwordResetController = require('../controllers/passwordResetController');
 var permissionsController = require('../controllers/permissionsController');
@@ -128,6 +129,12 @@ module.exports = function(app) {
         '/permissions/jobs',
         passport.authenticate('basic', { session: false }),
         permissionsController.addPermissionsForJob
+    );
+
+    // Create a project
+    app.post(
+        '/feedback',
+        feedbackController.createFeedback
     );
 
     // Errors

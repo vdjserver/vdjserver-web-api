@@ -4,6 +4,12 @@ var config = {};
 
 module.exports = config;
 
+// Recaptcha
+config.recaptchaSecret = '';
+config.recaptchaPublic = '6Le7f_0SAAAAAK5H0oniNyszvoib4y_b0JX423Yc';
+
+// Feedback Email address
+config.feedbackEmail = 'you@example.com';
 
 // General
 config.port = 8443;
