@@ -38,53 +38,44 @@ module.exports = function(app) {
     // Update file permissions
     app.post(
         '/permissions/files',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         permissionsController.syncFilePermissionsWithProject
     );
 
     // Update metadata permissions
     app.post(
         '/permissions/metadata',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         permissionsController.syncMetadataPermissionsWithProject
     );
 
     // Add permissions for new user
     app.post(
         '/permissions/username',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         permissionsController.addPermissionsForUsername
     );
 
     // Remove all permissions for user
     app.delete(
         '/permissions/username',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         permissionsController.removePermissionsForUsername
     );
 
     // Request an Agave token
     app.post(
         '/token',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         tokenController.getToken
     );
 
     // Refresh an Agave token
     app.put(
         '/token',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         tokenController.refreshToken
     );
-
-    // Delete an Agave token
-    /*
-    app.delete(
-        '/token',
-        passport.authenticate('basic', { session: false }),
-        tokenController.deleteToken
-    );
-    */
 
     // Create a user
     app.post(
@@ -95,7 +86,7 @@ module.exports = function(app) {
     // User change password
     app.post(
         '/user/change-password',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         userController.changePassword
     );
 
@@ -120,14 +111,14 @@ module.exports = function(app) {
     // Create Job Metadata
     app.post(
         '/jobs/metadata',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         jobsController.createJobMetadata
     );
 
     // Share Job With Project Member (update job permissions)
     app.post(
         '/permissions/jobs',
-        passport.authenticate('basic', { session: false }),
+        passport.authenticate('basic', {session: false}),
         permissionsController.addPermissionsForJob
     );
 

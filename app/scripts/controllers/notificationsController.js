@@ -8,7 +8,7 @@ var app = require('../app');
 var apiResponseController = require('./apiResponseController');
 
 // Node Libraries
-var Q = require('q');
+//var Q = require('q');
 
 var NotificationsController = {};
 module.exports = NotificationsController;

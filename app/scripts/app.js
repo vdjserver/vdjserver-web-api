@@ -38,7 +38,6 @@ app.use(passport.initialize());
 //app.use(express.methodOverride());
 //app.locals.pretty = true;
 
-
 // Server
 var env = process.env.NODE_ENV || 'production';
 if (env === 'test') {

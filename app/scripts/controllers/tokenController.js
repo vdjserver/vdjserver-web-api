@@ -10,7 +10,6 @@ var agaveIO = require('../vendor/agave/agaveIO');
 var TokenController = {};
 module.exports = TokenController;
 
-
 // Retrieves a new user token from Agave and returns it to the client
 TokenController.getToken = function(request, response) {
 

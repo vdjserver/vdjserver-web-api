@@ -99,7 +99,13 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 deferred.reject(new Error('Agave response is not json'));
             }
 
-            if (responseObject && responseObject.access_token && responseObject.refresh_token && responseObject.token_type && responseObject.expires_in) {
+            if (
+                responseObject
+                && responseObject.access_token
+                && responseObject.refresh_token
+                && responseObject.token_type
+                && responseObject.expires_in
+            ) {
                 deferred.resolve(responseObject);
             }
             else {
@@ -126,7 +132,8 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
     return deferred.promise;
 };
 
-// Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
+// Fetches a user token based on the supplied auth object
+// and returns the auth object with token data on success
 agaveIO.getToken = function(auth) {
 
     var deferred = Q.defer();
@@ -155,7 +162,6 @@ agaveIO.getToken = function(auth) {
 
     return deferred.promise;
 };
-
 
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
@@ -187,39 +193,6 @@ agaveIO.refreshToken = function(auth) {
     return deferred.promise;
 };
 
-/*
-// Deletes a token
-agaveIO.deleteToken = function(auth) {
-
-    var deferred = Q.defer();
-
-    var postData = 'token=' + auth.password;
-
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        auth:     agaveSettings.clientKey + ':' + agaveSettings.clientSecret,
-        path:     '/revoke',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/x-www-form-urlencoded',
-            'Content-Length': postData.length
-        }
-    };
-
-    agaveIO.sendTokenRequest(requestSettings, postData)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
-};
-*/
-
-// Fetches an internal user token based on the supplied auth object and returns the auth object with token data on success
 agaveIO.createUser = function(user) {
 
     var deferred = Q.defer();
@@ -758,7 +731,12 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'GET',
-        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"passwordReset", "uuid":"' + uuid + '", "owner":"' + serviceAccount.username + '"}'),
+        path:     '/meta/v2/data?q='
+                  + encodeURIComponent(
+                        '{"name":"passwordReset",'
+                        + ' "uuid":"' + uuid + '",'
+                        + ' "owner":"' + serviceAccount.username + '"}'
+                  ),
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken

@@ -13,7 +13,6 @@ var agaveIO = require('../vendor/agave/agaveIO');
 var ProjectController = {};
 module.exports = ProjectController;
 
-
 // Creates a project and all initial directories
 ProjectController.createProject = function(request, response) {
 

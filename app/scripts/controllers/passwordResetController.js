@@ -11,13 +11,13 @@ var emailIO = require('../vendor/emailIO');
 // Node Libraries
 var Q = require('q');
 
-
 var PasswordResetController = {};
 module.exports = PasswordResetController;
 
 PasswordResetController.createResetPasswordRequest = function(request, response) {
 
-    var username = request.body.username, userProfile;
+    var username = request.body.username;
+    var userProfile;
 
     // 1.  Get confirm username, email address from user profile
     // 2.  Generate random key by posting to metadata
@@ -71,7 +71,13 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             }
         })
         .then(function(profile) {
-            return agaveIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword}); // 4.
+            return agaveIO.updateUserPassword(
+                        {
+                            'username': username,
+                            'email': profile[0].value.email,
+                            'password': newPassword
+                        }
+                   ); // 4.
         })
         .then(function() {
             /*
