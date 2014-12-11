@@ -27,7 +27,6 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
     agaveIO.getUserProfile(username) // 1.
         .then(function(profile) {
             if (profile[0]) {
-                console.log("profile is: " + JSON.stringify(profile));
                 userProfile = profile[0];
                 return agaveIO.createPasswordResetMetadata(username); // 2.
             } else {
@@ -35,7 +34,6 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
             }
         })
         .then(function(passwordReset) {
-            console.log("passwordReset is: " + JSON.stringify(passwordReset));
             return emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid); // 3.
         })
         .then(function() {

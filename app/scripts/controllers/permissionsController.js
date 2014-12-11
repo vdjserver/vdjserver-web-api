@@ -22,8 +22,6 @@ module.exports = PermissionsController;
 // Intended to be used to make file pems match project metadata pems
 PermissionsController.syncFilePermissionsWithProject = function(request, response) {
 
-    //console.log('syncFilePermissionsWithProject - request body is: ' + JSON.stringify(request.body));
-
     var projectUuid = request.body.projectUuid;
 
     var serviceAccount = new ServiceAccount();
@@ -35,7 +33,6 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid)
         // Apply project pems to new file
         .then(function(projectPermissions) {
-            //console.log('syncFilePermissionsWithProject - metadataPems are: ' + JSON.stringify(projectPermissions));
 
             var filePermissions = new FilePermissions();
 
@@ -59,28 +56,8 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
 
                 var username = projectUsernames[i];
 
-                //console.log("username is: " + username);
                 promises[i] = createAgaveCall(username);
             }
-
-            //console.log("promise array is: " + JSON.stringify(promises));
-
-            //console.log('syncFilePermissionsWithProject - about to run username promises');
-
-/*
-            promises.forEach(function(agaveIOCall) {
-                agaveIOCall();
-
-                console.log("starting loop for: " + f);
-                var promiseLink = function() {
-                    console.log("inside promiseLink");
-                    return agaveIOCall();
-                }
-
-            });
-*/
-
-            //console.log("past promises now");
 
             return promises.reduce(Q.when, Q());
         })
