@@ -27,7 +27,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     var serviceAccount = new ServiceAccount();
 
     /*
-       The service account should already have full pems thanks to iRods.
+       The service account should already have full pems
        So, go ahead and fetch project metadata pems
     */
     agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid)
