@@ -45,17 +45,28 @@ JobsController.createJobMetadata = function(request, response) {
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
+
+            function createAgaveCall(username, token, uuid) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToMetadataPermissions(
+                        username,
+                        token,
+                        uuid
+                    );
+                };
+            }
+
             for (var i = 0; i < projectUsernames.length; i++) {
-                promises.push(
-                    agaveIO.addUsernameToMetadataPermissions(
-                        projectUsernames[i],
-                        serviceAccount.accessToken,
-                        jobMetadataUuid
-                    )
+                promises[i] = createAgaveCall(
+                    projectUsernames[i],
+                    serviceAccount.accessToken,
+                    jobMetadataUuid
                 );
             }
 
-            return Q.all(promises); // 3.
+            return promises.reduce(Q.when, new Q()); // 3.
         })
         .then(function() {
             apiResponseController.sendSuccess('Job metadata created successfully.', response); // 4a.
