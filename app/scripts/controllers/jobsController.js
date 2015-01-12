@@ -121,11 +121,13 @@ JobsController.createJobFileMetadata = function(jobId) {
             }
 
             for (var i = 0; i < jobFileListings.length; i++) {
-                promises[i] = createAgaveCall(
-                    projectUuid,
-                    jobId,
-                    jobFileListings[i]
-                );
+                if (jobFileListings[i].format !== 'folder') {
+                    promises[i] = createAgaveCall(
+                        projectUuid,
+                        jobId,
+                        jobFileListings[i]
+                    );
+                }
             }
 
             return promises.reduce(Q.when, new Q());
