@@ -852,3 +852,143 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
 
     return deferred.promise;
 };
+
+agaveIO.getJobOutput = function(jobId) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/jobs/v2/' + jobId,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/files/v2/listings/system'
+                  + '/' + agaveSettings.storageSystem
+                  + '//projects/' + projectUuid
+                  + '/analyses'
+                  + '/' + relativeArchivePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListing) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'projectJobFile',
+        value: {
+            projectUuid: projectUuid,
+            jobUuid: jobUuid,
+            fileType: 4,
+            name: jobFileListing.name,
+            length: jobFileListing.length,
+            isDeleted: false,
+            privateAttributes: {
+                tags: [],
+                'read-direction': '',
+            },
+            publicAttributes: {},
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization':  'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"projectJobFile",'
+                            + '"value.projectUuid":"' + projectUuid + '",'
+                            + '"value.jobUuid":"' + jobId + '"'
+                        + '}'
+                    ),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};

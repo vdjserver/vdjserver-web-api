@@ -75,3 +75,102 @@ JobsController.createJobMetadata = function(request, response) {
             apiResponseController.sendError(error.message, response); // 4b.
         });
 };
+
+JobsController.createJobFileMetadata = function(jobId) {
+
+    /* Follow this recipe:
+     *
+     * 1.) Get job output for file path
+     * 2.) Get file listings for file path
+     * 3.) Create project job file metadata for each completed job file (loop)
+     * 4.) Pull new project job file metadatas
+     * 5.) Pull project metadata permissions
+     * 6.) Sync project file metadata with project metadatas permissions
+     */
+
+    var serviceAccount = new ServiceAccount();
+    var archivePath = '';
+    var projectUuid = '';
+    var projectJobFileMetadatas = '';
+
+    agaveIO.getJobOutput(jobId) // 1
+        .then(function(jobOutput) {
+            archivePath = jobOutput._links.archiveData.href;
+
+            var splitArchivePath = archivePath.split('/');
+
+            var relativeArchivePath = splitArchivePath[splitArchivePath.length - 1];
+            projectUuid = splitArchivePath[splitArchivePath.length - 3];
+
+            return agaveIO.getJobOutputFileListings(projectUuid, relativeArchivePath); // 2
+        })
+        .then(function(jobFileListings) {
+
+            var promises = [];
+
+            function createAgaveCall(projectUuid, jobId, jobFileListing) {
+
+                return function() {
+
+                    return agaveIO.createProjectJobFileMetadata(
+                        projectUuid,
+                        jobId,
+                        jobFileListing
+                    );
+                };
+            }
+
+            for (var i = 0; i < jobFileListings.length; i++) {
+                promises[i] = createAgaveCall(
+                    projectUuid,
+                    jobId,
+                    jobFileListings[i]
+                );
+            }
+
+            return promises.reduce(Q.when, new Q());
+        })
+        .then(function() {
+            return agaveIO.getProjectJobFileMetadatas(projectUuid, jobId);
+        })
+        .then(function(metadatas) {
+            projectJobFileMetadatas = metadatas;
+
+            return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
+        })
+        .then(function(projectPermissions) {
+
+            var metadataPermissions = new MetadataPermissions();
+
+            var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+            var promises = [];
+
+            function createAgaveCall(username, token, uuid) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToMetadataPermissions(
+                        username,
+                        token,
+                        uuid
+                    );
+                };
+            }
+
+            for (var i = 0; i < projectJobFileMetadatas.length; i++) {
+                for (var j = 0; j < projectUsernames.length; j++) {
+                    promises.push(
+                        createAgaveCall(
+                            projectUsernames[j],
+                            serviceAccount.accessToken,
+                            projectJobFileMetadatas[i].uuid
+                        )
+                    );
+                }
+            }
+
+            return promises.reduce(Q.when, new Q());
+        })
+        ;
+};

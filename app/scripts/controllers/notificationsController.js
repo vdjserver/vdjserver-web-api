@@ -6,6 +6,7 @@ var app = require('../app');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
+var jobController = require('./jobsController');
 
 // Node Libraries
 //var Q = require('q');
@@ -31,6 +32,10 @@ NotificationsController.processJobNotifications = function(request, response) {
             jobMessage: jobMessage,
         }
     );
+
+    if (jobStatus === 'FINISHED') {
+        jobController.createJobFileMetadata(jobId);
+    }
 
     apiResponseController.sendSuccess('ok', response);
 };
