@@ -925,12 +925,13 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
             length: jobFileListing.length,
             isDeleted: false,
             privateAttributes: {
-                tags: [],
-                'read-direction': '',
+                'readDirection': '',
                 'relativeArchivePath': relativeArchivePath,
                 'jobName': job.name,
             },
-            publicAttributes: {},
+            publicAttributes: {
+                'tags': [],
+            },
         },
     };
 
