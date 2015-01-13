@@ -442,7 +442,7 @@ agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
         method: 'GET',
         path:   '/meta/v2/data?q='
                 + encodeURIComponent('{'
-                    + '"name":"projectFile",'
+                    + '"name": { $in: ["projectFile", "projectJobFile"] },'
                     + '"value.projectUuid":"' + projectUuid + '"'
                 + '}'),
         rejectUnauthorized: false,
