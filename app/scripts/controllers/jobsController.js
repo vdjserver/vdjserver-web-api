@@ -92,9 +92,13 @@ JobsController.createJobFileMetadata = function(jobId) {
     var relativeArchivePath = '';
     var projectUuid = '';
     var projectJobFileMetadatas = '';
+    var job = '';
 
     agaveIO.getJobOutput(jobId) // 1
         .then(function(jobOutput) {
+
+            job = jobOutput;
+
             var archivePath = jobOutput._links.archiveData.href;
 
             var splitArchivePath = archivePath.split('/');
@@ -108,7 +112,7 @@ JobsController.createJobFileMetadata = function(jobId) {
 
             var promises = [];
 
-            function createAgaveCall(projectUuid, jobId, jobFileListing) {
+            function createAgaveCall(projectUuid, jobId, jobFileListing, job, relativeArchivePath) {
 
                 return function() {
 
@@ -116,6 +120,7 @@ JobsController.createJobFileMetadata = function(jobId) {
                         projectUuid,
                         jobId,
                         jobFileListing,
+                        job,
                         relativeArchivePath
                     );
                 };
@@ -132,6 +137,7 @@ JobsController.createJobFileMetadata = function(jobId) {
                         projectUuid,
                         jobId,
                         jobFileListings[i],
+                        job,
                         relativeArchivePath
                     );
                 }

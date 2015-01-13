@@ -911,7 +911,7 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
     return deferred.promise;
 };
 
-agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListing, relativeArchivePath) {
+agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListing, job, relativeArchivePath) {
 
     var deferred = Q.defer();
 
@@ -928,6 +928,8 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
                 tags: [],
                 'read-direction': '',
                 'relativeArchivePath': relativeArchivePath,
+                'jobName': jobFileListing.name,
+                'job': job.name,
             },
             publicAttributes: {},
         },
