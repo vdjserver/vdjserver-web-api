@@ -85,13 +85,15 @@ JobsController.createJobFileMetadata = function(jobId) {
      * 3.) Create project job file metadata for each completed job file (loop)
      * 4.) Pull new project job file metadatas
      * 5.) Pull project metadata permissions
-     * 6.) Sync project file metadata with project metadatas permissions
+     * 6.) Sync job files with project metadatas permissions
+     * 7.) Sync project file metadata with project metadatas permissions
      */
 
     var serviceAccount = new ServiceAccount();
     var relativeArchivePath = '';
     var projectUuid = '';
     var projectJobFileMetadatas = '';
+    var projectPermissions = '';
     var job = '';
 
     agaveIO.getJobOutput(jobId) // 1
@@ -153,7 +155,40 @@ JobsController.createJobFileMetadata = function(jobId) {
 
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
-        .then(function(projectPermissions) {
+        .then(function(tmpProjectPermissions) {
+
+            projectPermissions = tmpProjectPermissions;
+            var metadataPermissions = new MetadataPermissions();
+
+            var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(tmpProjectPermissions);
+
+            var promises = [];
+
+            function createAgaveCall(username, token, uuid) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToFullFilePermissions(
+                        username,
+                        token,
+                        uuid
+                    );
+                };
+            }
+
+            for (var j = 0; j < projectUsernames.length; j++) {
+                promises.push(
+                    createAgaveCall(
+                        projectUsernames[j],
+                        serviceAccount.accessToken,
+                        projectUuid + '/analyses' + '/' + relativeArchivePath
+                    )
+                );
+            }
+
+            return promises.reduce(Q.when, new Q());
+        })
+        .then(function() {
 
             var metadataPermissions = new MetadataPermissions();
 
