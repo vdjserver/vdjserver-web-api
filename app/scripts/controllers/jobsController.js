@@ -122,7 +122,12 @@ JobsController.createJobFileMetadata = function(jobId) {
             }
 
             for (var i = 0; i < jobFileListings.length; i++) {
-                if (jobFileListings[i].format !== 'folder') {
+
+                var fileNameSplit = jobFileListings[i].name.split('.');
+                var fileExtension = fileNameSplit[fileNameSplit.count - 1];
+
+                // Whitelisted files
+                if (fileExtension === '.fasta' || fileExtension === '.fastq') {
                     promises[i] = createAgaveCall(
                         projectUuid,
                         jobId,
