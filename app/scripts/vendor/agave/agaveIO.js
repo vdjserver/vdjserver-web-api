@@ -920,7 +920,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
         value: {
             projectUuid: projectUuid,
             jobUuid: jobUuid,
-            fileType: 4,
+            fileType: 2,
             name: jobFileListing.name,
             length: jobFileListing.length,
             isDeleted: false,
