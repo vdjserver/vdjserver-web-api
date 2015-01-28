@@ -3,6 +3,7 @@
     "validateIndentation": 4,
     "maximumLineLength": 150,
     "requireCamelCaseOrUpperCaseIdentifiers": "ignoreProperties",
+    "disallowKeywordsOnNewLine": [],
     "requireOperatorBeforeLineBreak": [
         "?",
         "=",
