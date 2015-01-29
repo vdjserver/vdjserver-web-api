@@ -617,6 +617,117 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
     return deferred.promise;
 };
 
+agaveIO.createUserVerificationMetadata = function(username) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'userVerification',
+        value: {
+            'username': username,
+            'isVerified': false,
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getUserVerificationMetadata = function(username) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data?q='
+                  + encodeURIComponent(
+                        '{"name":"userVerification",'
+                        + ' "value.username":"' + username + '"'
+                        + ' "owner":"' + serviceAccount.username + '"'
+                        + '}'
+                  ),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.verifyUser = function(username, verificationId) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'userVerification',
+        value: {
+            'username': username,
+            'isVerified': true,
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data/' + verificationId,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createPasswordResetMetadata = function(username) {
 
     var deferred = Q.defer();
@@ -737,6 +848,33 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
                         + ' "uuid":"' + uuid + '",'
                         + ' "owner":"' + serviceAccount.username + '"}'
                   ),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getMetadata = function(uuid) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data/' + uuid,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken

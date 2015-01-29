@@ -44,3 +44,21 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
         }
     );
 };
+
+emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
+
+    var vdjWebappUrl = agaveSettings.vdjBackbone;
+
+    var mailOptions = {
+        to: recipientEmail,
+        subject: 'Welcome to VDJServer',
+        generateTextFromHTML: true,
+        html: 'Welcome to VDJServer.'
+              + '<br>'
+              + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+              ,
+
+    };
+
+    transporter.sendMail(mailOptions);
+};

@@ -9,6 +9,7 @@ var User = require('../models/user');
 
 // Processing
 var agaveIO = require('../vendor/agave/agaveIO');
+var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var Q = require('q');
@@ -36,6 +37,23 @@ UserController.createUser = function(request, response) {
         })
         .then(function(userToken) {
             return agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token);
+        })
+        .then(function() {
+            return agaveIO.createUserVerificationMetadata(user.username);
+        })
+        .then(function(userVerificationMetadata) {
+            console.log("userVerificationMeta is: " + JSON.stringify(userVerificationMetadata));
+            if (userVerificationMetadata[0]) {
+                var verificationId = userVerificationMetadata[0].uuid;
+                console.log("verificationId is: " + verificationId);
+
+                return emailIO.sendWelcomeEmail(user.email, verificationId);
+            }
+            else {
+
+                return Q.reject(new Error('Account creation fail. Unable to create verification metadata.'));
+            }
+
         })
         .then(function(/*profileSuccess*/) {
             apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
@@ -78,5 +96,76 @@ UserController.changePassword = function(request, response) {
         })
         .fail(function(error) {
             apiResponseController.sendError(error.message, response); // 3b.
+        });
+};
+
+UserController.verifyUser = function(request, response) {
+
+    var verificationId = request.params.verificationId;
+
+    // First, check to see if this verificationId corresponds to this username
+    agaveIO.getMetadata(verificationId)
+        .then(function(userVerificationMetadata) {
+            if (userVerificationMetadata[0] && verificationId === userVerificationMetadata[0].uuid) {
+                var username = userVerificationMetadata.value.username;
+                return agaveIO.verifyUser(username, verificationId);
+            }
+            else {
+                return Q.reject(new Error('Verification metadata failed comparison.'));
+            }
+        })
+        .then(function() {
+            apiResponseController.sendSuccess('', response);
+        })
+        .fail(function(error) {
+            apiResponseController.sendError(error.message, response);
+        });
+};
+
+UserController.resendVerificationEmail = function(request, response) {
+
+    var verificationId = request.params.verificationId;
+    var profile = {};
+    var username = '';
+
+    agaveIO.getMetadata(verificationId)
+        .then(function(userVerificationMetadata) {
+            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].isVerified === false) {
+                username = userVerificationMetadata.value.username;
+
+                return agaveIO.getUserProfile(username);
+            }
+            else {
+                return Q.reject(new Error('Verification metadata failed comparison.'));
+            }
+        })
+        .then(function(profileMetadata) {
+            if (profileMetadata && profileMetadata[0] && profileMetadata[0].value && profileMetadata[0].value.email) {
+                profile = profileMetadata;
+
+                return agaveIO.getUserVerificationMetadata(username);
+            }
+            else {
+                return Q.reject(new Error('Resend verification email fail. User profile could not be found.'));
+            }
+        })
+        .then(function(userVerificationMetadata) {
+            console.log("userVerificationMeta is: " + JSON.stringify(userVerificationMetadata));
+
+            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === false) {
+                var verificationId = userVerificationMetadata[0].uuid;
+                console.log("verificationId is: " + verificationId);
+
+                return emailIO.sendWelcomeEmail(profile[0].value.email, verificationId);
+            }
+            else {
+                return Q.reject(new Error('Resend verification email fail. Unable to find verification metadata.'));
+            }
+        })
+        .then(function() {
+            apiResponseController.sendSuccess('', response);
+        })
+        .fail(function(error) {
+            apiResponseController.sendError(error.message, response);
         });
 };

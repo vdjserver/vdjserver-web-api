@@ -102,6 +102,18 @@ module.exports = function(app) {
         passwordResetController.processResetPasswordRequest
     );
 
+    // Verify Username
+    app.post(
+        '/user/verify/:verificationId',
+        userController.verifyUser
+    );
+
+    // Resend User Verification Email
+    app.post(
+        '/user/verify/:verificationId/email',
+        userController.resendVerificationEmail
+    );
+
     // Process Job Create Notification
     app.post(
         '/notifications/jobs/:jobId',
