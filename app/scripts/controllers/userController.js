@@ -43,8 +43,8 @@ UserController.createUser = function(request, response) {
         })
         .then(function(userVerificationMetadata) {
             console.log("userVerificationMeta is: " + JSON.stringify(userVerificationMetadata));
-            if (userVerificationMetadata[0]) {
-                var verificationId = userVerificationMetadata[0].uuid;
+            if (userVerificationMetadata && userVerificationMetadata.uuid) {
+                var verificationId = userVerificationMetadata.uuid;
                 console.log("verificationId is: " + verificationId);
 
                 return emailIO.sendWelcomeEmail(user.email, verificationId);
@@ -106,7 +106,7 @@ UserController.verifyUser = function(request, response) {
     // First, check to see if this verificationId corresponds to this username
     agaveIO.getMetadata(verificationId)
         .then(function(userVerificationMetadata) {
-            if (userVerificationMetadata[0] && verificationId === userVerificationMetadata[0].uuid) {
+            if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
                 var username = userVerificationMetadata.value.username;
                 return agaveIO.verifyUser(username, verificationId);
             }
@@ -125,12 +125,11 @@ UserController.verifyUser = function(request, response) {
 UserController.resendVerificationEmail = function(request, response) {
 
     var verificationId = request.params.verificationId;
-    var profile = {};
     var username = '';
 
     agaveIO.getMetadata(verificationId)
         .then(function(userVerificationMetadata) {
-            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].isVerified === false) {
+            if (userVerificationMetadata && userVerificationMetadata.value.isVerified === false) {
                 username = userVerificationMetadata.value.username;
 
                 return agaveIO.getUserProfile(username);
@@ -141,25 +140,10 @@ UserController.resendVerificationEmail = function(request, response) {
         })
         .then(function(profileMetadata) {
             if (profileMetadata && profileMetadata[0] && profileMetadata[0].value && profileMetadata[0].value.email) {
-                profile = profileMetadata;
-
-                return agaveIO.getUserVerificationMetadata(username);
+                return emailIO.sendWelcomeEmail(profileMetadata[0].value.email, verificationId);
             }
             else {
                 return Q.reject(new Error('Resend verification email fail. User profile could not be found.'));
-            }
-        })
-        .then(function(userVerificationMetadata) {
-            console.log("userVerificationMeta is: " + JSON.stringify(userVerificationMetadata));
-
-            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === false) {
-                var verificationId = userVerificationMetadata[0].uuid;
-                console.log("verificationId is: " + verificationId);
-
-                return emailIO.sendWelcomeEmail(profile[0].value.email, verificationId);
-            }
-            else {
-                return Q.reject(new Error('Resend verification email fail. Unable to find verification metadata.'));
             }
         })
         .then(function() {
