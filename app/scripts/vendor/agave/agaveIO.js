@@ -668,7 +668,7 @@ agaveIO.getUserVerificationMetadata = function(username) {
         path:     '/meta/v2/data?q='
                   + encodeURIComponent(
                         '{"name":"userVerification",'
-                        + ' "value.username":"' + username + '"'
+                        + ' "value.username":"' + username + '",'
                         + ' "owner":"' + serviceAccount.username + '"'
                         + '}'
                   ),

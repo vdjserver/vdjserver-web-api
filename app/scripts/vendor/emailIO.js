@@ -25,7 +25,14 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 
     };
 
-    transporter.sendMail(mailOptions);
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending password reset email.', error);
+            }
+        }
+    );
 };
 
 emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
@@ -47,18 +54,31 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
 
 emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
 
-    var vdjWebappUrl = agaveSettings.vdjBackbone;
+    var vdjWebappUrl = agaveSettings.vdjBackbone
+                     + '/account'
+                     + '/verify'
+                     + '/' + verificationId
+                     ;
 
     var mailOptions = {
         to: recipientEmail,
-        subject: 'Welcome to VDJServer',
+        subject: 'VDJServer Account Verification',
         generateTextFromHTML: true,
         html: 'Welcome to VDJServer.'
+              + '<br>'
+              + 'Please verify your account by clicking on the link below:'
               + '<br>'
               + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
               ,
 
     };
 
-    transporter.sendMail(mailOptions);
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending account verification email.', error);
+            }
+        }
+    );
 };

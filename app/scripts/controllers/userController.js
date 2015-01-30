@@ -42,10 +42,8 @@ UserController.createUser = function(request, response) {
             return agaveIO.createUserVerificationMetadata(user.username);
         })
         .then(function(userVerificationMetadata) {
-            console.log("userVerificationMeta is: " + JSON.stringify(userVerificationMetadata));
             if (userVerificationMetadata && userVerificationMetadata.uuid) {
                 var verificationId = userVerificationMetadata.uuid;
-                console.log("verificationId is: " + verificationId);
 
                 return emailIO.sendWelcomeEmail(user.email, verificationId);
             }
@@ -124,13 +122,14 @@ UserController.verifyUser = function(request, response) {
 
 UserController.resendVerificationEmail = function(request, response) {
 
-    var verificationId = request.params.verificationId;
-    var username = '';
+    var username = request.params.username;
 
-    agaveIO.getMetadata(verificationId)
+    var verificationId = '';
+
+    agaveIO.getUserVerificationMetadata(username)
         .then(function(userVerificationMetadata) {
-            if (userVerificationMetadata && userVerificationMetadata.value.isVerified === false) {
-                username = userVerificationMetadata.value.username;
+            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === false) {
+                verificationId = userVerificationMetadata[0].uuid;
 
                 return agaveIO.getUserProfile(username);
             }

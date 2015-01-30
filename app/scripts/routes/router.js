@@ -110,7 +110,7 @@ module.exports = function(app) {
 
     // Resend User Verification Email
     app.post(
-        '/user/verify/:verificationId/email',
+        '/user/:username/verify/email',
         userController.resendVerificationEmail
     );
 
