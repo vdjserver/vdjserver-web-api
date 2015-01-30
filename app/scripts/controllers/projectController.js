@@ -54,7 +54,7 @@ ProjectController.createProject = function(request, response) {
             apiResponseController.sendSuccess(projectMetadata, response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 
 };

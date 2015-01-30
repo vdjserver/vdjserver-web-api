@@ -38,7 +38,7 @@ FeedbackController.createFeedback = function(request, response) {
     recaptcha.verify(
             function(success, error_code) {
                 if (!success) {
-                    apiResponseController.sendError('Recaptcha response invalid: ' + error_code, response);
+                    apiResponseController.sendError('Recaptcha response invalid: ' + error_code, 400, response);
 
                     return;
                 }

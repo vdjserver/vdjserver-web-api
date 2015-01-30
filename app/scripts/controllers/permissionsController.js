@@ -70,7 +70,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 
 };
@@ -130,7 +130,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 
 };
@@ -259,7 +259,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 };
 
@@ -324,7 +324,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 };
 
@@ -443,6 +443,6 @@ PermissionsController.addPermissionsForJob = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 };

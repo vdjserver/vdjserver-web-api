@@ -40,7 +40,7 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
             apiResponseController.sendSuccess('Password reset email sent.', response); // 4a.
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response); // 4b.
+            apiResponseController.sendError(error.message, 500, response); // 4b.
         });
 };
 
@@ -93,7 +93,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response); // 6b.
+            apiResponseController.sendError(error.message, 500, response); // 6b.
         });
 
 };

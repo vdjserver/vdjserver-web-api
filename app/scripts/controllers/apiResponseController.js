@@ -19,15 +19,15 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
     }
 };
 
-// Sends a 400 response with an error message to the client
-ApiResponseController.sendError = function(errorMessage, response) {
+// Sends a response with an error message to the client
+ApiResponseController.sendError = function(errorMessage, errorCode, response) {
 
     var apiResponse = new ApiResponse();
     apiResponse.setError();
     apiResponse.message = errorMessage;
 
     if (response) {
-        response.status(400).send(apiResponse);
+        response.status(errorCode).send(apiResponse);
     }
 };
 

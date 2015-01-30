@@ -57,7 +57,7 @@ UserController.createUser = function(request, response) {
             apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 
 };
@@ -93,7 +93,7 @@ UserController.changePassword = function(request, response) {
             apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response); // 3b.
+            apiResponseController.sendError(error.message, 500, response); // 3b.
         });
 };
 
@@ -116,7 +116,7 @@ UserController.verifyUser = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 };
 
@@ -149,6 +149,6 @@ UserController.resendVerificationEmail = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response);
+            apiResponseController.sendError(error.message, 500, response);
         });
 };

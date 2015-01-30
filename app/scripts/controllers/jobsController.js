@@ -72,7 +72,7 @@ JobsController.createJobMetadata = function(request, response) {
             apiResponseController.sendSuccess('Job metadata created successfully.', response); // 4a.
         })
         .fail(function(error) {
-            apiResponseController.sendError(error.message, response); // 4b.
+            apiResponseController.sendError(error.message, 500, response); // 4b.
         });
 };
 
