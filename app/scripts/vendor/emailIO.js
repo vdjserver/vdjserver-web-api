@@ -15,6 +15,7 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 
     var mailOptions = {
         to: recipientEmail,
+        from: agaveSettings.fromAddress,
         subject: 'VDJ Password Reset',
         generateTextFromHTML: true,
         html: 'A VDJ password reset request has been submitted to vdjserver.org.'
@@ -38,6 +39,7 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
     var mailOptions = {
         to: recipientEmail,
+        from: agaveSettings.fromAddress,
         subject: 'VDJServer.org Feedback',
         text: feedback,
     };
@@ -62,6 +64,7 @@ emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
 
     var mailOptions = {
         to: recipientEmail,
+        from: agaveSettings.fromAddress,
         subject: 'VDJServer Account Verification',
         generateTextFromHTML: true,
         html: 'Welcome to VDJServer.'

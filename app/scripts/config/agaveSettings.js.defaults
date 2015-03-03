@@ -15,4 +15,7 @@ module.exports = {
 
     // Agave Misc.
     storageSystem: 'data.vdjserver.org',
+
+    // Email
+    fromAddress: 'vdj@vdjserver.org',
 };
