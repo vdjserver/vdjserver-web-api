@@ -16,7 +16,7 @@ var io = require('socket.io')(app.server);
 var WebsocketsController = {};
 module.exports = WebsocketsController;
 
-io.on('connection', function(socket) {
+io.of('/api/v1').on('connection', function(socket) {
 
     socket.on('joinRoom', function(room) {
         socket.join(room);
