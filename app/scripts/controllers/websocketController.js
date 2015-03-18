@@ -27,8 +27,8 @@ io.of('/api/v1').on('connection', function(socket) {
         delete io.sockets.adapter.rooms[socket.id];
     });
 
-});
+    app.on('jobNotification', function(jobNotification) {
+        socket.in(jobNotification.jobId).emit('jobUpdate', jobNotification);
+    });
 
-app.on('jobNotification', function(jobNotification) {
-    io.sockets.in(jobNotification.jobId).emit('jobUpdate', jobNotification);
 });
