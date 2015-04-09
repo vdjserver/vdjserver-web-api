@@ -24,6 +24,19 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
 
     var projectUuid = request.body.projectUuid;
 
+    // TODO: change fileName to filename on backbone clients
+    var filename = request.body.fileName;
+
+    if (!projectUuid) {
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
+
+    if (!filename) {
+        apiResponseController.sendError('Filename required.', 400, response);
+        return;
+    }
+
     var serviceAccount = new ServiceAccount();
 
     /*
@@ -46,8 +59,12 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
 
                     return agaveIO.addUsernameToFullFilePermissions(
                         username,
+
                         serviceAccount.accessToken,
+
                         projectUuid
+                            + '/files'
+                            + '/' + filename
                     );
                 };
             }
