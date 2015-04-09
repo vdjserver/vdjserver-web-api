@@ -19,6 +19,16 @@ ProjectController.createProject = function(request, response) {
     var projectName = request.body.projectName;
     var username    = request.body.username;
 
+    if (!projectName) {
+        apiResponseController.sendError('Project name required.', 400, response);
+        return;
+    }
+
+    if (!username) {
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
     var serviceAccount = new ServiceAccount();
 
     var projectMetadata;

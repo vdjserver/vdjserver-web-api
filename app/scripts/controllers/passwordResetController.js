@@ -17,6 +17,12 @@ module.exports = PasswordResetController;
 PasswordResetController.createResetPasswordRequest = function(request, response) {
 
     var username = request.body.username;
+
+    if (!username) {
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
     var userProfile;
 
     // 1.  Get confirm username, email address from user profile
@@ -49,6 +55,22 @@ PasswordResetController.processResetPasswordRequest = function(request, response
     var username = request.body.username;
     var uuid = request.body.uuid;
     var newPassword = request.body.newPassword;
+
+    if (!username) {
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
+    if (!uuid) {
+        apiResponseController.sendError('Password reset id required.', 400, response);
+        return;
+    }
+
+    if (!newPassword) {
+        apiResponseController.sendError('New password required.', 400, response);
+        return;
+    }
+
     var passwordReset;
 
     // 1.  Get password reset metadata for given uuid

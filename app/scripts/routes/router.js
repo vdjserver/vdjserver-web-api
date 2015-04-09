@@ -134,7 +134,7 @@ module.exports = function(app) {
         permissionsController.addPermissionsForJob
     );
 
-    // Create a project
+    // Send feedback
     app.post(
         '/feedback',
         feedbackController.createFeedback

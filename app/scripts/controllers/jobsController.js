@@ -29,6 +29,16 @@ JobsController.createJobMetadata = function(request, response) {
     var jobUuid     = request.body.jobUuid;
     var projectUuid = request.body.projectUuid;
 
+    if (!jobUuid) {
+        apiResponseController.sendError('Job id required.', 400, response);
+        return;
+    }
+
+    if (!projectUuid) {
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
+
     var serviceAccount = new ServiceAccount();
     var jobMetadataUuid;
 

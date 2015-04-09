@@ -36,9 +36,9 @@ FeedbackController.createFeedback = function(request, response) {
     //verify the recaptcha
     var recaptcha = new Recaptcha(config.recaptchaPublic, config.recaptchaSecret, recaptchaData);
     recaptcha.verify(
-            function(success, error_code) {
+            function(success, errorCode) {
                 if (!success) {
-                    apiResponseController.sendError('Recaptcha response invalid: ' + error_code, 400, response);
+                    apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
 
                     return;
                 }
