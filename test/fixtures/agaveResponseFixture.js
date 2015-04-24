@@ -125,6 +125,33 @@ AgaveResponseFixture.createProjectDirectorySuccess = {
     'result':{},
 };
 
+AgaveResponseFixture.getUserVerificationMetadataSuccess = [{
+    'status': 'success',
+    'message': null,
+    'version': '2.0.0-SNAPSHOT-r33a65',
+    'result': [
+        {
+            'uuid': '0001398948143440-5056a550b8-0001-012',
+            'owner': 'vdj',
+            'schemaId': null,
+            'internalUsername': null,
+            'associationIds': [
+            ],
+            'lastUpdated': '2014-05-01T07:42:23.333-05:00',
+            'name': 'userVerification',
+            'value': {
+                'isVerified': true,
+            },
+            'created': '2014-05-01T07:42:23.333-05:00',
+            '_links': {
+                'self': {
+                    'href': 'https://agave.iplantc.org/meta/v2/data/0001398948143440-5056a550b8-0001-012'
+                },
+            }
+        },
+    ],
+}];
+
 AgaveResponseFixture.addUsernameToMetadataPermissionsSuccess = {
     'status': 'success',
     'message': null,

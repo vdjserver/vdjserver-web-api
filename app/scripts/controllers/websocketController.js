@@ -3,14 +3,7 @@
 
 var app = require('../app');
 
-// Controllers
-//var apiResponseController = require('./apiResponseController');
-
-// Processing
-//var agaveIO = require('../vendor/agave/agaveIO');
-
 // Node Libraries
-//var Q = require('q');
 var io = require('socket.io')(app.server);
 
 var WebsocketsController = {};

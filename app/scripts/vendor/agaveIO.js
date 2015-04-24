@@ -2,10 +2,10 @@
 'use strict';
 
 // Settings
-var agaveSettings = require('../../config/agaveSettings');
+var agaveSettings = require('../config/agaveSettings');
 
 // Models
-var ServiceAccount = require('../../models/serviceAccount');
+var ServiceAccount = require('../models/serviceAccount');
 
 // Promises
 var Q = require('q');

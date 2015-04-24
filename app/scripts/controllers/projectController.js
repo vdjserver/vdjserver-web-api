@@ -8,7 +8,7 @@ var apiResponseController = require('./apiResponseController');
 var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
-var agaveIO = require('../vendor/agave/agaveIO');
+var agaveIO = require('../vendor/agaveIO');
 
 var ProjectController = {};
 module.exports = ProjectController;

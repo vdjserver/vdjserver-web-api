@@ -1,6 +1,6 @@
 'use strict';
 
-var baseUrl = 'http://localhost:8442';
+var baseUrl = 'https://localhost:8443';
 
 var server = require('../app/scripts/app');
 
@@ -30,11 +30,15 @@ describe('VDJ/Agave Integration Tests', function() {
     // New Token
     it('should get a new Agave token', function(done) {
 
+        nock.enableNetConnect('localhost:8443');
+        agaveMocks.getUserVerificationMetadata(nock);
         agaveMocks.getToken(nock);
 
         api.post('/token')
             .auth(agaveRequestFixture.username, agaveRequestFixture.password)
             .end(function(error, response) {
+                console.log("end reached ok. error is: " + JSON.stringify(error));
+                console.log("data is: " + JSON.stringify(response));
 
                 var data = response.body.result;
 
@@ -46,7 +50,7 @@ describe('VDJ/Agave Integration Tests', function() {
                 done();
             });
     });
-
+/*
     it('should return an error message when unable to get a new Agave Token', function(done) {
 
         agaveMocks.genericPostError(nock);
@@ -96,5 +100,5 @@ describe('VDJ/Agave Integration Tests', function() {
                 done();
             });
     });
-
+*/
 });

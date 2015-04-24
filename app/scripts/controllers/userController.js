@@ -8,7 +8,7 @@ var apiResponseController = require('./apiResponseController');
 var User = require('../models/user');
 
 // Processing
-var agaveIO = require('../vendor/agave/agaveIO');
+var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 
 // Node Libraries

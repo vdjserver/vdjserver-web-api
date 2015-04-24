@@ -9,7 +9,7 @@ var MetadataPermissions = require('../models/metadataPermissions');
 var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
-var agaveIO = require('../vendor/agave/agaveIO');
+var agaveIO = require('../vendor/agaveIO');
 
 // Node Libraries
 var Q = require('q');

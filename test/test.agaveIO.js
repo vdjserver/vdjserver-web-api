@@ -2,7 +2,7 @@
 'use strict';
 
 // Processing
-var agaveIO = require('../app/scripts/vendor/agave/agaveIO');
+var agaveIO = require('../app/scripts/vendor/agaveIO');
 
 // Testing
 var should = require('chai').should();

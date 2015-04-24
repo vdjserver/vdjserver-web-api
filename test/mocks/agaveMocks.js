@@ -8,7 +8,6 @@ var agaveSettings = require('../../app/scripts/config/agaveSettings');
 var agaveRequestFixture  = require('../fixtures/agaveRequestFixture');
 var agaveResponseFixture = require('../fixtures/agaveResponseFixture');
 
-
 var AgaveMocks = {};
 module.exports = AgaveMocks;
 
@@ -95,6 +94,30 @@ AgaveMocks.refreshToken = function(nock) {
         .matchHeader('Content-Type', 'application/x-www-form-urlencoded')
         .post('/token', 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + agaveRequestFixture.refreshToken)
         .reply(200, agaveResponseFixture.tokenSuccess)
+    ;
+
+    return nock;
+};
+
+AgaveMocks.getUserVerificationMetadata = function(nock) {
+
+    nock('https://' + agaveSettings.hostname)
+        .log(console.log)
+        //.matchHeader('Content-Type', 'application/x-www-form-urlencoded')
+        //.matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
+        .get('/meta/v2/data?q='
+                  + encodeURIComponent(
+                        '{"name":"userVerification",'
+                        + ' "value.username":"' + agaveRequestFixture.username + '",'
+                        + ' "owner":"' + agaveSettings.serviceAccountKey + '"'
+                        + '}',
+                        function() {
+                            console.log("userVer hit ok");
+                        }
+                  )
+        )
+        //.get('/meta/v2/data?q=')
+        .reply(200, agaveResponseFixture.getUserVerificationMetadataSuccess)
     ;
 
     return nock;
