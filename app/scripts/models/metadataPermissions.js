@@ -2,6 +2,7 @@
 'use strict';
 
 var _ = require('underscore');
+var MetadataUtilities = require('./mixins/metadata-utilities');
 
 var MetadataPermissions = function(attributes) {
 
@@ -10,18 +11,6 @@ var MetadataPermissions = function(attributes) {
     }
 
     this.username = attributes.username || '';
-};
-
-MetadataPermissions.prototype.getUsernamesFromMetadataResponse = function(metadata) {
-
-    var usernames = [];
-
-    for (var i = 0; i < metadata.length; i++) {
-        usernames.push(metadata[i].username);
-    }
-
-    usernames = _.without(usernames, 'vdj');
-    return usernames;
 };
 
 MetadataPermissions.prototype.getUuidsFromMetadataResponse = function(metadata) {
@@ -45,5 +34,7 @@ MetadataPermissions.prototype.getJobUuidsFromMetadataResponse = function(metadat
 
     return uuids;
 };
+
+_.extend(MetadataPermissions.prototype, MetadataUtilities);
 
 module.exports = MetadataPermissions;

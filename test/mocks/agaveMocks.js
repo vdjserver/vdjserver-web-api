@@ -14,7 +14,6 @@ module.exports = AgaveMocks;
 // generic Agave errors
 AgaveMocks.genericGetError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .filteringRequestBody(function() {
             return '*';
         })
@@ -30,7 +29,6 @@ AgaveMocks.genericGetError = function(nock) {
 
 AgaveMocks.genericPutError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .filteringRequestBody(function() {
             return '*';
         })
@@ -46,7 +44,6 @@ AgaveMocks.genericPutError = function(nock) {
 
 AgaveMocks.genericPostError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .filteringRequestBody(function() {
             return '*';
         })
@@ -62,7 +59,6 @@ AgaveMocks.genericPostError = function(nock) {
 
 AgaveMocks.genericDeleteError = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .filteringRequestBody(function() {
             return '*';
         })
@@ -79,7 +75,6 @@ AgaveMocks.genericDeleteError = function(nock) {
 // Agave interaction mocks
 AgaveMocks.getToken = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Content-Type', 'application/x-www-form-urlencoded')
         .post('/token', 'grant_type=password&scope=PRODUCTION&username=' + agaveRequestFixture.username + '&password=' + agaveRequestFixture.password)
         .reply(200, JSON.stringify(agaveResponseFixture.tokenSuccess))
@@ -90,7 +85,6 @@ AgaveMocks.getToken = function(nock) {
 
 AgaveMocks.refreshToken = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Content-Type', 'application/x-www-form-urlencoded')
         .post('/token', 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + agaveRequestFixture.refreshToken)
         .reply(200, agaveResponseFixture.tokenSuccess)
@@ -102,7 +96,6 @@ AgaveMocks.refreshToken = function(nock) {
 AgaveMocks.getUserVerificationMetadata = function(nock) {
 
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         //.matchHeader('Content-Type', 'application/x-www-form-urlencoded')
         //.matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .get('/meta/v2/data?q='
@@ -125,7 +118,6 @@ AgaveMocks.getUserVerificationMetadata = function(nock) {
 
 AgaveMocks.createUser = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Content-Type', 'application/x-www-form-urlencoded')
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .post('/profiles/v2/', 'username=' + agaveRequestFixture.createUser.username + '&password=' + agaveRequestFixture.createUser.password + '&email=' + agaveRequestFixture.createUser.email)
@@ -137,7 +129,6 @@ AgaveMocks.createUser = function(nock) {
 
 AgaveMocks.createUserProfile = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Content-Type', 'application/json')
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .post('/meta/v2/data', {'name':'profile','value':agaveRequestFixture.createUserProfile})
@@ -149,7 +140,6 @@ AgaveMocks.createUserProfile = function(nock) {
 
 AgaveMocks.getUserProfile = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .get('/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + agaveRequestFixture.username + '"}'))
         .reply(200, agaveResponseFixture.getUserProfileSuccess)
@@ -160,7 +150,6 @@ AgaveMocks.getUserProfile = function(nock) {
 
 AgaveMocks.createProjectMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Content-Type', 'application/json')
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .post('/meta/v2/data', function(input) {
@@ -174,7 +163,6 @@ AgaveMocks.createProjectMetadata = function(nock) {
 
 AgaveMocks.createProjectDirectory = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .put('/files/v2/media/system/data.vdjserver.org//projects/', 'action=mkdir&path=' + agaveRequestFixture.projectUuid)
         .reply(200, agaveResponseFixture.createProjectDirectorySuccess)
@@ -185,7 +173,6 @@ AgaveMocks.createProjectDirectory = function(nock) {
 
 AgaveMocks.addUsernameToMetadataPermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .post('/meta/v2/data/' + agaveRequestFixture.projectUuid + '/pems', 'username=' + agaveRequestFixture.username + '&permission=READ_WRITE')
         .reply(200, agaveResponseFixture.addUsernameToMetadataPermissionsSuccess)
@@ -196,7 +183,6 @@ AgaveMocks.addUsernameToMetadataPermissions = function(nock) {
 
 AgaveMocks.removeUsernameFromMetadataPermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .delete('/meta/v2/data/' + agaveRequestFixture.projectUuid + '/pems/' + agaveRequestFixture.username)
         .reply(200, agaveResponseFixture.removeUsernameFromMetadataPermissionsSuccess)
@@ -207,7 +193,6 @@ AgaveMocks.removeUsernameFromMetadataPermissions = function(nock) {
 
 AgaveMocks.getMetadataPermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .get('/meta/v2/data/' + agaveRequestFixture.projectUuid + '/pems')
         .reply(200, agaveResponseFixture.getMetadataPermissionsSuccess)
@@ -218,7 +203,6 @@ AgaveMocks.getMetadataPermissions = function(nock) {
 
 AgaveMocks.getProjectFileMetadataPermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .get('/meta/v2/data?q='
                 + encodeURIComponent('{'
@@ -234,7 +218,6 @@ AgaveMocks.getProjectFileMetadataPermissions = function(nock) {
 
 AgaveMocks.getFilePermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .get('/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath)
         .reply(200, agaveResponseFixture.getFilePermissionsSuccess)
@@ -245,7 +228,6 @@ AgaveMocks.getFilePermissions = function(nock) {
 
 AgaveMocks.getFileListings = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .get('/files/v2/listings/system/data.vdjserver.org//projects/' + agaveRequestFixture.projectUuid + '/files')
         .reply(200, agaveResponseFixture.getFileListingsSuccess)
@@ -256,7 +238,6 @@ AgaveMocks.getFileListings = function(nock) {
 
 AgaveMocks.addUsernameToFullFilePermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .post(
             '/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath,
@@ -274,7 +255,6 @@ AgaveMocks.addUsernameToFullFilePermissions = function(nock) {
 
 AgaveMocks.removeUsernameFromFilePermissions = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveRequestFixture.accessToken)
         .post(
             '/files/v2/pems/system/data.vdjserver.org//projects/' + agaveRequestFixture.filePath,
@@ -290,7 +270,6 @@ AgaveMocks.removeUsernameFromFilePermissions = function(nock) {
 
 AgaveMocks.createPasswordResetMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .post(
             '/meta/v2/data',
@@ -309,7 +288,6 @@ AgaveMocks.createPasswordResetMetadata = function(nock) {
 
 AgaveMocks.getPasswordResetMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .get('/meta/v2/data?q=' + encodeURIComponent('{"name":"passwordReset", "uuid":"' + agaveRequestFixture.metadataUuid + '", "owner":"' + agaveSettings.serviceAccountKey + '"}'))
         .reply(200, agaveResponseFixture.getPasswordResetMetadataSuccess)
@@ -320,7 +298,6 @@ AgaveMocks.getPasswordResetMetadata = function(nock) {
 
 AgaveMocks.deleteMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .delete('/meta/v2/data/' + agaveRequestFixture.metadataUuid)
         .reply(200, agaveResponseFixture.deleteMetadataSuccess)
@@ -331,7 +308,6 @@ AgaveMocks.deleteMetadata = function(nock) {
 
 AgaveMocks.updateUserPassword = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         //.matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .put(
             '/profiles/v2/' + agaveRequestFixture.createUser.username + '/',
@@ -348,7 +324,6 @@ AgaveMocks.updateUserPassword = function(nock) {
 
 AgaveMocks.createJobMetadata = function(nock) {
     nock('https://' + agaveSettings.hostname)
-        .log(console.log)
         .matchHeader('Authorization', 'Bearer ' + agaveSettings.serviceAccountToken)
         .post(
             '/meta/v2/data',

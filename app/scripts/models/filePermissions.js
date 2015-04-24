@@ -2,6 +2,7 @@
 'use strict';
 
 var _ = require('underscore');
+var MetadataUtilities = require('./mixins/metadata-utilities');
 
 var FilePermissions = function(attributes) {
 
@@ -12,16 +13,6 @@ var FilePermissions = function(attributes) {
     this.username = attributes.username || '';
 };
 
-FilePermissions.prototype.getUsernamesFromMetadataResponse = function(metadata) {
-
-    var usernames = [];
-
-    for (var i = 0; i < metadata.length; i++) {
-        usernames.push(metadata[i].username);
-    }
-
-    usernames = _.without(usernames, 'vdj');
-    return usernames;
-};
+_.extend(FilePermissions.prototype, MetadataUtilities);
 
 module.exports = FilePermissions;

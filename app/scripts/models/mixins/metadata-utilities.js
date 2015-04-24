@@ -2,7 +2,7 @@
 
 var _ = require('underscore');
 
-var MetadataUtilities = {};
+var MetadataUtilities = {}; //function() {};
 
 MetadataUtilities.getUsernamesFromMetadataResponse = function(metadata) {
 
