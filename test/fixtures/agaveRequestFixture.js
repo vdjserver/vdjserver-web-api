@@ -56,8 +56,14 @@ AgaveRequestFixture.createUserProfile = {
 AgaveRequestFixture.createProjectMetadata = {
     name: 'project',
     value: {
-        name: 'Fancy Project',
+        name: AgaveRequestFixture.projectName,
     },
 };
 
 AgaveRequestFixture.filePath = '123123123/myFile.fastq';
+
+AgaveRequestFixture.removeUsernameFromFilePermissions = {
+    'username': AgaveRequestFixture.username,
+    'permission':'NONE',
+    'recursive': true,
+};

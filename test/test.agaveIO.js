@@ -13,7 +13,6 @@ var agaveMocks           = require('./mocks/agaveMocks');
 var agaveRequestFixture  = require('./fixtures/agaveRequestFixture');
 var agaveResponseFixture = require('./fixtures/agaveResponseFixture');
 
-
 describe('agaveIO token functions', function() {
 
     before(function(done) {
@@ -132,13 +131,17 @@ describe('agaveIO token functions', function() {
 
     it('should fulfill a promise to create a new VDJ project', function(done) {
 
-        agaveMocks.createProjectMetadata(nock);
+        var mock = agaveMocks.createProjectMetadata(nock);
 
         agaveIO.createProjectMetadata(agaveRequestFixture.projectName)
             .then(function(data) {
-                data.should.eql(agaveResponseFixture.createProjectMetadataSuccess.result);
+                data.should.eql(agaveResponseFixture.createProjectSuccess.result);
                 done();
-            });
+            })
+            .fail(function(error) {
+                should.not.exist(error);
+            })
+            ;
     });
 
     it('should fail a promise when unable to create a new Agave project', function(done) {
