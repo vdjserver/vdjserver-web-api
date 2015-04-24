@@ -20,11 +20,13 @@ ProjectController.createProject = function(request, response) {
     var username    = request.body.username;
 
     if (!projectName) {
+        console.error('Error ProjectController.createProject: missing projectName parameter');
         apiResponseController.sendError('Project name required.', 400, response);
         return;
     }
 
     if (!username) {
+        console.error('Error ProjectController.createProject: missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
@@ -64,6 +66,7 @@ ProjectController.createProject = function(request, response) {
             apiResponseController.sendSuccess(projectMetadata, response);
         })
         .fail(function(error) {
+            console.error('Error ProjectController.createProject: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 

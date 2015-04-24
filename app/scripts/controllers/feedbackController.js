@@ -36,19 +36,20 @@ FeedbackController.createFeedback = function(request, response) {
     //verify the recaptcha
     var recaptcha = new Recaptcha(config.recaptchaPublic, config.recaptchaSecret, recaptchaData);
     recaptcha.verify(
-            function(success, errorCode) {
-                if (!success) {
-                    apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+        function(success, errorCode) {
+            if (!success) {
+                console.error('Error FeedbackController.createFeedback: error code is: ' + errorCode);
+                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+                return;
+            }
+            else {
+                //send the email
+                emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
 
-                    return;
-                }
-                else {
-                    //send the email
-                    emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
-
-                    //send the response
-                    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-                    return;
-                }
-            });
+                //send the response
+                apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+                return;
+            }
+        }
+    );
 };

@@ -40,6 +40,8 @@ ApiResponseController.send404 = function(request, response) {
     apiResponse.message = 'The endpoint you are trying to reach either doesn\'t exist,'
                           + ' or doesn\'t support the action that you\'re trying.';
 
+    console.error('Error ApiResponseController.send404: ' + JSON.stringify(request.route));
+
     if (response) {
         response.status(404).send(apiResponse);
     }

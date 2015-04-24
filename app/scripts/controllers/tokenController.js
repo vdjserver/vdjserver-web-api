@@ -29,6 +29,8 @@ TokenController.getToken = function(request, response) {
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
+            console.error('Error TokenController.getToken: ' + JSON.stringify(error));
+
             if (error.message === '1') {
                 apiResponseController.sendError('Cannot fetch token for unverified account.', 403, response);
             }
@@ -46,6 +48,7 @@ TokenController.refreshToken = function(request, response) {
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
+            console.error('Error TokenController.refreshToken: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };

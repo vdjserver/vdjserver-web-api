@@ -31,6 +31,60 @@ UserController.createUser = function(request, response) {
         affiliation: request.body.affiliation,
     });
 
+    if (!username) {
+        console.error('Error UserController.createUser: missing username parameter');
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
+    if (!password) {
+        console.error('Error UserController.createUser: missing password parameter');
+        apiResponseController.sendError('Password required.', 400, response);
+        return;
+    }
+
+    if (!email) {
+        console.error('Error UserController.createUser: missing email parameter');
+        apiResponseController.sendError('Email required.', 400, response);
+        return;
+    }
+
+    if (!firstName) {
+        console.error('Error UserController.createUser: missing firstName parameter');
+        apiResponseController.sendError('First Name required.', 400, response);
+        return;
+    }
+
+    if (!lastName) {
+        console.error('Error UserController.createUser: missing lastName parameter');
+        apiResponseController.sendError('Last Name required.', 400, response);
+        return;
+    }
+
+    if (!city) {
+        console.error('Error UserController.createUser: missing city parameter');
+        apiResponseController.sendError('City required.', 400, response);
+        return;
+    }
+
+    if (!state) {
+        console.error('Error UserController.createUser: missing state parameter');
+        apiResponseController.sendError('State required.', 400, response);
+        return;
+    }
+
+    if (!country) {
+        console.error('Error UserController.createUser: missing country parameter');
+        apiResponseController.sendError('Country required.', 400, response);
+        return;
+    }
+
+    if (!affiliation) {
+        console.error('Error UserController.createUser: missing affiliation parameter');
+        apiResponseController.sendError('Affiliation required.', 400, response);
+        return;
+    }
+
     agaveIO.createUser(user.getCreateUserAttributes())
         .then(function() {
             return agaveIO.getToken(user);
@@ -57,6 +111,7 @@ UserController.createUser = function(request, response) {
             apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
         })
         .fail(function(error) {
+            console.error('Error UserController.createUser: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 
@@ -66,6 +121,24 @@ UserController.changePassword = function(request, response) {
     var username = request.user.username;
     var password = request.body.password;
     var newPassword = request.body.newPassword;
+
+    if (!username) {
+        console.error('Error UserController.changePassword: missing username parameter');
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
+    if (!password) {
+        console.error('Error UserController.changePassword: missing password parameter');
+        apiResponseController.sendError('Password required.', 400, response);
+        return;
+    }
+
+    if (!newPassword) {
+        console.error('Error UserController.changePassword: missing newPassword parameter');
+        apiResponseController.sendError('New Password required.', 400, response);
+        return;
+    }
 
     // 0.  Verify old password
     // 1.  Get user profile
@@ -84,8 +157,10 @@ UserController.changePassword = function(request, response) {
                 return agaveIO.updateUserPassword({ // 2.
                     'username': username,
                     'email': profile[0].value.email,
-                    'password': newPassword});
-            } else {
+                    'password': newPassword,
+                });
+            }
+            else {
                 return Q.reject(new Error('Password change fail. User profile not found.'));
             }
         })
@@ -93,6 +168,7 @@ UserController.changePassword = function(request, response) {
             apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
         })
         .fail(function(error) {
+            console.error('Error UserController.changePassword: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response); // 3b.
         });
 };
@@ -100,6 +176,11 @@ UserController.changePassword = function(request, response) {
 UserController.verifyUser = function(request, response) {
 
     var verificationId = request.params.verificationId;
+
+    if (!verificationId) {
+        console.error('Error UserController.verifyUser: missing verificationId parameter');
+        apiResponseController.sendError('Verification Id required.', 400, response);
+    }
 
     // First, check to see if this verificationId corresponds to this username
     agaveIO.getMetadata(verificationId)
@@ -116,6 +197,7 @@ UserController.verifyUser = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
+            console.error('Error UserController.verifyUser: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };
@@ -123,6 +205,11 @@ UserController.verifyUser = function(request, response) {
 UserController.resendVerificationEmail = function(request, response) {
 
     var username = request.params.username;
+
+    if (!username) {
+        console.error('Error UserController.resendVerificationEmail: missing username parameter');
+        apiResponseController.sendError('Username required.', 400, response);
+    }
 
     var verificationId = '';
 
@@ -149,6 +236,7 @@ UserController.resendVerificationEmail = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
+            console.error('Error UserController.resendVerificationEmail: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };

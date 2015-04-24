@@ -18,4 +18,7 @@ module.exports = {
 
     // Email
     fromAddress: 'vdj@vdjserver.org',
+
+    // Debug
+    debugConsole: false,
 };

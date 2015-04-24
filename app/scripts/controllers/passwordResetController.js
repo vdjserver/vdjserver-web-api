@@ -19,6 +19,7 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
     var username = request.body.username;
 
     if (!username) {
+        console.error('Error PasswordResetController.createResetPasswordRequest: missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
@@ -35,7 +36,8 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
             if (profile[0]) {
                 userProfile = profile[0];
                 return agaveIO.createPasswordResetMetadata(username); // 2.
-            } else {
+            }
+            else {
                 return Q.reject(new Error('Password reset fail. Username unknown.'));
             }
         })
@@ -46,6 +48,7 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
             apiResponseController.sendSuccess('Password reset email sent.', response); // 4a.
         })
         .fail(function(error) {
+            console.error('Error PasswordResetController.createResetPasswordRequest: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response); // 4b.
         });
 };
@@ -57,16 +60,19 @@ PasswordResetController.processResetPasswordRequest = function(request, response
     var newPassword = request.body.newPassword;
 
     if (!username) {
+        console.error('Error PasswordResetController.processResetPasswordRequest: missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
     if (!uuid) {
+        console.error('Error PasswordResetController.processResetPasswordRequest: missing uuid parameter');
         apiResponseController.sendError('Password reset id required.', 400, response);
         return;
     }
 
     if (!newPassword) {
+        console.error('Error PasswordResetController.processResetPasswordRequest: missing newPassword parameter');
         apiResponseController.sendError('New password required.', 400, response);
         return;
     }
@@ -93,13 +99,11 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             }
         })
         .then(function(profile) {
-            return agaveIO.updateUserPassword(
-                        {
-                            'username': username,
-                            'email': profile[0].value.email,
-                            'password': newPassword
-                        }
-                   ); // 4.
+            return agaveIO.updateUserPassword({
+                'username': username,
+                'email': profile[0].value.email,
+                'password': newPassword
+            }); // 4.
         })
         .then(function() {
             /*
@@ -115,6 +119,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
         })
         .fail(function(error) {
+            console.error('Error PasswordResetController.processResetPasswordRequest: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response); // 6b.
         });
 

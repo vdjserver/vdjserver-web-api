@@ -30,11 +30,13 @@ JobsController.createJobMetadata = function(request, response) {
     var projectUuid = request.body.projectUuid;
 
     if (!jobUuid) {
+        console.error('Error JobsController.createJobMetadata: missing jobId parameter');
         apiResponseController.sendError('Job id required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
+        console.error('Error JobsController.createJobMetadata: missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
@@ -82,6 +84,7 @@ JobsController.createJobMetadata = function(request, response) {
             apiResponseController.sendSuccess('Job metadata created successfully.', response); // 4a.
         })
         .fail(function(error) {
+            console.error('Error JobsController.createJobMetadata: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response); // 4b.
         });
 };
@@ -231,6 +234,10 @@ JobsController.createJobFileMetadata = function(jobId) {
             }
 
             return promises.reduce(Q.when, new Q());
+        })
+        .fail(function(error) {
+            console.error('Error JobsController.createJobFileMetadata: ' + JSON.stringify(error));
+            apiResponseController.sendError(error.message, 500, response); // 4b.
         })
         ;
 };

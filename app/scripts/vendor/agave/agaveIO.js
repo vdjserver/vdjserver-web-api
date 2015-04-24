@@ -44,7 +44,11 @@ agaveIO.sendRequest = function(requestSettings, postData) {
                 responseObject = JSON.parse(output);
             }
             else {
-                console.log('Agave response is not json.');
+
+                if (agaveSettings.debugConsole === true) {
+                    console.log('Agave response is not json.');
+                }
+
                 deferred.reject(new Error('Agave response is not json'));
             }
 
@@ -52,16 +56,23 @@ agaveIO.sendRequest = function(requestSettings, postData) {
                 deferred.resolve(responseObject);
             }
             else {
-                console.log('Agave returned an error. it is: ' + JSON.stringify(responseObject));
-                console.log('Agave returned an error. it is: ' + responseObject);
-                deferred.reject(new Error('Agave response returned an error.'));
+
+                if (agaveSettings.debugConsole === true) {
+                    console.error('Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                    console.error('Agave returned an error. it is: ' + responseObject);
+                }
+
+                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
             }
 
         });
     });
 
-    request.on('error', function() {
-        console.log('Agave connection error.');
+    request.on('error', function(error) {
+        if (agaveSettings.debugConsole === true) {
+            console.error('Agave connection error.' + JSON.stringify(error));
+        }
+
         deferred.reject(new Error('Agave connection error'));
     });
 
@@ -95,7 +106,11 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 responseObject = JSON.parse(output);
             }
             else {
-                console.log('Agave token response is not json.');
+
+                if (agaveSettings.debugConsole === true) {
+                    console.error('Agave token response is not json.');
+                }
+
                 deferred.reject(new Error('Agave response is not json'));
             }
 
@@ -109,16 +124,24 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
                 deferred.resolve(responseObject);
             }
             else {
-                console.log('Agave returned a token error. it is: ' + JSON.stringify(responseObject));
-                console.log('Agave returned a token error. it is: ' + responseObject);
-                deferred.reject(new Error('Agave response returned an error'));
+
+                if (agaveSettings.debugConsole === true) {
+                    console.error('Agave returned a token error. it is: ' + JSON.stringify(responseObject));
+                    console.error('Agave returned a token error. it is: ' + responseObject);
+                }
+
+                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
             }
 
         });
     });
 
     request.on('error', function() {
-        console.log('Agave token connection error.');
+
+        if (agaveSettings.debugConsole === true) {
+            console.error('Agave token connection error.');
+        }
+
         deferred.reject(new Error('Agave connection error'));
     });
 
@@ -597,7 +620,7 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'POST',
-        path:     '/files/v2/pems/system/' + agaveSettings.storageSytem + '//projects/' + filePath,
+        path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',

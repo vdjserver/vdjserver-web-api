@@ -28,11 +28,13 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     var filename = request.body.fileName;
 
     if (!projectUuid) {
+        console.error('Error PermissionsController.syncFilePermissionsWithProject: missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
 
     if (!filename) {
+        console.error('Error PermissionsController.syncFilePermissionsWithProject: missing filename parameter');
         apiResponseController.sendError('Filename required.', 400, response);
         return;
     }
@@ -87,6 +89,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
+            console.error('Error PermissionsController.syncFilePermissionsWithProject: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 
@@ -99,6 +102,18 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
     var accessToken = request.user.password;
 
     var serviceAccount = new ServiceAccount();
+
+    if (!uuid) {
+        console.error('Error PermissionsController.syncMetadataPermissionsWithProject: missing metadataUuid parameter');
+        apiResponseController.sendError('Metadata Uuid required.', 400, response);
+        return;
+    }
+
+    if (!projectUuid) {
+        console.error('Error PermissionsController.syncMetadataPermissionsWithProject: missing projectUuid parameter');
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
 
     // First, make sure serviceAccount has full pems on the new metadata
     // Use the user's accessToken to set this since serviceAccount may not have full pems yet
@@ -147,6 +162,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
         .fail(function(error) {
+            console.error('Error PermissionsController.syncMetadataPermissionsWithProject: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 
@@ -157,6 +173,24 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
     var accessToken = request.user.password;
+
+    if (!username) {
+        console.error('Error PermissionsController.addPermissionsForUsername: missing username parameter');
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
+    if (!projectUuid) {
+        console.error('Error PermissionsController.addPermissionsForUsername: missing projectUuid parameter');
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
+
+    if (!accessToken) {
+        console.error('Error PermissionsController.addPermissionsForUsername: missing accessToken parameter');
+        apiResponseController.sendError('Access Token required.', 400, response);
+        return;
+    }
 
     var serviceAccount = new ServiceAccount();
 
@@ -276,6 +310,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
+            console.error('Error PermissionsController.addPermissionsForUsername: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };
@@ -285,6 +320,24 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
     var accessToken = request.user.password;
+
+    if (!username) {
+        console.error('Error PermissionsController.removePermissionsForUsername: missing username parameter');
+        apiResponseController.sendError('Username required.', 400, response);
+        return;
+    }
+
+    if (!projectUuid) {
+        console.error('Error PermissionsController.removePermissionsForUsername: missing projectUuid parameter');
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
+
+    if (!accessToken) {
+        console.error('Error PermissionsController.removePermissionsForUsername: missing accessToken parameter');
+        apiResponseController.sendError('Access Token required.', 400, response);
+        return;
+    }
 
     var serviceAccount = new ServiceAccount();
 
@@ -341,6 +394,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
+            console.error('Error PermissionsController.removePermissionsForUsername: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };
@@ -350,6 +404,24 @@ PermissionsController.addPermissionsForJob = function(request, response) {
     var jobUuid = request.body.jobUuid;
     var projectUuid = request.body.projectUuid;
     var accessToken = request.user.password;
+
+    if (!username) {
+        console.error('Error PermissionsController.addPermissionsForJob: missing jobUuid parameter');
+        apiResponseController.sendError('JobUuid required.', 400, response);
+        return;
+    }
+
+    if (!projectUuid) {
+        console.error('Error PermissionsController.addPermissionsForJob: missing projectUuid parameter');
+        apiResponseController.sendError('Project Uuid required.', 400, response);
+        return;
+    }
+
+    if (!accessToken) {
+        console.error('Error PermissionsController.addPermissionsForJob: missing accessToken parameter');
+        apiResponseController.sendError('Access Token required.', 400, response);
+        return;
+    }
 
     var serviceAccount = new ServiceAccount();
 
@@ -460,6 +532,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
+            console.error('Error PermissionsController.addPermissionsForJob: ' + JSON.stringify(error));
             apiResponseController.sendError(error.message, 500, response);
         });
 };
