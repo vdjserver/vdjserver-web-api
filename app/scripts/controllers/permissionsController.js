@@ -405,7 +405,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
     var projectUuid = request.body.projectUuid;
     var accessToken = request.user.password;
 
-    if (!username) {
+    if (!jobUuid) {
         console.error('Error PermissionsController.addPermissionsForJob: missing jobUuid parameter');
         apiResponseController.sendError('JobUuid required.', 400, response);
         return;
