@@ -9,6 +9,7 @@ var notificationsController = require('../controllers/notificationsController');
 var passwordResetController = require('../controllers/passwordResetController');
 var permissionsController = require('../controllers/permissionsController');
 var projectController     = require('../controllers/projectController');
+var telemetryController   = require('../controllers/telemetryController');
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
 
@@ -61,6 +62,12 @@ module.exports = function(app) {
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
         permissionsController.removePermissionsForUsername
+    );
+
+    // Record Telemetry Data
+    app.post(
+        '/telemetry',
+        telemetryController.recordErrorTelemetry
     );
 
     // Request an Agave token
