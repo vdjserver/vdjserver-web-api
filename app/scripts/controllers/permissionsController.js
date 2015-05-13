@@ -66,7 +66,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
 
                         projectUuid
                             + '/files'
-                            + '/' + filename
+                            + '/' + encodeURIComponent(filename)
                     );
                 };
             }
