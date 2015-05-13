@@ -31,59 +31,61 @@ UserController.createUser = function(request, response) {
         affiliation: request.body.affiliation,
     });
 
-    if (!username) {
+    if (!user.username) {
         console.error('Error UserController.createUser: missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
-    if (!password) {
+    if (!user.password) {
         console.error('Error UserController.createUser: missing password parameter');
         apiResponseController.sendError('Password required.', 400, response);
         return;
     }
 
-    if (!email) {
+    if (!user.email) {
         console.error('Error UserController.createUser: missing email parameter');
         apiResponseController.sendError('Email required.', 400, response);
         return;
     }
 
-    if (!firstName) {
+    /*
+    if (!user.firstName) {
         console.error('Error UserController.createUser: missing firstName parameter');
         apiResponseController.sendError('First Name required.', 400, response);
         return;
     }
 
-    if (!lastName) {
+    if (!user.lastName) {
         console.error('Error UserController.createUser: missing lastName parameter');
         apiResponseController.sendError('Last Name required.', 400, response);
         return;
     }
 
-    if (!city) {
+    if (!user.city) {
         console.error('Error UserController.createUser: missing city parameter');
         apiResponseController.sendError('City required.', 400, response);
         return;
     }
 
-    if (!state) {
+    if (!user.state) {
         console.error('Error UserController.createUser: missing state parameter');
         apiResponseController.sendError('State required.', 400, response);
         return;
     }
 
-    if (!country) {
+    if (!user.country) {
         console.error('Error UserController.createUser: missing country parameter');
         apiResponseController.sendError('Country required.', 400, response);
         return;
     }
 
-    if (!affiliation) {
+    if (!user.affiliation) {
         console.error('Error UserController.createUser: missing affiliation parameter');
         apiResponseController.sendError('Affiliation required.', 400, response);
         return;
     }
+    */
 
     agaveIO.createUser(user.getCreateUserAttributes())
         .then(function() {
