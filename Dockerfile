@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y \
 RUN npm install -g \
     forever
 
-RUN mkdir /vdjserver-auth
+RUN mkdir /vdjserver-web-api
 
 # Install npm dependencies (optimized for cache)
-COPY package.json /vdjserver-auth/
-RUN cd /vdjserver-auth && npm install
+COPY package.json /vdjserver-web-api/
+RUN cd /vdjserver-web-api && npm install
 
 # Copy project source
-COPY . /vdjserver-auth
+COPY . /vdjserver-web-api
 
 # Supervisor
-RUN touch /vdjserver-auth/logs/forever.log
-RUN touch /vdjserver-auth/logs/stderr.log
+RUN touch /vdjserver-web-api/logs/output.log
+RUN touch /vdjserver-web-api/logs/error.log
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
