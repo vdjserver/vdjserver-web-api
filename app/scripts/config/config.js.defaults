@@ -18,6 +18,6 @@ config.sessionSecret = 'super-duper-secret-secret';
 // Server / SSL
 var fs = require('fs');
 config.sslOptions = {
-    key:  fs.readFileSync(__dirname + '/vdjserver.org.certificate/vdjserver.org.key'),
-    cert: fs.readFileSync(__dirname + '/vdjserver.org.certificate/vdjserver.org.cer')
+    key:  fs.readFileSync(process.env.SSL_KEY_PATH),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH)
 };
