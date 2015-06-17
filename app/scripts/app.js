@@ -38,6 +38,17 @@ app.use(passport.initialize());
 //app.use(express.methodOverride());
 //app.locals.pretty = true;
 
+try {
+    var tmpRedis = process.env.REDIS_1;
+    tmpRedis = tmpRedis.split('tcp://');
+    app.redisHost = tmpRedis[0];
+    app.redisPort = tmpRedis[1];
+    console.log('Detected redis settings from environment.');
+}
+catch (e) {
+    console.error('Unable to detect redis settings from environment. Error is: ' + e);
+}
+
 // Server
 var env = process.env.NODE_ENV || 'production';
 if (env === 'test') {

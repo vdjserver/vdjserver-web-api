@@ -9,7 +9,10 @@ var agaveSettings = require('../config/agaveSettings');
 var apiResponseController = require('./apiResponseController');
 var jobController = require('./jobsController');
 var kue = require('kue');
-var notificationJobs = kue.createQueue();
+var notificationJobs = kue.createQueue({
+    port: app.redisPort || 6379,
+    host: app.redisHost || 'localhost',
+});
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
