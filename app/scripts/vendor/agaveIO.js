@@ -392,7 +392,7 @@ agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid)
         headers: {
             'Content-Length': postData.length,
             'Authorization': 'Bearer ' + accessToken,
-        }
+        },
     };
 
     agaveIO.sendRequest(requestSettings, postData)
@@ -1141,6 +1141,115 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var postData = {
+        associationIds: [
+            fileUuid,
+        ],
+        name: 'projectFile',
+        owner: '',
+        value: {
+            'projectUuid': projectUuid,
+            'fileType': fileType,
+            'name': name,
+            'length': length,
+            'isDeleted': false,
+            'readDirection': '',
+            'publicAttributes': {
+                'tags': [],
+            },
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getFileDetail = function(relativePath) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/meta/v2/data?q='
+                + encodeURIComponent('{'
+                    + '"name": "projectFile",'
+                    + '"value.projectUuid": "' + projectUuid + '",'
+                    + '"associationIds": { $in: ["' + fileUuid + '"] }'
+                + '}'),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
         }
     };
 

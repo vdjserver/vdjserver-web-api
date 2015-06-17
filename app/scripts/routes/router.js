@@ -30,10 +30,29 @@ module.exports = function(app) {
         apiResponseController.confirmUpStatus
     );
 
-    // Create a project
+    // Send feedback
     app.post(
-        '/projects',
-        projectController.createProject
+        '/feedback',
+        feedbackController.createFeedback
+    );
+
+    // Create Job Metadata
+    app.post(
+        '/jobs/metadata',
+        passport.authenticate('basic', {session: false}),
+        jobsController.createJobMetadata
+    );
+
+    // Process Job Create Notification
+    app.post(
+        '/notifications/files/:uuid',
+        notificationsController.createFileMetadata
+    );
+
+    // Process Job Create Notification
+    app.post(
+        '/notifications/jobs/:jobId',
+        notificationsController.processJobNotifications
     );
 
     // Update file permissions
@@ -41,6 +60,13 @@ module.exports = function(app) {
         '/permissions/files',
         passport.authenticate('basic', {session: false}),
         permissionsController.syncFilePermissionsWithProject
+    );
+
+    // Share Job With Project Member (update job permissions)
+    app.post(
+        '/permissions/jobs',
+        passport.authenticate('basic', {session: false}),
+        permissionsController.addPermissionsForJob
     );
 
     // Update metadata permissions
@@ -62,6 +88,12 @@ module.exports = function(app) {
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
         permissionsController.removePermissionsForUsername
+    );
+
+    // Create a project
+    app.post(
+        '/projects',
+        projectController.createProject
     );
 
     // Record Telemetry Data
@@ -109,42 +141,16 @@ module.exports = function(app) {
         passwordResetController.processResetPasswordRequest
     );
 
-    // Verify Username
-    app.post(
-        '/user/verify/:verificationId',
-        userController.verifyUser
-    );
-
     // Resend User Verification Email
     app.post(
         '/user/:username/verify/email',
         userController.resendVerificationEmail
     );
 
-    // Process Job Create Notification
+    // Verify Username
     app.post(
-        '/notifications/jobs/:jobId',
-        notificationsController.processJobNotifications
-    );
-
-    // Create Job Metadata
-    app.post(
-        '/jobs/metadata',
-        passport.authenticate('basic', {session: false}),
-        jobsController.createJobMetadata
-    );
-
-    // Share Job With Project Member (update job permissions)
-    app.post(
-        '/permissions/jobs',
-        passport.authenticate('basic', {session: false}),
-        permissionsController.addPermissionsForJob
-    );
-
-    // Send feedback
-    app.post(
-        '/feedback',
-        feedbackController.createFeedback
+        '/user/verify/:verificationId',
+        userController.verifyUser
     );
 
     // Errors
