@@ -39,11 +39,14 @@ app.use(passport.initialize());
 //app.locals.pretty = true;
 
 try {
-    var tmpRedis = process.env.REDIS_1;
+    var tmpRedis = process.env.REDIS_1_PORT;
     tmpRedis = tmpRedis.split('tcp://');
+    tmpRedis = tmpRedis[1].split(':');
     app.redisHost = tmpRedis[0];
     app.redisPort = tmpRedis[1];
     console.log('Detected redis settings from environment.');
+    console.log('redisHost is: ' + app.redisHost);
+    console.log('redisPort is: ' + app.redisPort);
 }
 catch (e) {
     console.error('Unable to detect redis settings from environment. Error is: ' + e);
