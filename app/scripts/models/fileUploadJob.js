@@ -128,7 +128,7 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
     var projectId = this.getProjectId();
 
     if (projectId === '') {
-        throw new Error('Unable to parse project id for file: ' + this.fileUuid);
+        return new Error('Unable to parse project id for file: ' + this.fileUuid);
     }
 
     return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.getProjectId())

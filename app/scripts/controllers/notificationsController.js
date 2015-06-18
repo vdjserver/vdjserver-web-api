@@ -58,7 +58,7 @@ NotificationsController.createFileMetadata = function(request, response) {
             if (isMember === 1) {
 
                 // error out
-                throw new Error('fileNotification: duplicate uuid for ' + guardKey);
+                return new Error('fileNotification: duplicate uuid for ' + guardKey);
             }
             else {
                 return Q.ninvoke(redisClient, 'set', guardKey, 'ok');
