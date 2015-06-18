@@ -158,6 +158,8 @@ NotificationsController.createFileMetadata = function(request, response) {
         })
         .done(function() {
             console.log('fileUploadMetadata created for: ' + JSON.stringify(fileNotification));
+        }, function(error) {
+            console.error('NotificationsController.createFileMetadata error is: ' + error);
         })
         .fail(function(error) {
             console.error('NotificationsController.createFileMetadata error is: ' + error);
