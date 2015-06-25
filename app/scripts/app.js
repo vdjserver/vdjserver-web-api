@@ -7,6 +7,7 @@ var morgan       = require('morgan');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
 var passport     = require('passport');
+var _            = require('underscore');
 var app          = module.exports = express();
 
 // Server Options
@@ -40,13 +41,19 @@ app.use(passport.initialize());
 
 try {
     var tmpRedis = process.env.REDIS_1_PORT;
-    tmpRedis = tmpRedis.split('tcp://');
-    tmpRedis = tmpRedis[1].split(':');
-    app.redisHost = tmpRedis[0];
-    app.redisPort = tmpRedis[1];
-    console.log('Detected redis settings from environment.');
-    console.log('redisHost is: ' + app.redisHost);
-    console.log('redisPort is: ' + app.redisPort);
+
+    if (_.isArray(tmpRedis)) {
+        tmpRedis = tmpRedis.split('tcp://');
+        tmpRedis = tmpRedis[1].split(':');
+        app.redisHost = tmpRedis[0];
+        app.redisPort = tmpRedis[1];
+        console.log('Detected redis settings from environment.');
+        console.log('redisHost is: ' + app.redisHost);
+        console.log('redisPort is: ' + app.redisPort);
+    }
+    else {
+        console.log('Unable to detect redis settings from environment; using defaults instead.');
+    }
 }
 catch (e) {
     console.error('Unable to detect redis settings from environment. Error is: ' + e);
@@ -82,3 +89,14 @@ require('./routes/router')(app);
 
 // WebsocketIO
 require('./controllers/websocketController');
+
+// Queue Management
+var queueManager = require('./utilities/queueManager');
+
+setInterval(function() {
+    console.log("timer tick");
+    queueManager.processFileUploads();
+    console.log("timer post");
+}, 10000);
+
+//queueManager.processFileUploads();

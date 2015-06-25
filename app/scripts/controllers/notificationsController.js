@@ -15,6 +15,7 @@ var notificationJobs = kue.createQueue({
         host: app.redisHost || 'localhost',
     },
 });
+//var redisClient = kue.redis.createClient();
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
@@ -36,11 +37,6 @@ NotificationsController.createFileMetadata = function(request, response) {
 
     console.log('received fileNotification: ' + JSON.stringify(fileNotification));
 
-    var guardKey = 'guard-' + fileNotification.fileUuid;
-
-    var redisClient = kue.redis.createClient();
-
-
     /*
         1.) Send response to prevent blocking notification client
         2.) Check if this fileId has been received in the past 5 minutes-ish or so (Agave is sending duplicates as of 17/June/2015)
@@ -52,26 +48,8 @@ NotificationsController.createFileMetadata = function(request, response) {
         8.) Profit
     */
     Q.when(apiResponseController.sendSuccess('', response), function() {
-            return Q.ninvoke(redisClient, 'exists', guardKey)
-        })
-        .then(function(isMember) {
-            if (isMember === 1) {
-                var deferred = Q.defer();
 
-                // error out
-                var error = new Error('fileNotification: duplicate uuid for ' + guardKey);
-                deferred.reject(error);
-
-                return deferred.promise;
-            }
-            else {
-                return Q.ninvoke(redisClient, 'set', guardKey, 'ok');
-            }
-        })
-        .then(function() {
-            return Q.ninvoke(redisClient, 'expire', guardKey, 600);
-        })
-        .then(function() {
+        return Q.fcall(function() {
             notificationJobs
                 .create('fileUploadPermissions', fileNotification)
                 .removeOnComplete(true)
@@ -90,81 +68,9 @@ NotificationsController.createFileMetadata = function(request, response) {
                 .save()
                 ;
         })
-        .then(function() {
-            var deferred = Q.defer();
-
-            notificationJobs.process('fileUploadPermissions', function(jobData, done) {
-
-                var fileUploadJob = new FileUploadJob(jobData);
-                fileUploadJob.setAgaveFilePermissions()
-                    .then(function() {
-                        done();
-                        deferred.resolve();
-                    })
-                    .fail(function() {
-                        var error = new Error('fileUploadPermissions fail for ' + JSON.stringify(jobData));
-
-                        done(error);
-                        deferred.reject(error);
-                    })
-                    ;
-            });
-
-            return deferred.promise;
-        })
-        .then(function() {
-            var deferred = Q.defer();
-
-            notificationJobs.process('fileUploadMetadata', function(jobData, done) {
-                var fileUploadJob = new FileUploadJob(jobData);
-
-                fileUploadJob.createAgaveFileMetadata()
-                    .then(function(newMetadata) {
-                        done();
-                        deferred.resolve();
-                    })
-                    .fail(function(error) {
-                        var error = new Error('fileUploadMetadata fail for ' + JSON.stringify(jobData));
-
-                        done(error);
-                        deferred.reject(error);
-                    })
-                    ;
-            });
-
-            return deferred.promise;
-        })
-        .then(function() {
-            var deferred = Q.defer();
-
-            notificationJobs.process('fileUploadMetadataPermissions', function(jobData, done) {
-                var fileUploadJob = new FileUploadJob(jobData);
-
-                fileUploadJob.setMetadataPermissions()
-                    .then(function(newMetadata) {
-                        done();
-                        deferred.resolve();
-                    })
-                    .fail(function(error) {
-                        var error = new Error('fileUploadMetadataPermissions fail for ' + JSON.stringify(jobData));
-
-                        done(error);
-                        deferred.reject(error);
-                    })
-                    ;
-            });
-
-            return deferred.promise;
-        })
-        .fail(function(error) {
-            console.error('NotificationsController.createFileMetadata error is: ' + error);
-        })
-        .done(function() {
-            console.log('fileUploadMetadata created for: ' + JSON.stringify(fileNotification));
-        }, function(error) {
-            console.error('NotificationsController.createFileMetadata error is: ' + error);
-        })
         ;
+    })
+    ;
 };
 
 NotificationsController.processJobNotifications = function(request, response) {
