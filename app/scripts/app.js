@@ -42,7 +42,7 @@ app.use(passport.initialize());
 try {
     var tmpRedis = process.env.REDIS_1_PORT;
 
-    if (_.isArray(tmpRedis)) {
+    if (_.isUndefined(tmpRedis) === false) {
         tmpRedis = tmpRedis.split('tcp://');
         tmpRedis = tmpRedis[1].split(':');
         app.redisHost = tmpRedis[0];
