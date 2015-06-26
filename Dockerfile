@@ -24,8 +24,6 @@ RUN cd /vdjserver-web-api && npm install
 COPY . /vdjserver-web-api
 
 # Supervisor
-RUN touch /vdjserver-web-api/logs/output.log
-RUN touch /vdjserver-web-api/logs/error.log
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
