@@ -65,7 +65,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         };
 
-                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createDeletePromise(job);
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length] = createDeletePromise(job);
                     }
                     else {
                         uniqueSet.add(job.data.fileUuid);
@@ -87,7 +87,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         }
 
-                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createUploadPromise(job);
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length] = createUploadPromise(job);
                     }
                 });
                 return Q.all(fileUploadPermissionPromises);
@@ -118,7 +118,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         };
 
-                        fileMetadataPromises[fileMetadataPromises.length + 1] = createDeletePromise(job);
+                        fileMetadataPromises[fileMetadataPromises.length] = createDeletePromise(job);
                     }
                     else {
 
@@ -143,7 +143,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         }
 
-                        fileMetadataPromises[fileMetadataPromises.length + 1] = createUploadPromise(job);
+                        fileMetadataPromises[fileMetadataPromises.length] = createUploadPromise(job);
                     }
                 });
 
@@ -174,7 +174,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         };
 
-                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createDeletePromise(job);
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length] = createDeletePromise(job);
                     }
                     else {
                         uniqueSet.add(job.data.fileUuid);
@@ -199,7 +199,7 @@ QueueManager.processFileUploads = function() {
                                 ;
                         }
 
-                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createUploadPromise(job);
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length] = createUploadPromise(job);
                     }
                 });
 console.log("promise count is: " + fileUploadPermissionPromises.length);
