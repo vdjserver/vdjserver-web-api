@@ -15,12 +15,12 @@ var agaveIO = require('../vendor/agaveIO');
 
 var FileUploadJob = function(kueAttributes) {
 
-    if (typeof kueAttributes.data === 'object') {
-        this.fileUuid = kueAttributes.data.fileUuid || '';
-        this.fileEvent = kueAttributes.data.fileEvent || '';
-        this.fileType = kueAttributes.data.fileType || '';
-        this.filePath = kueAttributes.data.filePath || '';
-        this.fileSystem = kueAttributes.data.fileSystem || '';
+    if (typeof kueAttributes === 'object') {
+        this.fileUuid  = kueAttributes.fileUuid  || '';
+        this.fileEvent = kueAttributes.fileEvent || '';
+        this.fileType  = kueAttributes.fileType  || '';
+        this.filePath  = kueAttributes.filePath  || '';
+        this.fileSystem = kueAttributes.fileSystem || '';
     }
 };
 

@@ -28,6 +28,8 @@ module.exports = QueueManager;
 
 QueueManager.processFileUploads = function() {
 
+    console.log("processFileUploads lock is: " + lock);
+
     if (lock === false) {
         lock = true;
 
@@ -39,128 +41,170 @@ QueueManager.processFileUploads = function() {
                 }
             })
             .then(function() {
-                console.log("fCall hit");
+                console.log("nbind fileUploadPermissions");
+
+                var myFunc = Q.nbind(kue.Job.rangeByType, kue.Job);
+                return myFunc('fileUploadPermissions', 'inactive', 0, -1, 'asc');
+            })
+            .then(function(jobs) {
+
+                console.log("promise test 1 - jobs are: " + JSON.stringify(jobs));
+                var fileUploadPermissionPromises = [];
+
+                var uniqueSet = new Set();
+                jobs.forEach(function(job) {
+
+                    if (uniqueSet.has(job.data.fileUuid)) {
+
+                        var createDeletePromise = function(delJob) {
+
+                            return Q.ninvoke(delJob, 'remove')
+                                .then(function() {
+                                    console.log('IF fileUploadPermissions removed ', delJob.id);
+                                })
+                                ;
+                        };
+
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createDeletePromise(job);
+                    }
+                    else {
+                        uniqueSet.add(job.data.fileUuid);
+
+                        var createUploadPromise = function(tmpJob) {
+
+                            var fileUploadJob = new FileUploadJob(tmpJob.data);
+                            return fileUploadJob.setAgaveFilePermissions()
+                                .then(function() {
+                                    console.log("fileUploadPermissions task ok");
+                                    return Q.ninvoke(tmpJob, 'remove');
+                                })
+                                .then(function() {
+                                    console.log('ELSE fileUploadPermissions removed ', tmpJob.id);
+                                })
+                                .fail(function() {
+                                    var error = new Error('fileUploadPermissions fail for ' + JSON.stringify(tmpJob));
+                                })
+                                ;
+                        }
+
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createUploadPromise(job);
+                    }
+                });
+                return Q.all(fileUploadPermissionPromises);
+            })
+            .then(function() {
+                console.log("nbind fileUploadMetadata");
                 // prune
 
-                kue.Job.rangeByType('fileUploadPermissions', 'inactive', 0, -1, 'asc', function(err, jobs) {
-                    console.log("fileUploadPermissions err is: " + JSON.stringify(err));
-                    var uniqueSet = new Set();
-                    jobs.forEach(function(job) {
-                        console.log("fileUploadPermissions job is: " + JSON.stringify(job));
+                var myFunc = Q.nbind(kue.Job.rangeByType, kue.Job);
+                return myFunc('fileUploadMetadata', 'inactive', 0, -1, 'asc');
+            })
+            .then(function(jobs) {
 
-                        if (uniqueSet.has(job.data.fileUuid)) {
-                            job.remove(function() {
-                                console.log('fileUploadPermissions removed ', job.id);
-                            });
+                console.log("promise test 2 - jobs are: " + JSON.stringify(jobs));
+                var fileMetadataPromises = [];
+
+                var uniqueSet = new Set();
+                jobs.forEach(function(job) {
+
+                    if (uniqueSet.has(job.data.fileUuid)) {
+
+                        var createDeletePromise = function(delJob) {
+
+                            return Q.ninvoke(delJob, 'remove')
+                                .then(function() {
+                                    console.log('IF fileUploadMetadata removed ', delJob.id);
+                                })
+                                ;
+                        };
+
+                        fileMetadataPromises[fileMetadataPromises.length + 1] = createDeletePromise(job);
+                    }
+                    else {
+
+                        uniqueSet.add(job.data.fileUuid);
+
+                        var createUploadPromise = function(tmpJob) {
+                            console.log("uploadPromise 2: tmpJob is: " + JSON.stringify(tmpJob));
+
+                            var fileUploadJob = new FileUploadJob(tmpJob.data);
+                            return fileUploadJob.createAgaveFileMetadata()
+                                .then(function(newMetadata) {
+                                    console.log("fileUploadMetadata task ok");
+                                    return Q.ninvoke(tmpJob, 'remove');
+                                })
+                                .then(function() {
+                                    console.log('ELSE fileUploadMetadata removed ', tmpJob.id);
+                                })
+                                .fail(function(error) {
+                                    var error = new Error('fileUploadMetadata fail for ' + JSON.stringify(tmpJob));
+
+                                })
+                                ;
                         }
-                        else {
-                            uniqueSet.add(job.data.fileUuid);
-                        }
-                    });
+
+                        fileMetadataPromises[fileMetadataPromises.length + 1] = createUploadPromise(job);
+                    }
                 });
 
-                kue.Job.rangeByType('fileUploadMetadata', 'inactive', 0, -1, 'asc', function(err, jobs) {
-                    console.log("fileUploadMetadata err is: " + JSON.stringify(err));
-                    var uniqueSet = new Set();
-                    jobs.forEach(function(job) {
-                        console.log("fileUploadMetadata job is: " + JSON.stringify(job));
-
-                        if (uniqueSet.has(job.data.fileUuid)) {
-                            job.remove(function() {
-                                console.log('fileUploadMetadata removed ', job.id);
-                            });
-                        }
-                        else {
-                            uniqueSet.add(job.data.fileUuid);
-                        }
-                    });
-                });
-
-                kue.Job.rangeByType('fileUploadMetadataPermissions', 'inactive', 0, -1, 'asc', function(err, jobs) {
-                    console.log("fileUploadMetadataPermissions err is: " + JSON.stringify(err));
-                    var uniqueSet = new Set();
-                    jobs.forEach(function(job) {
-                        console.log("fileUploadMetadataPermissions job is: " + JSON.stringify(job));
-
-                        if (uniqueSet.has(job.data.fileUuid)) {
-                            job.remove(function() {
-                                console.log('fileUploadMetadataPermissions removed ', job.id);
-                            });
-                        }
-                        else {
-                            uniqueSet.add(job.data.fileUuid);
-                        }
-                    });
-                });
+                return Q.all(fileMetadataPromises);
             })
             .then(function() {
-                var deferred = Q.defer();
+                console.log("nbind fileUploadMetadataPermissions");
+                // prune
 
-                notificationJobs.process('fileUploadPermissions', function(jobData, done) {
-
-                    var fileUploadJob = new FileUploadJob(jobData);
-                    fileUploadJob.setAgaveFilePermissions()
-                        .then(function() {
-                            console.log("fileUploadPermissions done");
-                            done();
-                            deferred.resolve();
-                        })
-                        .fail(function() {
-                            var error = new Error('fileUploadPermissions fail for ' + JSON.stringify(jobData));
-
-                            done(error);
-                            deferred.reject(error);
-                        })
-                        ;
-                });
-
-                return deferred.promise;
+                var myFunc = Q.nbind(kue.Job.rangeByType, kue.Job);
+                return myFunc('fileUploadMetadataPermissions', 'inactive', 0, -1, 'asc');
             })
-            .then(function() {
-                var deferred = Q.defer();
+            .then(function(jobs) {
+                console.log("promise test 3 - jobs are: " + JSON.stringify(jobs));
+                var fileUploadPermissionPromises = [];
 
-                notificationJobs.process('fileUploadMetadata', function(jobData, done) {
-                    var fileUploadJob = new FileUploadJob(jobData);
+                var uniqueSet = new Set();
+                jobs.forEach(function(job) {
+                    //console.log("fileUploadMetadataPermissions job is: " + JSON.stringify(job));
 
-                    fileUploadJob.createAgaveFileMetadata()
-                        .then(function(newMetadata) {
-                            console.log("fileUploadMetadata done");
-                            done();
-                            deferred.resolve();
-                        })
-                        .fail(function(error) {
-                            var error = new Error('fileUploadMetadata fail for ' + JSON.stringify(jobData));
+                    if (uniqueSet.has(job.data.fileUuid)) {
+                        var createDeletePromise = function(delJob) {
 
-                            done(error);
-                            deferred.reject(error);
-                        })
-                        ;
+                            return Q.ninvoke(delJob, 'remove')
+                                .then(function() {
+                                    console.log('IF fileUploadMetadataPermissions removed ', delJob.id);
+                                })
+                                ;
+                        };
+
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createDeletePromise(job);
+                    }
+                    else {
+                        uniqueSet.add(job.data.fileUuid);
+
+                        var createUploadPromise = function(tmpJob) {
+                            console.log("uploadPromise 3: tmpJob is: " + JSON.stringify(tmpJob));
+                            var fileUploadJob = new FileUploadJob(tmpJob.data);
+
+                            return fileUploadJob.setMetadataPermissions()
+                                .then(function() {
+                                    console.log("fileUploadMetadataPermissions task ok");
+                                    return Q.ninvoke(tmpJob, 'remove');
+                                })
+                                .then(function() {
+                                    console.log('ELSE fileUploadMetadataPermissions removed ', tmpJob.id);
+                                })
+                                .fail(function(error) {
+                                    var error = new Error('fileUploadMetadataPermissions fail for ' + JSON.stringify(tmpJob));
+
+                                    console.log("promise 3 fail");
+                                })
+                                ;
+                        }
+
+                        fileUploadPermissionPromises[fileUploadPermissionPromises.length + 1] = createUploadPromise(job);
+                    }
                 });
-
-                return deferred.promise;
-            })
-            .then(function() {
-                var deferred = Q.defer();
-
-                notificationJobs.process('fileUploadMetadataPermissions', function(jobData, done) {
-                    var fileUploadJob = new FileUploadJob(jobData);
-
-                    fileUploadJob.setMetadataPermissions()
-                        .then(function(newMetadata) {
-                            console.log("fileUploadMetadataPermissions");
-                            done();
-                            deferred.resolve();
-                        })
-                        .fail(function(error) {
-                            var error = new Error('fileUploadMetadataPermissions fail for ' + JSON.stringify(jobData));
-
-                            done(error);
-                            deferred.reject(error);
-                        })
-                        ;
-                });
-
-                return deferred.promise;
+console.log("promise count is: " + fileUploadPermissionPromises.length);
+console.log("promise arr is: " + JSON.stringify(fileUploadPermissionPromises));
+                return Q.all(fileUploadPermissionPromises);
             })
             .then(function() {
                 console.log("all done");

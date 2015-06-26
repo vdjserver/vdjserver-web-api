@@ -98,5 +98,3 @@ setInterval(function() {
     queueManager.processFileUploads();
     console.log("timer post");
 }, 10000);
-
-//queueManager.processFileUploads();
