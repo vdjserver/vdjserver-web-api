@@ -27,11 +27,13 @@ nsp.on('connection', function(socket) {
 app.on('jobNotification', function(jobNotification) {
     //console.log("jobNotification received ok: " + JSON.stringify(jobNotification));
     //console.log("jobNotification recieved. Rooms are: " + JSON.stringify(io.sockets.adapter.rooms));
+
     nsp.in(jobNotification.jobId).emit('jobUpdate', jobNotification);
 });
 
-/*
 app.on('fileImportNotification', function(fileImportNotification) {
-    nsp.in(fileImportNotification.projectUuid).emit('fileImportUpdate', fileImportNotification);
+    //console.log("fileImportNotification received ok: " + JSON.stringify(fileImportNotification));
+    //console.log("fileImportNotification recieved. Rooms are: " + JSON.stringify(io.sockets.adapter.rooms));
+
+    nsp.in(fileImportNotification.fileInformation.fileUuid).emit('fileImportUpdate', fileImportNotification);
 });
-*/

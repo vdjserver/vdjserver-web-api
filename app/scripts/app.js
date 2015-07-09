@@ -94,7 +94,5 @@ require('./controllers/websocketController');
 var queueManager = require('./utilities/queueManager');
 
 setInterval(function() {
-    console.log("timer tick");
     queueManager.processFileUploads();
-    console.log("timer post");
 }, 10000);
