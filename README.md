@@ -1,46 +1,82 @@
-#### VDJServer-Auth
-An auth service for the VDJServer.org project.
+# VDJServer API
 
-Uses:
- * Node.js
- * Express.js
- * Agave 2.0
+This project is a node.js middleware API for VDJServer clients and the Agave API.
 
-#### Installation & Setup
-This assumes you already have node.js & npm installed.
+It provides a variety of important services for clients including:
+
+* authentication
+* Agave webhook processing
+* websocket notifications
+
+## Service Dependencies
+
+The VDJServer API requires a [redis](http://redis.io/) database for notification queueing. There are two ways of handling this:
+
+## Installation & Setup via Docker
+
+This project has been dockerized, and building it in via docker is straightforward:
 
 ```
-git clone git@bitbucket.org:taccaci/vdjserver-auth.git
-cd vdjserver-auth
+git clone git@bitbucket.org:vdjserver/vdjserver-web-api.git
 
-Install NPM dependencies
-npm install -d
+cd vdjserver-web-api
 
-Copy default agave settings:
-cd app/scripts/config
-cp agaveSettingsDefault.js agaveSettings.js
-cp configDefault.js config.js
-
-Edit agaveSettings.js and add the following:
-* clientKey
-* clientSecret
-
-Edit config.js and for the following:
-* config.port
-* config.sessionSecret
-* config.sslOptions // comment this out if SSL not needed
-
-Make sure that the following files are available:
-* app/scripts/config/vdjserver.org.certificate/vdjserver.org.key
-* app/scripts/config/vdjserver.org.certificate/vdjserver.org.cer
-
-Start App
-node app/scripts/app
+docker build -t vdjserver-web-api .
 ```
 
+You will also need to set up the [VDJServer Redis](git@bitbucket.org:vdjserver/vdjserver-web-redis.git) docker container:
+
+```
+git clone git@bitbucket.org:vdjserver/vdjserver-web-redis.git
+
+cd vdjserver-web-redis
+
+docker build -it redis
+```
+
+Now you can start the VDJServer API:
+
+```
+docker run --link redis:redis vdjserver-web-api
+```
+
+## Running VDJServer API Without Docker
+
+It may be faster to do iterative development on a local instance of the VDJServer API without using docker. Node.js applications need to be restarted to read changes in their codebases, and this is often done faster on a local machine than in a docker container.
+
+```
+git clone git@bitbucket.org:vdjserver/vdjserver-web-api.git
+
+cd vdjserver-web-api/app/scripts
+
+npm install
+
+cp config/agaveSettings.js.defaults config/agaveSettings.js
+
+# Add in values as needed
+vim config/agaveSettings.js
+
+cp config/config.js.defaults config/config.js
+
+# Add in values as needed
+vim config/config.js
+
+####
+#Install and start a local redis database on your machine using yum, apt-get, homebrew, etc.
+# e.g. on a mac:
+# brew install redis
+# redis-server /usr/local/etc/redis.conf
+####
+
+# Set the correct environment vars to run as http instead of https
+export NODE_ENV=development
+
+# Start up the API
+node app.js
+```
 
 #### Documentation:
-Documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0](https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0).
+Legacy documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0](https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0). Please note that this is currently deprecated, and is expected to be replaced by Swagger docs in the future.
 
 Documentation on Agave v2 is available at: [http://agaveapi.co/live-docs/](http://agaveapi.co/live-docs/).
 
