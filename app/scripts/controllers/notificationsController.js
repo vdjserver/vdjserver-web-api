@@ -35,8 +35,6 @@ NotificationsController.createFileMetadata = function(request, response) {
         fileSystem: request.query.system,
     };
 
-    console.log('received fileNotification: ' + JSON.stringify(fileNotification));
-
     /*
         1.) Send response to prevent blocking notification client
         2.) Check if this fileId has been received in the past 5 minutes-ish or so (Agave is sending duplicates as of 17/June/2015)
@@ -53,18 +51,8 @@ NotificationsController.createFileMetadata = function(request, response) {
             notificationJobs
                 .create('fileUploadPermissions', fileNotification)
                 .removeOnComplete(true)
-                .save()
-                ;
-
-            notificationJobs
-                .create('fileUploadMetadata', fileNotification)
-                .removeOnComplete(true)
-                .save()
-                ;
-
-            notificationJobs
-                .create('fileUploadMetadataPermissions', fileNotification)
-                .removeOnComplete(true)
+                .attempts(5)
+                //.backoff({delay: 60 * 1000, type: 'fixed'})
                 .save()
                 ;
         })

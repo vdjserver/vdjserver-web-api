@@ -92,7 +92,4 @@ require('./controllers/websocketController');
 
 // Queue Management
 var queueManager = require('./utilities/queueManager');
-
-setInterval(function() {
-    queueManager.processFileUploads();
-}, 10000);
+queueManager.processFileUploads();
