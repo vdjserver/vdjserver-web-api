@@ -8,10 +8,7 @@ var agaveSettings = require('../config/agaveSettings');
 // Controllers
 var kue = require('kue');
 var notificationJobs = kue.createQueue({
-    redis: {
-        port: app.redisPort || 6379,
-        host: app.redisHost || 'localhost',
-    },
+    redis: app.redisConfig,
 });
 var redisClient = kue.redis.createClient();
 

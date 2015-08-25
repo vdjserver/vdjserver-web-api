@@ -39,25 +39,10 @@ app.use(passport.initialize());
 //app.use(express.methodOverride());
 //app.locals.pretty = true;
 
-try {
-    var tmpRedis = process.env.REDIS_1_PORT;
-
-    if (_.isUndefined(tmpRedis) === false) {
-        tmpRedis = tmpRedis.split('tcp://');
-        tmpRedis = tmpRedis[1].split(':');
-        app.redisHost = tmpRedis[0];
-        app.redisPort = tmpRedis[1];
-        console.log('Detected redis settings from environment.');
-        console.log('redisHost is: ' + app.redisHost);
-        console.log('redisPort is: ' + app.redisPort);
-    }
-    else {
-        console.log('Unable to detect redis settings from environment; using defaults instead.');
-    }
-}
-catch (e) {
-    console.error('Unable to detect redis settings from environment. Error is: ' + e);
-}
+app.redisConfig = {
+    port: 6379,
+    host: 'localhost',
+};
 
 // Server
 var env = process.env.NODE_ENV || 'production';
@@ -79,8 +64,8 @@ else if (env === 'development') {
 else if (env === 'production') {
     app.use(errorHandler());
 
-    app.server = require('https').createServer(app.get('sslOptions'), app).listen(app.get('port'), function() {
-        console.log('Express Prod HTTPS server listening on port ' + app.get('port'));
+    app.server = require('http').createServer(app).listen(app.get('port'), function() {
+        console.log('Express Prod HTTP server listening on port ' + app.get('port'));
     });
 }
 

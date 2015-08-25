@@ -1,7 +1,6 @@
 # App specific files #
 ######################
-app/scripts/config/agaveSettings.js
-app/scripts/config/config.js
+.env
 
 logs
 node_modules
