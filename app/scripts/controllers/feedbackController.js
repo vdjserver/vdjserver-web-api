@@ -18,13 +18,13 @@ var Recaptcha = require('recaptcha').Recaptcha;
 var FeedbackController = {};
 module.exports = FeedbackController;
 
-FeedbackController.createFeedback = function(request, response) {
+FeedbackController.createPublicFeedback = function(request, response) {
 
     var feedback = new Feedback({
-        feedback : request.body.feedback,
+        feedback: request.body.feedback,
         remoteip:  request.connection.remoteAddress,
-        recaptcha_challenge_field : request.body.recaptcha_challenge_field,
-        recaptcha_response_field : request.body.recaptcha_response_field,
+        recaptcha_challenge_field: request.body.recaptcha_challenge_field,
+        recaptcha_response_field: request.body.recaptcha_response_field,
     });
 
     var recaptchaData = {

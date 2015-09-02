@@ -32,8 +32,8 @@ module.exports = function(app) {
 
     // Send feedback
     app.post(
-        '/feedback',
-        feedbackController.createFeedback
+        '/feedback/public',
+        feedbackController.createPublicFeedback
     );
 
     // Create Job Metadata
