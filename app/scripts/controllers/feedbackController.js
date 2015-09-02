@@ -22,15 +22,15 @@ FeedbackController.createPublicFeedback = function(request, response) {
 
     var feedback = new Feedback({
         feedback: request.body.feedback,
-        remoteip:  request.connection.remoteAddress,
+        remoteip: request.connection.remoteAddress,
         recaptcha_challenge_field: request.body.recaptcha_challenge_field,
-        recaptcha_response_field: request.body.recaptcha_response_field,
+        recaptcha_response_field:  request.body.recaptcha_response_field,
     });
 
     var recaptchaData = {
-        remoteip: feedback.remoteip,
+        remoteip:  feedback.remoteip,
         challenge: feedback.recaptcha_challenge_field,
-        response: feedback.recaptcha_response_field,
+        response:  feedback.recaptcha_response_field,
     };
 
     //verify the recaptcha
@@ -38,7 +38,7 @@ FeedbackController.createPublicFeedback = function(request, response) {
     recaptcha.verify(
         function(success, errorCode) {
             if (!success) {
-                console.error('Error FeedbackController.createFeedback: error code is: ' + errorCode);
+                console.error('Error FeedbackController.createPublicFeedback: error code is: ' + errorCode);
                 apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
                 return;
             }
