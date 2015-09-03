@@ -32,6 +32,11 @@ module.exports = function(app) {
 
     // Send feedback
     app.post(
+        '/feedback',
+        feedbackController.createFeedback
+    );
+
+    app.post(
         '/feedback/public',
         feedbackController.createPublicFeedback
     );

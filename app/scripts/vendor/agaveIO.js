@@ -7,8 +7,9 @@ var agaveSettings = require('../config/agaveSettings');
 // Models
 var ServiceAccount = require('../models/serviceAccount');
 
-// Promises
+// Node Libraries
 var Q = require('q');
+var _ = require('underscore');
 
 var agaveIO  = {};
 module.exports = agaveIO;
@@ -1254,6 +1255,50 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
     };
 
     agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createFeedbackMetadata = function(feedback, username) {
+
+    var deferred = Q.defer();
+
+    var valueData = {
+        feedbackMessage: feedback,
+    };
+
+    if (username.length > 0) {
+        valueData.username = username;
+    }
+
+    var postData = {
+        name: 'feedback',
+        value: valueData,
+    };
+
+    postData = JSON.stringify(postData);
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/meta/v2/data',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': postData.length,
+            'Authorization':  'Bearer ' + serviceAccount.accessToken
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
