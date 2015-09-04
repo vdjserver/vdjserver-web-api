@@ -13,4 +13,4 @@ config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
 config.recaptchaPublic = process.env.RECAPTCHA_PUBLIC;
 
 // Feedback Email address
-config.feedbackEmail = process.env.EMAIL_ADDRESS;
+config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
