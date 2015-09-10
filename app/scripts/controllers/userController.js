@@ -120,7 +120,7 @@ UserController.createUser = function(request, response) {
             apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
         })
         .fail(function(error) {
-            console.error('UserController.createUser - error - ' + error);
+            console.error('UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -186,7 +186,7 @@ UserController.changePassword = function(request, response) {
             apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
         })
         .fail(function(error) {
-            console.error('UserController.changePassword - error - ' + error);
+            console.error('UserController.changePassword - error - username ' + username + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response); // 3b.
         })
         ;
@@ -222,7 +222,7 @@ UserController.verifyUser = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
-            console.error('UserController.verifyUser - error - ' + error);
+            console.error('UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -273,7 +273,7 @@ UserController.resendVerificationEmail = function(request, response) {
             apiResponseController.sendSuccess('', response);
         })
         .fail(function(error) {
-            console.error('UserController.resendVerificationEmail - error -  ' + error);
+            console.error('UserController.resendVerificationEmail - error - username ' + username + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;

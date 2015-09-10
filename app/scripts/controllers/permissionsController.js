@@ -94,7 +94,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
-            console.error('PermissionsController.syncFilePermissionsWithProject - error - ' + error);
+            console.error('PermissionsController.syncFilePermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -179,7 +179,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
         .fail(function(error) {
-            console.error('PermissionsController.syncMetadataPermissionsWithProject - error - ' + error);
+            console.error('PermissionsController.syncMetadataPermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -343,7 +343,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('PermissionsController.addPermissionsForUsername - error - ' + error);
+            console.error('PermissionsController.addPermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -444,7 +444,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('PermissionsController.removePermissionsForUsername - error - ' + error);
+            console.error('PermissionsController.removePermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
@@ -596,7 +596,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('PermissionsController.addPermissionsForJob - error - ' + error);
+            console.error('PermissionsController.addPermissionsForJob - error - job ' + jobUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;

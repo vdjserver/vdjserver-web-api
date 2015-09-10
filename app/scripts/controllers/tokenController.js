@@ -33,7 +33,7 @@ TokenController.getToken = function(request, response) {
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
-            console.error('TokenController.getToken - error - ' + error);
+            console.error('TokenController.getToken - error - username ' + request.user.username + ', error ' + error);
 
             apiResponseController.sendError(error.message, 401, response);
         });
@@ -50,7 +50,7 @@ TokenController.refreshToken = function(request, response) {
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
-            console.error('TokenController.refreshToken - error - ' + error);
+            console.error('TokenController.refreshToken - error - username ' + request.user.username + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         });
 };

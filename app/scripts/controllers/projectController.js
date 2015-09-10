@@ -79,7 +79,7 @@ ProjectController.createProject = function(request, response) {
             apiResponseController.sendSuccess(projectMetadata, response);
         })
         .fail(function(error) {
-            console.error('ProjectController.createProject - error - ' + error);
+            console.error('ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;

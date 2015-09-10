@@ -91,7 +91,7 @@ JobsController.createJobMetadata = function(request, response) {
             apiResponseController.sendSuccess('Job metadata created successfully.', response); // 4a.
         })
         .fail(function(error) {
-            console.error('JobsController.createJobMetadata - error - ' + error);
+            console.error('JobsController.createJobMetadata - error - jobId ' + jobUuid ', error ' + error);
 
             apiResponseController.sendError(error.message, 500, response); // 4b.
         })
@@ -263,7 +263,7 @@ JobsController.createJobFileMetadata = function(jobId) {
             return promises.reduce(Q.when, new Q());
         })
         .fail(function(error) {
-            console.error('JobsController.createJobFileMetadata - error - ' + error);
+            console.error('JobsController.createJobFileMetadata - error - jobId ' + jobId + ', error ' + error);
 
             apiResponseController.sendError(error.message, 500, response); // 4b.
         })
