@@ -24,6 +24,7 @@ var NotificationsController = {};
 module.exports = NotificationsController;
 
 NotificationsController.createFileMetadata = function(request, response) {
+
     var fileNotification = {
         fileUuid:   request.params.uuid,
         fileEvent:  request.query.event,
@@ -31,6 +32,8 @@ NotificationsController.createFileMetadata = function(request, response) {
         filePath:   request.query.path,
         fileSystem: request.query.system,
     };
+
+    console.log('NotificationsController.createFileMetadata - event - begin for file uuid' + fileNotification.fileUuid);
 
     /*
         1.) Send response to prevent blocking notification client
@@ -43,6 +46,7 @@ NotificationsController.createFileMetadata = function(request, response) {
         8.) Profit
     */
     Q.when(apiResponseController.sendSuccess('', response), function() {
+        console.log('NotificationsController.createFileMetadata - event - queued for file uuid' + fileNotification.fileUuid);
 
         return Q.fcall(function() {
             notificationJobs
@@ -66,30 +70,32 @@ NotificationsController.processJobNotifications = function(request, response) {
     var jobMessage  = request.query.error;
 
     if (!jobId) {
-        console.error('Error NotificationsController.processJobNotifications: missing jobId parameter');
+        console.error('NotificationsController.processJobNotifications - error - missing jobId parameter');
         apiResponseController.sendError('Job id required.', 400, response);
         return;
     }
 
     if (!jobEvent) {
-        console.error('Error NotificationsController.processJobNotifications: missing jobEvent parameter');
+        console.error('NotificationsController.processJobNotifications - error - missing jobEvent parameter');
         apiResponseController.sendError('Job event required.', 400, response);
         return;
     }
 
     if (!jobStatus) {
-        console.error('Error NotificationsController.processJobNotifications: missing jobStatus parameter');
+        console.error('NotificationsController.processJobNotifications - error - missing jobStatus parameter');
         apiResponseController.sendError('Job status required.', 400, response);
         return;
     }
 
     if (!jobMessage) {
-        console.error('Error NotificationsController.processJobNotifications: missing jobMessage parameter');
+        console.error('NotificationsController.processJobNotifications - error - missing jobMessage parameter');
         apiResponseController.sendError('Job message required.', 400, response);
         return;
     }
 
-    console.log('Job Id \'' + jobId + '\' received a notification. New status is: ' + jobStatus);
+    console.log(
+        'NotificationsController.processJobNotifications - event - received notification for job id ' + jobId + ', new status is: ' + jobStatus
+    );
 
     app.emit(
         'jobNotification',

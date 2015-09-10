@@ -22,13 +22,13 @@ module.exports = FeedbackController;
 FeedbackController.createFeedback = function(request, response) {
 
     if (_.isString(request.body.feedback) === false || request.body.feedback.length <= 0) {
-        console.error('Error FeedbackController.createFeedback: missing feedback parameter');
+        console.error('FeedbackController.createFeedback - error - missing feedback parameter');
         apiResponseController.sendError('Feedback parameter required.', 400, response);
         return;
     }
 
     if (_.isString(request.body.username) === false || request.body.username.length <= 0) {
-        console.error('Error FeedbackController.createFeedback: missing username parameter');
+        console.error('FeedbackController.createFeedback - error - missing username parameter');
         apiResponseController.sendError('Username parameter required.', 400, response);
         return;
     }
@@ -37,6 +37,8 @@ FeedbackController.createFeedback = function(request, response) {
         feedback: request.body.feedback,
         username: request.body.username,
     });
+
+    console.log('FeedbackController.createFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
     // store in metadata
     feedback.storeFeedbackInMetadata();
@@ -62,16 +64,18 @@ FeedbackController.createPublicFeedback = function(request, response) {
         response:  feedback.recaptcha_response_field,
     };
 
-    //verify the recaptcha
+    // verify the recaptcha
     var recaptcha = new Recaptcha(config.recaptchaPublic, config.recaptchaSecret, recaptchaData);
     recaptcha.verify(
         function(success, errorCode) {
             if (!success) {
-                console.error('Error FeedbackController.createPublicFeedback: error code is: ' + errorCode);
+                console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
                 apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
                 return;
             }
             else {
+
+                console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
                 // store in metadata
                 feedback.storeFeedbackInMetadata();
