@@ -560,22 +560,22 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         .then(function(tmpJobMetadata) {
             console.log('PermissionsController.addPermissionsForJob - event - getJobMetadataForProject for job ' + jobUuid);
 
-            var jobUuid = tmpJobMetadata.uuid;
+            var jobMetaUuid = tmpJobMetadata.uuid;
 
-            if (!jobUuid || jobUuid.length === 0) {
-                jobUuid = tmpJobMetadata[0].uuid;
+            if (!jobMetaUuid || jobMetaUuid.length === 0) {
+                jobMetaUuid = tmpJobMetadata[0].uuid;
             }
 
             var promises = [];
 
-            function createAgaveCall(username, token, jobUuid) {
+            function createAgaveCall(username, token, jobMetaUuid) {
 
                 return function() {
 
                     return agaveIO.addUsernameToMetadataPermissions(
                         username,
                         token,
-                        jobUuid
+                        jobMetaUuid
                     );
                 };
             }
@@ -584,7 +584,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
                 promises[i] = createAgaveCall(
                     projectUsernames[i],
                     serviceAccount.accessToken,
-                    jobUuid
+                    jobMetaUuid
                 );
             }
 
