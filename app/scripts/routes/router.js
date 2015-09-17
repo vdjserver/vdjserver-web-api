@@ -32,7 +32,7 @@ module.exports = function(app) {
     );
 
     app.get(
-        '/community',
+        '/export/community',
         passport.authenticate('basic', {session: false}),
         communityDataController.getCommunityData
     );
