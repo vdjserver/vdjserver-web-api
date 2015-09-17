@@ -28,16 +28,18 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     var filename = request.body.fileName;
 
     if (!projectUuid) {
-        console.error('Error PermissionsController.syncFilePermissionsWithProject: missing projectUuid parameter');
+        console.error('PermissionsController.syncFilePermissionsWithProject - error - missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
 
     if (!filename) {
-        console.error('Error PermissionsController.syncFilePermissionsWithProject: missing filename parameter');
+        console.error('PermissionsController.syncFilePermissionsWithProject - error - missing filename parameter');
         apiResponseController.sendError('Filename required.', 400, response);
         return;
     }
+
+    console.log('PermissionsController.syncFilePermissionsWithProject - event - begin for ' + projectUuid);
 
     var serviceAccount = new ServiceAccount();
 
@@ -48,6 +50,7 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
     agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid)
         // Apply project pems to new file
         .then(function(projectPermissions) {
+            console.log('PermissionsController.syncFilePermissionsWithProject - event - getMetadatapermissions for ' + projectUuid);
 
             var filePermissions = new FilePermissions();
 
@@ -82,17 +85,19 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
         })
         // Get file pems listing to return to user
         .then(function() {
+            console.log('PermissionsController.syncFilePermissionsWithProject - event - addUsernameToFullFilePermissions for ' + projectUuid);
             return agaveIO.getFilePermissions(serviceAccount.accessToken, projectUuid);
         })
         // Finally send updated file pems back to user
         .then(function(updatedFilePermissions) {
+            console.log('PermissionsController.syncFilePermissionsWithProject - event - getFilePermissions for ' + projectUuid);
             return apiResponseController.sendSuccess(updatedFilePermissions, response);
         })
         .fail(function(error) {
-            console.error('Error PermissionsController.syncFilePermissionsWithProject: ' + JSON.stringify(error));
+            console.error('PermissionsController.syncFilePermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
-        });
-
+        })
+        ;
 };
 
 PermissionsController.syncMetadataPermissionsWithProject = function(request, response) {
@@ -104,26 +109,30 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
     var serviceAccount = new ServiceAccount();
 
     if (!uuid) {
-        console.error('Error PermissionsController.syncMetadataPermissionsWithProject: missing metadataUuid parameter');
+        console.error('PermissionsController.syncMetadataPermissionsWithProject - error - missing metadataUuid parameter');
         apiResponseController.sendError('Metadata Uuid required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
-        console.error('Error PermissionsController.syncMetadataPermissionsWithProject: missing projectUuid parameter');
+        console.error('PermissionsController.syncMetadataPermissionsWithProject - error - missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
+
+    console.log('PermissionsController.syncMetadataPermissionsWithProject - event - begin for project ' + projectUuid);
 
     // First, make sure serviceAccount has full pems on the new metadata
     // Use the user's accessToken to set this since serviceAccount may not have full pems yet
     agaveIO.addUsernameToMetadataPermissions(serviceAccount.username, accessToken, uuid)
         // Next, fetch project metadata pems
         .then(function() {
+            console.log('PermissionsController.syncMetadataPermissionsWithProject - event - add service account pems for project ' + projectUuid);
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         // Apply project pems to new metadata
         .then(function(projectPermissions) {
+            console.log('PermissionsController.syncMetadataPermissionsWithProject - event - getMetadataPermissions for project ' + projectUuid);
 
             var metadataPermissions = new MetadataPermissions();
 
@@ -155,17 +164,25 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
         })
         // Get fileMetadata pems listing to return to user
         .then(function() {
+            console.log(
+                'PermissionsController.syncMetadataPermissionsWithProject - event - addUsernameToMetadataPermissions for project ' + projectUuid
+            );
+
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, uuid);
         })
         // Finally send updated fileMetadata pems back to user
         .then(function(updatedFileMetadataPermissions) {
+            console.log(
+                'PermissionsController.syncMetadataPermissionsWithProject - event - complete for project ' + projectUuid
+            );
+
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
         .fail(function(error) {
-            console.error('Error PermissionsController.syncMetadataPermissionsWithProject: ' + JSON.stringify(error));
+            console.error('PermissionsController.syncMetadataPermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
-        });
-
+        })
+        ;
 };
 
 PermissionsController.addPermissionsForUsername = function(request, response) {
@@ -175,19 +192,19 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
     var accessToken = request.user.password;
 
     if (!username) {
-        console.error('Error PermissionsController.addPermissionsForUsername: missing username parameter');
+        console.error('PermissionsController.addPermissionsForUsername - error - missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
-        console.error('Error PermissionsController.addPermissionsForUsername: missing projectUuid parameter');
+        console.error('PermissionsController.addPermissionsForUsername - error - missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
 
     if (!accessToken) {
-        console.error('Error PermissionsController.addPermissionsForUsername: missing accessToken parameter');
+        console.error('PermissionsController.addPermissionsForUsername - error - missing accessToken parameter');
         apiResponseController.sendError('Access Token required.', 400, response);
         return;
     }
@@ -196,22 +213,32 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
     var jobMetadatas;
 
+    console.log('PermissionsController.addPermissionsForUsername - event - begin for project ' + projectUuid);
+
     // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
         // Add new username to project metadata pems
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - getMetadataPermissions for project ' + projectUuid);
+
             return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // set project file directory + subdirectory permissions recursively
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
+
             return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // get file metadata pems
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToFullFilePermissions for project ' + projectUuid);
+
             return agaveIO.getProjectFileMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         // (loop) add to file metadata pems
         .then(function(projectFileMetadataPermissions) {
+            console.log('PermissionsController.addPermissionsForUsername - event - getProjectFileMetadataPermissions for project ' + projectUuid);
+
             var metadata = new MetadataPermissions();
             var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
 
@@ -241,10 +268,13 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
         })
         // get job metadatas
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
+
             return agaveIO.getJobMetadataForProject(projectUuid);
         })
         // (loop) add to job metadata permissions
         .then(function(tmpJobMetadatas) {
+            console.log('PermissionsController.addPermissionsForUsername - event - getJobMetadataForProject for project ' + projectUuid);
 
             // cache for later
             jobMetadatas = tmpJobMetadatas;
@@ -278,6 +308,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
         })
         // (loop) add to job permissions
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
 
             var metadata = new MetadataPermissions();
             var uuids = metadata.getJobUuidsFromMetadataResponse(jobMetadatas);
@@ -307,12 +338,15 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - complete for project ' + projectUuid);
+
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('Error PermissionsController.addPermissionsForUsername: ' + JSON.stringify(error));
+            console.error('PermissionsController.addPermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
-        });
+        })
+        ;
 };
 
 PermissionsController.removePermissionsForUsername = function(request, response) {
@@ -322,24 +356,26 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     var accessToken = request.user.password;
 
     if (!username) {
-        console.error('Error PermissionsController.removePermissionsForUsername: missing username parameter');
+        console.error('PermissionsController.removePermissionsForUsername - error - missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
-        console.error('Error PermissionsController.removePermissionsForUsername: missing projectUuid parameter');
+        console.error('PermissionsController.removePermissionsForUsername - error - missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
 
     if (!accessToken) {
-        console.error('Error PermissionsController.removePermissionsForUsername: missing accessToken parameter');
+        console.error('PermissionsController.removePermissionsForUsername - error - missing accessToken parameter');
         apiResponseController.sendError('Access Token required.', 400, response);
         return;
     }
 
     var serviceAccount = new ServiceAccount();
+
+    console.log('PermissionsController.removePermissionsForUsername - event - begin for project ' + projectUuid);
 
     // check that token is on project
     // remove from project metadata pems
@@ -351,18 +387,28 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     agaveIO.getMetadataPermissions(accessToken, projectUuid)
         // Add new username to project metadata pems
         .then(function() {
+            console.log('PermissionsController.removePermissionsForUsername - event - getMetadataPermissions for project ' + projectUuid);
+
             return agaveIO.removeUsernameFromMetadataPermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // Remove project directory + subdirectory permissions recursively
         .then(function() {
+            console.log(
+                'PermissionsController.removePermissionsForUsername - event - removeUsernameFromMetadataPermissions for project ' + projectUuid
+            );
+
             return agaveIO.removeUsernameFromFilePermissions(username, serviceAccount.accessToken, projectUuid);
         })
         // Get File Metadata pems
         .then(function() {
+            console.log('PermissionsController.removePermissionsForUsername - event - removeUsernameFromFilePermissions for project ' + projectUuid);
+
             return agaveIO.getProjectFileMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         // (loop) Remove from File Metadata pems
         .then(function(projectFileMetadataPermissions) {
+            console.log('PermissionsController.removePermissionsForUsername - event - getProjectFileMetadataPermissions for project ' + projectUuid);
+
             var metadata = new MetadataPermissions();
             var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
 
@@ -391,12 +437,17 @@ PermissionsController.removePermissionsForUsername = function(request, response)
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
+            console.log(
+                'PermissionsController.removePermissionsForUsername - event - removeUsernameFromMetadataPermissions for project ' + projectUuid
+            );
+
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('Error PermissionsController.removePermissionsForUsername: ' + JSON.stringify(error));
+            console.error('PermissionsController.removePermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
-        });
+        })
+        ;
 };
 
 PermissionsController.addPermissionsForJob = function(request, response) {
@@ -406,19 +457,22 @@ PermissionsController.addPermissionsForJob = function(request, response) {
     var accessToken = request.user.password;
 
     if (!jobUuid) {
-        console.error('Error PermissionsController.addPermissionsForJob: missing jobUuid parameter');
+        console.error('PermissionsController.addPermissionsForJob - error - missing jobUuid parameter');
+
         apiResponseController.sendError('JobUuid required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
-        console.error('Error PermissionsController.addPermissionsForJob: missing projectUuid parameter');
+        console.error('PermissionsController.addPermissionsForJob - error - missing projectUuid parameter');
+
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
 
     if (!accessToken) {
-        console.error('Error PermissionsController.addPermissionsForJob: missing accessToken parameter');
+        console.error('PermissionsController.addPermissionsForJob - error - missing accessToken parameter');
+
         apiResponseController.sendError('Access Token required.', 400, response);
         return;
     }
@@ -427,14 +481,18 @@ PermissionsController.addPermissionsForJob = function(request, response) {
 
     var projectUsernames;
 
+    console.log('PermissionsController.addPermissionsForJob - event - begin for job ' + jobUuid);
+
     // Add service account to job pems
     agaveIO.addUsernameToJobPermissions(serviceAccount.username, accessToken, jobUuid)
         // Get project users
         .then(function() {
+            console.log('PermissionsController.addPermissionsForJob - event - addUsernameToJobPermissions for job ' + jobUuid);
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         // (loop) add project users to job pems
         .then(function(projectPermissions) {
+            console.log('PermissionsController.addPermissionsForJob - event - getMetadataPermissions for job ' + jobUuid);
 
             var filePermissions = new FilePermissions();
 
@@ -466,6 +524,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         })
         // (loop) set job output file permissions
         .then(function() {
+            console.log('PermissionsController.addPermissionsForJob - event - addUsernameToJobPermissions for job ' + jobUuid);
 
             var promises = [];
 
@@ -493,27 +552,30 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         })
         // get job metadatas
         .then(function() {
+            console.log('PermissionsController.addPermissionsForJob - event - addUsernameToFullFilePermissions for job ' + jobUuid);
+
             return agaveIO.getJobMetadataForProject(projectUuid);
         })
         // (loop) add to job metadata permissions
         .then(function(tmpJobMetadata) {
+            console.log('PermissionsController.addPermissionsForJob - event - getJobMetadataForProject for job ' + jobUuid);
 
-            var jobUuid = tmpJobMetadata.uuid;
+            var jobMetaUuid = tmpJobMetadata.uuid;
 
-            if (!jobUuid || jobUuid.length === 0) {
-                jobUuid = tmpJobMetadata[0].uuid;
+            if (!jobMetaUuid || jobMetaUuid.length === 0) {
+                jobMetaUuid = tmpJobMetadata[0].uuid;
             }
 
             var promises = [];
 
-            function createAgaveCall(username, token, jobUuid) {
+            function createAgaveCall(username, token, jobMetaUuid) {
 
                 return function() {
 
                     return agaveIO.addUsernameToMetadataPermissions(
                         username,
                         token,
-                        jobUuid
+                        jobMetaUuid
                     );
                 };
             }
@@ -522,17 +584,20 @@ PermissionsController.addPermissionsForJob = function(request, response) {
                 promises[i] = createAgaveCall(
                     projectUsernames[i],
                     serviceAccount.accessToken,
-                    jobUuid
+                    jobMetaUuid
                 );
             }
 
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
+            console.log('PermissionsController.addPermissionsForJob - event - addUsernameToMetadataPermissions for job ' + jobUuid);
+
             return apiResponseController.sendSuccess('success', response);
         })
         .fail(function(error) {
-            console.error('Error PermissionsController.addPermissionsForJob: ' + JSON.stringify(error));
+            console.error('PermissionsController.addPermissionsForJob - error - job ' + jobUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
-        });
+        })
+        ;
 };

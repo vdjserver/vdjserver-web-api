@@ -30,27 +30,32 @@ JobsController.createJobMetadata = function(request, response) {
     var projectUuid = request.body.projectUuid;
 
     if (!jobUuid) {
-        console.error('Error JobsController.createJobMetadata: missing jobId parameter');
+        console.error('JobsController.createJobMetadata - error - missing jobId parameter');
         apiResponseController.sendError('Job id required.', 400, response);
         return;
     }
 
     if (!projectUuid) {
-        console.error('Error JobsController.createJobMetadata: missing projectUuid parameter');
+        console.error('JobsController.createJobMetadata - error - missing projectUuid parameter');
         apiResponseController.sendError('Project Uuid required.', 400, response);
         return;
     }
+
+    console.log('JobsController.createJobMetadata - event - begin for jobId ' + jobUuid);
 
     var serviceAccount = new ServiceAccount();
     var jobMetadataUuid;
 
     agaveIO.createJobMetadata(projectUuid, jobUuid) // 1.
         .then(function(jobMetadata) {
+            console.log('JobsController.createJobMetadata - event - createJobMetadata for jobId ' + jobUuid);
+
             jobMetadataUuid = jobMetadata.uuid;
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid); // 2.
         })
         // Apply project pems to new metadata
         .then(function(projectPermissions) {
+            console.log('JobsController.createJobMetadata - event - getMetadataPermissions for jobId ' + jobUuid);
 
             var metadataPermissions = new MetadataPermissions();
 
@@ -81,12 +86,16 @@ JobsController.createJobMetadata = function(request, response) {
             return promises.reduce(Q.when, new Q()); // 3.
         })
         .then(function() {
+            console.log('JobsController.createJobMetadata - event - complete for jobId ' + jobUuid);
+
             apiResponseController.sendSuccess('Job metadata created successfully.', response); // 4a.
         })
         .fail(function(error) {
-            console.error('Error JobsController.createJobMetadata: ' + JSON.stringify(error));
+            console.error('JobsController.createJobMetadata - error - jobId ' + jobUuid + ', error ' + error);
+
             apiResponseController.sendError(error.message, 500, response); // 4b.
-        });
+        })
+        ;
 };
 
 JobsController.createJobFileMetadata = function(jobId) {
@@ -109,8 +118,11 @@ JobsController.createJobFileMetadata = function(jobId) {
     var projectPermissions = '';
     var job = '';
 
+    console.log('JobsController.createJobFileMetadata - event - begin for jobId ' + jobId);
+
     agaveIO.getJobOutput(jobId) // 1
         .then(function(jobOutput) {
+            console.log('JobsController.createJobFileMetadata - event - getJobOutput for jobId ' + jobId);
 
             job = jobOutput;
 
@@ -124,6 +136,7 @@ JobsController.createJobFileMetadata = function(jobId) {
             return agaveIO.getJobOutputFileListings(projectUuid, relativeArchivePath); // 2
         })
         .then(function(jobFileListings) {
+            console.log('JobsController.createJobFileMetadata - event - getJobOutputFileListings for jobId ' + jobId);
 
             var promises = [];
 
@@ -169,14 +182,19 @@ JobsController.createJobFileMetadata = function(jobId) {
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
+            console.log('JobsController.createJobFileMetadata - event - createProjectJobFileMetadata for jobId ' + jobId);
+
             return agaveIO.getProjectJobFileMetadatas(projectUuid, jobId);
         })
         .then(function(metadatas) {
+            console.log('JobsController.createJobFileMetadata - event - getProjectJobFileMetadatas for jobId ' + jobId);
+
             projectJobFileMetadatas = metadatas;
 
             return agaveIO.getMetadataPermissions(serviceAccount.accessToken, projectUuid);
         })
         .then(function(tmpProjectPermissions) {
+            console.log('JobsController.createJobFileMetadata - event - getMetadataPermissions for jobId ' + jobId);
 
             projectPermissions = tmpProjectPermissions;
             var metadataPermissions = new MetadataPermissions();
@@ -210,6 +228,7 @@ JobsController.createJobFileMetadata = function(jobId) {
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
+            console.log('JobsController.createJobFileMetadata - event - addUsernameToFullFilePermissions for jobId ' + jobId);
 
             var metadataPermissions = new MetadataPermissions();
 
@@ -244,7 +263,8 @@ JobsController.createJobFileMetadata = function(jobId) {
             return promises.reduce(Q.when, new Q());
         })
         .fail(function(error) {
-            console.error('Error JobsController.createJobFileMetadata: ' + JSON.stringify(error));
+            console.error('JobsController.createJobFileMetadata - error - jobId ' + jobId + ', error ' + error);
+
             apiResponseController.sendError(error.message, 500, response); // 4b.
         })
         ;
