@@ -3,6 +3,7 @@
 
 // Controllers
 var apiResponseController = require('../controllers/apiResponseController');
+var communityDataController = require('../controllers/communityDataController');
 var jobsController        = require('../controllers/jobsController');
 var feedbackController    = require('../controllers/feedbackController');
 var notificationsController = require('../controllers/notificationsController');
@@ -28,6 +29,12 @@ module.exports = function(app) {
     app.get(
         '/',
         apiResponseController.confirmUpStatus
+    );
+
+    app.get(
+        '/export/community',
+        passport.authenticate('basic', {session: false}),
+        communityDataController.getCommunityData
     );
 
     // Send feedback
@@ -163,5 +170,6 @@ module.exports = function(app) {
         .get(apiResponseController.send404)
         .post(apiResponseController.send404)
         .put(apiResponseController.send404)
-        .delete(apiResponseController.send404);
+        .delete(apiResponseController.send404)
+        ;
 };

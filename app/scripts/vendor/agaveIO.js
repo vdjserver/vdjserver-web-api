@@ -1304,6 +1304,62 @@ agaveIO.createFeedbackMetadata = function(feedback, username) {
         })
         .fail(function(errorObject) {
             deferred.reject(errorObject);
+        })
+        ;
+
+    return deferred.promise;
+};
+
+agaveIO.getCommunityDataMetadata = function() {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/meta/v2/data?q='
+                + encodeURIComponent('{'
+                    + '"name": "communityDataSRA"'
+                + '}'),
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.validateToken = function(token) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/systems/v2/',
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + token,
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve();
+        })
+        .fail(function(errorObject) {
+            deferred.reject(new Error('Unable to validate token.'));
         });
 
     return deferred.promise;
