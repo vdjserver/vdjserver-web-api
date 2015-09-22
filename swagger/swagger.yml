@@ -1,0 +1,1028 @@
+swagger: '2.0'
+
+info:
+  version: 1.0.0
+  title: 'VDJ API'
+
+securityDefinitions:
+  basicAuth:
+    type: basic
+    description: HTTP Basic Authentication. Includes an Agave username and an Agave token
+
+paths:
+
+  # DONE
+  /:
+    get:
+      description: |
+        Returns API health status.
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/HealthCheckResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /export/community:
+    get:
+      description: |
+        Returns commmunity data metadata.
+      security:
+       - basicAuth: []
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/ExportCommunityDataResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /feedback:
+    post:
+      description: |
+        Collects user feedback.
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/UserFeedbackResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /feedback/public:
+    post:
+      description: |
+        Collects public feedback.
+      parameters:
+        - name: feedback
+          in: body
+          required: true
+          type: string
+        - name: recaptcha_challenge_field
+          in: body
+          required: true
+          type: string
+        - name: recaptcha_response_field
+          in: body
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/PublicFeedbackResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /jobs/metadata:
+    post:
+      description: |
+        Creates job metadata.
+      security:
+       - basicAuth: []
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/CreateJobMetadataResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /notifications/files/{uuid}:
+    post:
+      description: |
+        Processes Agave file import notifications.
+      parameters:
+        - name: uuid
+          in: path
+          description: fileUuid
+          required: true
+          type: string
+        - name: event
+          in: query
+          description: File import Agave event
+          required: true
+          type: string
+        - name: type
+          in: query
+          description: File import type
+          required: true
+          type: string
+        - name: path
+          in: query
+          description: File import path on Agave storage system
+          required: true
+          type: string
+        - name: system
+          in: query
+          description: File import storage system
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/FileImportNotificationResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /notifications/jobs/{jobId}:
+    post:
+      description: |
+        Processes Agave file import notifications.
+      parameters:
+        - name: jobId
+          in: path
+          description: job id
+          required: true
+          type: string
+        - name: event
+          in: query
+          description: Job processing event
+          required: true
+          type: string
+        - name: status
+          in: query
+          description: Job status
+          required: true
+          type: string
+        - name: error
+          in: query
+          description: Job error
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/JobNotificationResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /permissions/files:
+    post:
+      description: |
+        Synchronizes file permissions for a new file
+      security:
+       - basicAuth: []
+      parameters:
+        - name: fileName
+          in: body
+          description: Name of file to update permissions on
+          required: true
+          schema:
+            type: string
+        - name: projectUuid
+          in: body
+          description: Project id for new file
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/SyncFilePermissionsResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /permissions/jobs:
+    post:
+      description: |
+        Synchronizes job permissions for a new job
+      security:
+       - basicAuth: []
+      parameters:
+        - name: jobUuid
+          in: body
+          description: Job identifier
+          required: true
+          schema:
+            type: string
+        - name: projectUuid
+          in: body
+          description: Project id for new file
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/SyncJobPermissionsResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /permissions/metadata:
+    post:
+      description: |
+        Synchronizes metadata permissions for new metadata
+      security:
+       - basicAuth: []
+      parameters:
+        - name: uuid
+          in: body
+          description: Metadata identifier
+          required: true
+          schema:
+            type: string
+        - name: projectUuid
+          in: body
+          description: Project id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/SyncMetadataPermissionsResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /permissions/username:
+    post:
+      description: |
+        Adds project permissions to username
+      security:
+       - basicAuth: []
+      parameters:
+        - name: username
+          in: body
+          description: Username to add permissions on
+          required: true
+          schema:
+            type: string
+        - name: projectUuid
+          in: body
+          description: Project id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/AddUsernamePermissionsResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      description: |
+        Remove project permissions to username
+      security:
+       - basicAuth: []
+      parameters:
+        - name: username
+          in: body
+          description: Username to remove permissions on
+          required: true
+          schema:
+            type: string
+        - name: projectUuid
+          in: body
+          description: Project id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/RemoveUsernamePermissionsResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /projects:
+    post:
+      description: |
+        Creates a new project
+      parameters:
+        - name: username
+          in: body
+          description: Username to add permissions on
+          required: true
+          schema:
+            type: string
+        - name: projectName
+          in: body
+          description: Name for new project
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/CreateProjectResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /telemetry:
+    post:
+      description: |
+        Record error telemetry
+      parameters:
+        - name: body
+          in: body
+          description: Username to add permissions on
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/RecordErrorTelemetryResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /token:
+    post:
+      description: |
+        Returns an Agave token
+      security:
+       - basicAuth: []
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/GetTokenResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    put:
+      description: |
+        Refreshes an Agave token
+      security:
+       - basicAuth: []
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/GetTokenResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user:
+    post:
+      description: |
+        Create a new user account
+      parameters:
+        - name: username
+          in: body
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: body
+          required: true
+          schema:
+            type: string
+        - name: email
+          in: body
+          required: true
+          schema:
+            type: string
+        - name: firstName
+          in: body
+          required: false
+          schema:
+            type: string
+        - name: lastName
+          in: body
+          required: false
+          schema:
+            type: string
+        - name: city
+          in: body
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: body
+          required: false
+          schema:
+            type: string
+        - name: country
+          in: body
+          required: false
+          schema:
+            type: string
+        - name: affiliation
+          in: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/CreateUserResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user/change-password:
+    post:
+      description: |
+        Change a user password
+      security:
+       - basicAuth: []
+      parameters:
+        - name: password
+          in: body
+          description: Old password
+          required: true
+          schema:
+            type: string
+        - name: newPassword
+          in: body
+          description: New password
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/ChangePasswordResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user/reset-password:
+    post:
+      description: |
+        Initiate user password reset
+      parameters:
+        - name: username
+          in: body
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/ResetPasswordResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user/reset-password/verify:
+    post:
+      description: |
+        Verify user password reset
+      parameters:
+        - name: username
+          in: body
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: body
+          required: true
+          schema:
+            type: string
+        - name: newPassword
+          in: body
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/VerifyResetPasswordResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user/reset-password/verify/email:
+    post:
+      description: |
+        Resend user password reset verification email
+      parameters:
+        - name: username
+          in: body
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/ResendResetPasswordVerificationEmailResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  # DONE
+  /user/verify/{verificationId}:
+    post:
+      description: |
+        Verify user account
+      parameters:
+        - name: verificationId
+          in: body
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: "#/definitions/VerifyNewAccountResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+definitions:
+
+  ### Endpoint Responses ###
+  AddUsernamePermissionsResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  ChangePasswordResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  CreateJobMetadataResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  CreateProjectResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: object
+        required: true
+        properties:
+          uuid:
+            type: string
+          owner:
+            type: string
+          schemaId:
+            type: string
+          internalUsername:
+            type: string
+          associationIds:
+            type: array
+          lastUpdated:
+            type: string
+            format: datetime
+          name:
+            type: string
+          value:
+            type: object
+            properties:
+              name:
+                type: string
+          created:
+            type: string
+            format: datetime
+          _links:
+            type: object
+            properties:
+              self:
+                type: object
+                properties:
+                  href:
+                    type: string
+
+  CreateUserResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: object
+        required: true
+        properties:
+          username:
+            type: string
+          email:
+            type: string
+          firstName:
+            type: string
+          lastName:
+            type: string
+          city:
+            type: string
+          state:
+            type: string
+          country:
+            type: string
+          affiliation:
+            type: string
+
+  ExportCommunityDataResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: object
+        required: true
+        properties:
+          uuid:
+            type: string
+          owner:
+            type: string
+          schemaId:
+            type: string
+          internalUsername:
+            type: string
+          associationIds:
+            type: array
+          lastUpdated:
+            type: string
+            format: datetime
+          name:
+            type: string
+          value:
+            type: object
+            properties:
+              projectUuid:
+                type: string
+              abstract:
+                type: string
+              bioProjectType:
+                type: string
+              study:
+                type: string
+              receptor:
+                type: string
+              studyId:
+                type: string
+              title:
+                type: string
+              organism:
+                type: string
+              vdjServerProcessing:
+                type: string
+              experimentProjects:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    sraExperiment:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        url:
+                          type: string
+                    biosample:
+                      type: string
+                    sampleDescription:
+                      type: string
+                    sraRun:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        url:
+                          type: string
+                    layout:
+                      type: string
+                    platform:
+                      type: string
+                    readCount:
+                      type: string
+                    sequenceLength:
+                      type: string
+                    qcFilteredOutput:
+                      type: array
+                      items:
+                        type: string
+                    igBlastOutput:
+                      type: array
+                      items:
+                        type: string
+          created:
+            type: string
+            format: datetime
+          _links:
+            type: object
+            properties:
+              self:
+                type: object
+                properties:
+                  href:
+                    type: string
+
+  FileImportNotificationResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  GetTokenResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: object
+        required: true
+        properties:
+          token_type:
+            type: string
+          expires_in:
+            type: integer
+          refresh_token:
+            type: string
+          access_token:
+            type: string
+
+  HealthCheckResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  JobNotificationResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  PublicFeedbackResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  RecordErrorTelemetryResponse:
+    properties:
+      temp:
+        type: string
+
+  RemoveUsernamePermissionsResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  ResendResetPasswordVerificationEmailResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  ResetPasswordResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  SyncFilePermissionsResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: object
+        required: true
+        properties:
+          username:
+            type: string
+          internalUsername:
+            type: string
+          permission:
+            type: object
+            properties:
+              read:
+                type: string
+              write:
+                type: boolean
+              execute:
+                type: boolean
+          recursive:
+            type: boolean
+          _links:
+            type: object
+            properties:
+              parent:
+                type: object
+                properties:
+                  href:
+                    type: string
+              file:
+                type: object
+                properties:
+                  href:
+                    type: string
+              profile:
+                type: object
+                properties:
+                  href:
+                    type: string
+
+  SyncJobPermissionsResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  SyncMetadataPermissionsResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  UserFeedbackResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  VerifyNewAccountResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  VerifyResetPasswordResponse:
+    properties:
+      message:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+      result:
+        type: string
+        required: true
+
+  ### Error Responses ###
+  ErrorResponse:
+    schema:
+      WrapperResponse
+    properties:
+      message:
+        type: string
