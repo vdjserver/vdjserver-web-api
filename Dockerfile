@@ -4,16 +4,25 @@ FROM debian:jessie
 MAINTAINER Walter Scarborough <wscarbor@tacc.utexas.edu>
 
 # Install OS Dependencies
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
     nodejs \
     nodejs-legacy \
     npm \
+    sendmail-bin \
     supervisor \
     vim \
     wget
 
-RUN npm install -g \
-    forever
+# Setup postfix
+# The postfix install won't respect noninteractivity unless this config is set beforehand.
+RUN mkdir /etc/postfix
+RUN touch /etc/mailname
+COPY docker/postfix/main.cf /etc/postfix/main.cf
+COPY docker/scripts/postfix-config-replace.sh /root/postfix-config-replace.sh
+
+# Debian vociferously complains if you try to install postfix and sendmail at the same time.
+RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q --force-yes \
+    postfix
 
 RUN mkdir /vdjserver-web-api
 
@@ -39,4 +48,4 @@ RUN cd /vdjserver-web-api && npm install
 # Copy project source
 COPY . /vdjserver-web-api
 
-CMD /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
+CMD ["/root/postfix-config-replace.sh"]
