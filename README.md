@@ -24,25 +24,24 @@ cd vdjserver-web-api
 docker build -t vdjserver-web-api .
 ```
 
-You will also need to set up the [VDJServer Redis](git@bitbucket.org:vdjserver/vdjserver-web-redis.git) docker container:
+Edit the environment configuration file:
 
 ```
-git clone git@bitbucket.org:vdjserver/vdjserver-web-redis.git
-
-cd vdjserver-web-redis
-
-docker build -it redis
+cp .env.defaults .env
+vim .env
+# NOTE: the POSTFIX_RELAYHOST value is available on TACC VMs by looking for the relayhost value in /etc/postfix/main.cf on the host.
+# POSTFIX_HOSTNAME should just be the hostname of wherever you've deployed the VDJ API.
 ```
 
 Now you can start the VDJServer API:
 
 ```
-docker run --link redis:redis vdjserver-web-api
+docker run --env-file .env vdjserver-web-api
 ```
 
 ## Running VDJServer API Without Docker
 
-It may be faster to do iterative development on a local instance of the VDJServer API without using docker. Node.js applications need to be restarted to read changes in their codebases, and this is often done faster on a local machine than in a docker container.
+It may be faster to do iterative development on a local instance of the VDJServer API without using docker. Node.js applications need to be restarted to read changes in their codebases, and this can often be done faster on a local machine than in a docker container.
 
 ```
 git clone git@bitbucket.org:vdjserver/vdjserver-web-api.git
@@ -76,7 +75,7 @@ node app.js
 ```
 
 #### Documentation:
-Legacy documentation on VDJ Auth Server endpoints is currently available at: [https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0](https://docs.google.com/a/tacc.utexas.edu/spreadsheets/d/1A7uu8iMerAB8xBIcnRLLArHyxA1fuh4gqKbj1ygstTA/edit#gid=0). Please note that this is currently deprecated, and is expected to be replaced by Swagger docs in the future.
+Swagger 2 docs are available at: vdjserver-web-api/swagger/swagger.yml
 
 Documentation on Agave v2 is available at: [http://agaveapi.co/live-docs/](http://agaveapi.co/live-docs/).
 
