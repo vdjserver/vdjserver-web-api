@@ -1,9 +1,17 @@
 {
-    "preset": "google",
-    "validateIndentation": 4,
-    "maximumLineLength": 150,
-    "requireCamelCaseOrUpperCaseIdentifiers": "ignoreProperties",
     "disallowKeywordsOnNewLine": [],
+    "disallowMixedSpacesAndTabs": true,
+    "excludeFiles": [
+        "node_modules/**",
+        "test/**",
+        "app/bower_components/**",
+        "app/scripts/vendor/**"
+    ],
+    "maximumLineLength": 150,
+    "preset": "google",
+    "requireCamelCaseOrUpperCaseIdentifiers": "ignoreProperties",
+    "requireCurlyBraces": true,
+    "requireDotNotation": false,
     "requireOperatorBeforeLineBreak": [
         "?",
         "=",
@@ -17,5 +25,7 @@
         ">=",
         "<",
         "<="
-    ]
+    ],
+    "requireTrailingComma": true,
+    "validateIndentation": 4
 }
