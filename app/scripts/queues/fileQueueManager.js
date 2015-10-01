@@ -18,12 +18,10 @@ var FileUploadJob = require('../models/fileUploadJob');
 // Node Libraries
 var Q = require('q');
 
-var lock = false;
+var FileQueueManager = {};
+module.exports = FileQueueManager;
 
-var QueueManager = {};
-module.exports = QueueManager;
-
-QueueManager.processFileUploads = function() {
+FileQueueManager.processFileUploads = function() {
 
     var queue = kue.createQueue();
 

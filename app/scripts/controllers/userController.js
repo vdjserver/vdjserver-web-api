@@ -1,6 +1,9 @@
 
 'use strict';
 
+// App
+var app = require('../app');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
@@ -13,6 +16,10 @@ var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var Q = require('q');
+var kue = require('kue');
+var taskQueue = kue.createQueue({
+    redis: app.redisConfig,
+});
 
 var UserController = {};
 module.exports = UserController;
@@ -148,8 +155,25 @@ UserController.createUser = function(request, response) {
 
         return deferred.promise;
     })
+
+//----------------
+// if possible, create account here
+// if error, insert into queue
+//
+// Start queue
+// 4.) create profile metadata
+// 5.) create verification metadata
+// 6.) send email
+// 7.) done - notify user
+
     .then(function(userToken) {
         var deferred = Q.defer();
+
+        /*
+        // TODO / DEBUG: remove this
+        var error = new Error(4);
+        deferred.reject(error);
+        */
 
         agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
             .then(function() {
@@ -164,7 +188,7 @@ UserController.createUser = function(request, response) {
 
         return deferred.promise;
     })
-    .then(function(userToken) {
+    .then(function() {
         var deferred = Q.defer();
 
         agaveIO.createUserVerificationMetadata(user.username)
@@ -192,6 +216,45 @@ UserController.createUser = function(request, response) {
     })
     .fail(function(error) {
         console.error('UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
+
+        // Insert into appropriate place in queue
+        switch (error.message) {
+
+            case '4': {
+                Q.fcall(function() {
+                    taskQueue
+                        .create('createUserProfileMetadataTask', user.getSanitizedAttributes())
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .save()
+                        ;
+                })
+                ;
+
+                break;
+            }
+
+            case '5': {
+                Q.fcall(function() {
+                    taskQueue
+                        .create('createUserVerificationMetadataTask', user.getSanitizedAttributes())
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .save()
+                        ;
+                })
+                ;
+
+                break;
+            }
+
+            default: {
+                break;
+            }
+        }
+
+        console.error('UserController.createUser - error message is: ' + error.message);
+
         apiResponseController.sendError(error.message, 500, response);
     })
     ;

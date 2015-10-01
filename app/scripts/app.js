@@ -76,5 +76,8 @@ require('./routes/router')(app);
 require('./controllers/websocketController');
 
 // Queue Management
-var queueManager = require('./utilities/queueManager');
-queueManager.processFileUploads();
+var fileQueueManager = require('./queues/fileQueueManager');
+fileQueueManager.processFileUploads();
+
+var accountQueueManager = require('./queues/accountQueueManager');
+accountQueueManager.processNewAccounts();

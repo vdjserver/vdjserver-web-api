@@ -26,6 +26,5 @@
         "<",
         "<="
     ],
-    "requireTrailingComma": true,
     "validateIndentation": 4
 }

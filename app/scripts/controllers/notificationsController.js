@@ -12,7 +12,6 @@ var kue = require('kue');
 var notificationJobs = kue.createQueue({
     redis: app.redisConfig,
 });
-//var redisClient = kue.redis.createClient();
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
