@@ -89,41 +89,112 @@ UserController.createUser = function(request, response) {
 
     console.log('UserController.createUser - event - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
-    agaveIO.createUser(user.getCreateUserAttributes())
-        .then(function() {
-            console.log('UserController.createUser - event - agave account successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-            return agaveIO.getToken(user);
-        })
-        .then(function(userToken) {
-            console.log('UserController.createUser - event - token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-            return agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token);
-        })
-        .then(function() {
-            console.log('UserController.createUser - event - vdj profile successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-            return agaveIO.createUserVerificationMetadata(user.username);
-        })
-        .then(function(userVerificationMetadata) {
-            console.log('UserController.createUser - event - verification metadata successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+    Q.fcall(function() {
+        var deferred = Q.defer();
 
-            if (userVerificationMetadata && userVerificationMetadata.uuid) {
-                var verificationId = userVerificationMetadata.uuid;
+        agaveIO.isDuplicateUsername(user.username)
+            .then(function(isDuplicate) {
 
-                return emailIO.sendWelcomeEmail(user.email, verificationId);
-            }
-            else {
-                return Q.reject(new Error('UserController.createUser - error - unable to create verification metadata.'));
-            }
+                if (isDuplicate === true) {
+                    var error = new Error(1);
+                    deferred.reject(error);
+                }
+                else {
+                    console.log(
+                        'UserController.createUser - event - agave duplicate account check successful for '
+                        + JSON.stringify(user.getSanitizedAttributes())
+                    );
 
-        })
-        .then(function(/*profileSuccess*/) {
-            console.log('UserController.createUser - event - acount creation complete for ' + JSON.stringify(user.getSanitizedAttributes()));
-            apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
-        })
-        .fail(function(error) {
-            console.error('UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
+                    deferred.resolve();
+                }
+            })
+            .fail(function() {
+                var error = new Error(1);
+                deferred.reject(error);
+            })
+            ;
+
+        return deferred.promise;
+    })
+    .then(function() {
+        var deferred = Q.defer();
+
+        agaveIO.createUser(user.getCreateUserAttributes())
+            .then(function() {
+                console.log('UserController.createUser - event - agave account successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+                deferred.resolve();
+            })
+            .fail(function() {
+                var error = new Error(2);
+                deferred.reject(error);
+            })
+            ;
+
+        return deferred.promise;
+    })
+    .then(function() {
+        var deferred = Q.defer();
+
+        agaveIO.getToken(user)
+            .then(function(userToken) {
+                console.log('UserController.createUser - event - token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+                deferred.resolve(userToken);
+            })
+            .fail(function() {
+                var error = new Error(3);
+                deferred.reject(error);
+            })
+            ;
+
+        return deferred.promise;
+    })
+    .then(function(userToken) {
+        var deferred = Q.defer();
+
+        agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
+            .then(function() {
+                console.log('UserController.createUser - event - vdj profile successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+                deferred.resolve();
+            })
+            .fail(function() {
+                var error = new Error(4);
+                deferred.reject(error);
+            })
+            ;
+
+        return deferred.promise;
+    })
+    .then(function(userToken) {
+        var deferred = Q.defer();
+
+        agaveIO.createUserVerificationMetadata(user.username)
+            .then(function(userVerificationMetadata) {
+                console.log(
+                    'UserController.createUser - event - verification metadata successful for ' + JSON.stringify(user.getSanitizedAttributes())
+                );
+                deferred.resolve(userVerificationMetadata);
+            })
+            .fail(function() {
+                var error = new Error(5);
+                deferred.reject(error);
+            })
+            ;
+
+        return deferred.promise;
+    })
+    .then(function(userVerificationMetadata) {
+        emailIO.sendWelcomeEmail(user.email, userVerificationMetadata.uuid);
+        console.log('UserController.createUser - event - send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+    })
+    .then(function() {
+        console.log('UserController.createUser - event - acount creation complete for ' + JSON.stringify(user.getSanitizedAttributes()));
+        apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
+    })
+    .fail(function(error) {
+        console.error('UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
+        apiResponseController.sendError(error.message, 500, response);
+    })
+    ;
 };
 
 UserController.changePassword = function(request, response) {
@@ -157,7 +228,11 @@ UserController.changePassword = function(request, response) {
     // 3.  Response
     // 3a. Success
     // 3b. Fail
-    var auth = {username: username, password: password};
+    var auth = {
+        username: username,
+        password: password,
+    };
+
     agaveIO.getToken(auth) // 0.
         .then(function(/*token*/) {
             console.log('UserController.changePassword - event - token verify success for ' + username);

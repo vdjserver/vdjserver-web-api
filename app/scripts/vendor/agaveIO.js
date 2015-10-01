@@ -1364,3 +1364,30 @@ agaveIO.validateToken = function(token) {
 
     return deferred.promise;
 };
+
+agaveIO.isDuplicateUsername = function(username) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/profiles/v2/' + username,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(true);
+        })
+        .fail(function(errorObject) {
+            deferred.resolve(false);
+        });
+
+    return deferred.promise;
+};
