@@ -155,29 +155,13 @@ UserController.createUser = function(request, response) {
 
         return deferred.promise;
     })
-
-//----------------
-// if possible, create account here
-// if error, insert into queue
-//
-// Start queue
-// 4.) create profile metadata
-// 5.) create verification metadata
-// 6.) send email
-// 7.) done - notify user
-
     .then(function(userToken) {
         var deferred = Q.defer();
-
-        /*
-        // TODO / DEBUG: remove this
-        var error = new Error(4);
-        deferred.reject(error);
-        */
 
         agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
             .then(function() {
                 console.log('UserController.createUser - event - vdj profile successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
                 deferred.resolve();
             })
             .fail(function() {
@@ -225,7 +209,11 @@ UserController.createUser = function(request, response) {
                     taskQueue
                         .create('createUserProfileMetadataTask', user.getSanitizedAttributes())
                         .removeOnComplete(true)
-                        .attempts(5)
+                        .attempts(10)
+                        .backoff({
+                            delay: 60 * 1000,
+                            type: 'fixed',
+                        })
                         .save()
                         ;
                 })
@@ -239,7 +227,11 @@ UserController.createUser = function(request, response) {
                     taskQueue
                         .create('createUserVerificationMetadataTask', user.getSanitizedAttributes())
                         .removeOnComplete(true)
-                        .attempts(5)
+                        .attempts(10)
+                        .backoff({
+                            delay: 60 * 1000,
+                            type: 'fixed',
+                        })
                         .save()
                         ;
                 })
@@ -252,8 +244,6 @@ UserController.createUser = function(request, response) {
                 break;
             }
         }
-
-        console.error('UserController.createUser - error message is: ' + error.message);
 
         apiResponseController.sendError(error.message, 500, response);
     })

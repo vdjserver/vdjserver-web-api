@@ -27,16 +27,15 @@ AccountQueueManager.processNewAccounts = function() {
 
     taskQueue.process('createUserProfileMetadataTask', function(createUserJob, done) {
 
-        console.log("createUserProfileMetadataTask running");
-
         var serviceAccount = new ServiceAccount();
         var user = createUserJob.data;
 
-        console.log("A user 1 is: " + JSON.stringify(user));
-
         agaveIO.createUserProfile(user, serviceAccount.accessToken)
             .then(function() {
-                console.log("createUserProfileMetadataTask then ok");
+                console.log(
+                    'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'
+                    + ' - event - createUserProfile successful for ' + user.username
+                );
 
                 taskQueue
                     .create('createUserVerificationMetadataTask', user)
@@ -50,37 +49,55 @@ AccountQueueManager.processNewAccounts = function() {
                     ;
             })
             .then(function() {
-                console.log("createUserProfileMetadataTask done");
+                console.log(
+                    'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'
+                    + ' - event - queued next task successful for ' + user.username
+                );
+
                 done();
             })
             .fail(function(error) {
-                console.log("createUserProfileMetadataTask error");
-                done(new Error('createUserProfileMetadataTask error is: ' + error));
+
+                var errorMessage = 'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'
+                                 + ' - error - user ' + user.username + ', error ' + error
+                                 ;
+
+                console.log(errorMessage);
+
+                done(new Error(errorMessage));
             })
             ;
     });
 
     taskQueue.process('createUserVerificationMetadataTask', function(createUserJob, done) {
 
-        console.log("createUserVerificationMetadataTask running");
-
         var user = createUserJob.data;
-
-        console.log("B user 1 is: " + JSON.stringify(user));
 
         agaveIO.createUserVerificationMetadata(user.username)
             .then(function(userVerificationMetadata) {
-                console.log("createUserVerificationMetadata then ok");
+                console.log(
+                    'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'
+                    + ' - event - created metadata successful for ' + user.username
+                );
 
                 emailIO.sendWelcomeEmail(user.email, userVerificationMetadata.uuid);
             })
             .then(function() {
-                console.log("createUserProfileMetadataTask done");
+                console.log(
+                    'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'
+                    + ' - event - finish successful for ' + user.username
+                );
+
                 done();
             })
             .fail(function(error) {
-                console.log("createUserVerificationMetadataTask error");
-                done(new Error('createUserVerificationMetadataTask error is: ' + error));
+                var errorMessage = 'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'
+                                 + ' - error - user ' + user.username + ', error ' + error
+                                 ;
+
+                console.log(errorMessage);
+
+                done(new Error(errorMessage));
             })
             ;
     });
