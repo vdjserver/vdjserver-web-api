@@ -293,7 +293,7 @@ agaveIO.getUserProfile = function(username) {
     var requestSettings = {
         host:     agaveSettings.hostname,
         method:   'GET',
-        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}'),
+        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=5000',
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -468,7 +468,9 @@ agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
                 + encodeURIComponent('{'
                     + '"name": { $in: ["projectFile", "projectJobFile"] },'
                     + '"value.projectUuid":"' + projectUuid + '"'
-                + '}'),
+                + '}')
+                + '&limit=5000'
+                ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + accessToken
@@ -695,7 +697,9 @@ agaveIO.getUserVerificationMetadata = function(username) {
                         + ' "value.username":"' + username + '",'
                         + ' "owner":"' + serviceAccount.username + '"'
                         + '}'
-                  ),
+                  )
+                  + '&limit=5000'
+                  ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -806,7 +810,9 @@ agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
                             + '"value.projectUuid":"' + projectUuid + '",'
                             + '"value.jobUuid":"' + jobUuid + '",'
                         + '}'
-                    ),
+                    )
+                    + '&limit=5000'
+                    ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -839,7 +845,9 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
                             + '"name":"projectJob",'
                             + '"value.projectUuid":"' + projectUuid + '"'
                         + '}'
-                    ),
+                    )
+                    + '&limit=5000'
+                    ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -871,7 +879,9 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
                         '{"name":"passwordReset",'
                         + ' "uuid":"' + uuid + '",'
                         + ' "owner":"' + serviceAccount.username + '"}'
-                  ),
+                  )
+                  + '&limit=5000'
+                  ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -1138,7 +1148,9 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
                             + '"value.projectUuid":"' + projectUuid + '",'
                             + '"value.jobUuid":"' + jobId + '"'
                         + '}'
-                    ),
+                    )
+                    + '&limit=5000'
+                    ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken
@@ -1247,7 +1259,9 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
                     + '"name": "projectFile",'
                     + '"value.projectUuid": "' + projectUuid + '",'
                     + '"associationIds": { $in: ["' + fileUuid + '"] }'
-                + '}'),
+                + '}')
+                + '&limit=5000'
+                ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken,
@@ -1322,7 +1336,9 @@ agaveIO.getCommunityDataMetadata = function() {
         path:   '/meta/v2/data?q='
                 + encodeURIComponent('{'
                     + '"name": "communityDataSRA"'
-                + '}'),
+                + '}')
+                + '&limit=5000'
+                ,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + serviceAccount.accessToken,
