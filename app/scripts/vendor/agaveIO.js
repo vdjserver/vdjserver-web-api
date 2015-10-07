@@ -10,20 +10,10 @@ var ServiceAccount = require('../models/serviceAccount');
 // Node Libraries
 var Q = require('q');
 var _ = require('underscore');
+var jsonApprover = require('json-approver');
 
 var agaveIO  = {};
 module.exports = agaveIO;
-
-var isJSON = function(input) {
-    try {
-        JSON.parse(input);
-    }
-    catch (error) {
-        return false;
-    }
-
-    return true;
-};
 
 agaveIO.sendRequest = function(requestSettings, postData) {
 
@@ -41,7 +31,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
 
             var responseObject;
 
-            if (output && isJSON(output)) {
+            if (output && jsonApprover.isJSON(output)) {
                 responseObject = JSON.parse(output);
             }
             else {
@@ -103,7 +93,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
 
             var responseObject;
 
-            if (output && isJSON(output)) {
+            if (output && jsonApprover.isJSON(output)) {
                 responseObject = JSON.parse(output);
             }
             else {

@@ -27,7 +27,7 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q --force-yes \
 RUN mkdir /vdjserver-web-api
 
 # Setup redis
-ENV REDIS_VERSION=3.0.3
+ENV REDIS_VERSION=3.0.4
 RUN cd /root \
     && wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz \
     && tar xvzf redis-$REDIS_VERSION.tar.gz \
