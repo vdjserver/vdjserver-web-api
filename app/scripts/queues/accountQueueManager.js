@@ -12,6 +12,7 @@ var ServiceAccount = require('../models/serviceAccount');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Q = require('q');
@@ -58,6 +59,8 @@ AccountQueueManager.processNewAccounts = function() {
             })
             .fail(function(error) {
 
+                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserProfileMetadataTask fail', user.username);
+
                 var errorMessage = 'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'
                                  + ' - error - user ' + user.username + ', error ' + error
                                  ;
@@ -91,6 +94,8 @@ AccountQueueManager.processNewAccounts = function() {
                 done();
             })
             .fail(function(error) {
+                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserVerificationMetadataTask fail', user.username);
+
                 var errorMessage = 'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'
                                  + ' - error - user ' + user.username + ', error ' + error
                                  ;

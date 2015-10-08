@@ -85,3 +85,22 @@ emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
         }
     );
 };
+
+emailIO.sendDebugEmail = function(recipientEmail, debugMessage) {
+
+    var mailOptions = {
+        to: recipientEmail,
+        from: agaveSettings.fromAddress,
+        subject: 'VDJServer.org Debug Email',
+        text: debugMessage,
+    };
+
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending debug email. Error: ', error);
+            }
+        }
+    );
+};
