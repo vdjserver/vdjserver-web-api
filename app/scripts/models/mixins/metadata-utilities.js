@@ -13,6 +13,7 @@ MetadataUtilities.getUsernamesFromMetadataResponse = function(metadata) {
     }
 
     usernames = _.without(usernames, 'vdj');
+
     return usernames;
 };
 

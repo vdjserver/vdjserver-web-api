@@ -50,9 +50,9 @@ module.exports = function(app) {
 
     // Create Job Metadata
     app.post(
-        '/jobs/metadata',
+        '/jobs/queue',
         passport.authenticate('basic', {session: false}),
-        jobsController.createJobMetadata
+        jobsController.queueJob
     );
 
     // Process Job Create Notification

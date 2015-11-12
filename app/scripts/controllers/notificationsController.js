@@ -9,7 +9,7 @@ var agaveSettings = require('../config/agaveSettings');
 var apiResponseController = require('./apiResponseController');
 var jobController = require('./jobsController');
 var kue = require('kue');
-var notificationJobs = kue.createQueue({
+var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
@@ -48,7 +48,7 @@ NotificationsController.createFileMetadata = function(request, response) {
         console.log('NotificationsController.createFileMetadata - event - queued for file uuid' + fileNotification.fileUuid);
 
         return Q.fcall(function() {
-            notificationJobs
+            taskQueue
                 .create('fileUploadPermissions', fileNotification)
                 .removeOnComplete(true)
                 .attempts(5)
@@ -107,7 +107,17 @@ NotificationsController.processJobNotifications = function(request, response) {
     );
 
     if (jobStatus === 'FINISHED') {
-        jobController.createJobFileMetadata(jobId);
+        var jobData = {
+            jobId: jobId,
+        };
+
+        taskQueue
+            .create('shareJobOutputFilesTask', jobData)
+            .removeOnComplete(true)
+            .attempts(5)
+            //.backoff({delay: 60 * 1000, type: 'fixed'})
+            .save()
+            ;
     }
 
     apiResponseController.sendSuccess('ok', response);

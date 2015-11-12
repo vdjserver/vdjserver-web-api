@@ -81,3 +81,6 @@ fileQueueManager.processFileUploads();
 
 var accountQueueManager = require('./queues/accountQueueManager');
 accountQueueManager.processNewAccounts();
+
+var jobQueueManager = require('./queues/jobQueueManager');
+jobQueueManager.processJobs();
