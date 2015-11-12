@@ -86,17 +86,23 @@ paths:
             $ref: "#/definitions/ErrorResponse"
 
   # DONE
-  /jobs/metadata:
+  /jobs/queue:
     post:
       description: |
-        Creates job metadata.
+        Queues a new job launch
       security:
        - basicAuth: []
+      parameters:
+        - name: queueParam
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/JobQueueParameter"
       responses:
         '200':
           description: Successful response
           schema:
-            $ref: "#/definitions/CreateJobMetadataResponse"
+            $ref: "#/definitions/JobQueueResponse"
         default:
           description: Error
           schema:
@@ -594,6 +600,16 @@ paths:
 
 definitions:
 
+  ### parameters
+  JobQueueParameter:
+    properties:
+      projectUuid:
+        type: string
+        required: true
+      config:
+        type: object
+        required: true
+
   ### Endpoint Responses ###
   AddUsernamePermissionsResponse:
     properties:
@@ -619,7 +635,7 @@ definitions:
         type: string
         required: true
 
-  CreateJobMetadataResponse:
+  JobQueueResponse:
     properties:
       message:
         type: string
@@ -1026,3 +1042,4 @@ definitions:
     properties:
       message:
         type: string
+
