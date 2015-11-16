@@ -48,18 +48,17 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('createArchivePathDirectoryTask', function(task, done) {
 
         var jobData = task.data;
-        var projectUuid = jobData.projectUuid;
 
         var job = new Job();
 
-        var archivePath = job.createArchivePath(projectUuid, jobData.config.name);
+        var archivePath = job.createArchivePath(jobData.projectUuid, jobData.config.name);
         var relativeArchivePath = job.convertToRelativeArchivePath(archivePath);
 
         // store new archivePath for later
         jobData.config.archivePath = archivePath;
 
         // agave mkdir relativeArchivePath
-        agaveIO.createJobArchiveDirectory(projectUuid, relativeArchivePath)
+        agaveIO.createJobArchiveDirectory(jobData.projectUuid, relativeArchivePath)
             // pass archivePath with other job data to next task
             .then(function() {
                 taskQueue
@@ -85,7 +84,7 @@ JobQueueManager.processJobs = function() {
         var jobData = task.data;
 
         var job = new Job();
-        var jobNotification = job.getJobNotification();
+        var jobNotification = job.getJobNotification(jobData.projectUuid, jobData.config.name);
         jobData.config.notifications = [
             jobNotification,
         ];

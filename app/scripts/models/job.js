@@ -47,10 +47,15 @@ Job.prototype.convertToRelativeArchivePath = function(absoluteArchivePath) {
     return relativeArchivePath;
 };
 
-Job.prototype.getJobNotification = function() {
+Job.prototype.getJobNotification = function(projectUuid, jobName) {
     return {
         'url': process.env.VDJ_API_URL
-               + '/notifications/jobs/${JOB_ID}?status=${JOB_STATUS}&event=${EVENT}&error=${JOB_ERROR}'
+               + '/notifications/jobs/${JOB_ID}'
+               + '?status=${JOB_STATUS}'
+               + '&event=${EVENT}'
+               + '&error=${JOB_ERROR}'
+               + '&projectUuid=' + projectUuid
+               + '&jobName=' + encodeURIComponent(jobName)
                ,
         'event': '*',
         'persistent': true,
