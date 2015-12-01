@@ -22,7 +22,7 @@ var Q = require('q');
 var NotificationsController = {};
 module.exports = NotificationsController;
 
-NotificationsController.createFileMetadata = function(request, response) {
+NotificationsController.processFileImportNotifications = function(request, response) {
 
     var fileNotification = {
         fileUuid:   request.params.uuid,
@@ -32,7 +32,7 @@ NotificationsController.createFileMetadata = function(request, response) {
         fileSystem: request.query.system,
     };
 
-    console.log('NotificationsController.createFileMetadata - event - begin for file uuid' + fileNotification.fileUuid);
+    console.log('NotificationsController.processFileImportNotifications - event - begin for file uuid' + fileNotification.fileUuid);
 
     /*
         1.) Send response to prevent blocking notification client
@@ -45,7 +45,7 @@ NotificationsController.createFileMetadata = function(request, response) {
         8.) Profit
     */
     Q.when(apiResponseController.sendSuccess('', response), function() {
-        console.log('NotificationsController.createFileMetadata - event - queued for file uuid' + fileNotification.fileUuid);
+        console.log('NotificationsController.processFileImportNotifications - event - queued for file uuid' + fileNotification.fileUuid);
 
         return Q.fcall(function() {
             taskQueue

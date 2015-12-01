@@ -55,10 +55,10 @@ module.exports = function(app) {
         jobsController.queueJob
     );
 
-    // Process Job Create Notification
+    // Process File Import Notification
     app.post(
-        '/notifications/files/:uuid',
-        notificationsController.createFileMetadata
+        '/notifications/files/import/:uuid',
+        notificationsController.processFileImportNotifications
     );
 
     // Process Job Create Notification

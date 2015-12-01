@@ -18,10 +18,16 @@ var FileUploadJob = require('../models/fileUploadJob');
 // Node Libraries
 var Q = require('q');
 
-var FileQueueManager = {};
-module.exports = FileQueueManager;
+var FilePermissionsQueueManager = {};
+module.exports = FilePermissionsQueueManager;
 
-FileQueueManager.processFileUploads = function() {
+/*
+    Processing tasks
+    1.) share file w/ project users
+    2.) create file metadata
+    3.) share file metadata w/ project users
+*/
+FilePermissionsQueueManager.processFileUploads = function() {
 
     var queue = kue.createQueue();
 
