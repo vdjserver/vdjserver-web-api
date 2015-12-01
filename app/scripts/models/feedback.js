@@ -8,8 +8,7 @@ var Feedback = function(attributes) {
     this.username = attributes.username || '';
     this.feedback = attributes.feedback || '';
     this.remoteip = attributes.remoteip || '';
-    this.recaptcha_challenge_field = attributes.recaptcha_challenge_field || '';
-    this.recaptcha_response_field = attributes.recaptcha_response_field || '';
+    this.g_recaptcha_response = attributes.g_recaptcha_response || '';
 };
 
 _.extend(Feedback.prototype, FeedbackUtilities);

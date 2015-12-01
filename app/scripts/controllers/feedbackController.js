@@ -13,7 +13,7 @@ var Feedback = require('../models/feedback');
 var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
-var Recaptcha = require('recaptcha').Recaptcha;
+var Recaptcha = require('recaptcha-v2').Recaptcha;
 var _ = require('underscore');
 
 var FeedbackController = {};
@@ -50,43 +50,39 @@ FeedbackController.createFeedback = function(request, response) {
 };
 
 FeedbackController.createPublicFeedback = function(request, response) {
-
     var feedback = new Feedback({
         feedback: request.body.feedback,
         remoteip: request.connection.remoteAddress,
-        recaptcha_challenge_field: request.body.recaptcha_challenge_field,
-        recaptcha_response_field:  request.body.recaptcha_response_field,
+        g_recaptcha_response: request.body['g-recaptcha-response']
     });
 
     var recaptchaData = {
         remoteip:  feedback.remoteip,
-        challenge: feedback.recaptcha_challenge_field,
-        response:  feedback.recaptcha_response_field,
+        response: feedback.g_recaptcha_response,
+        secret: config.recaptchaSecret
     };
 
     // verify the recaptcha
     var recaptcha = new Recaptcha(config.recaptchaPublic, config.recaptchaSecret, recaptchaData);
-    recaptcha.verify(
-        function(success, errorCode) {
-            if (!success) {
-                console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
-                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-                return;
-            }
-            else {
 
-                console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
-
-                // store in metadata
-                feedback.storeFeedbackInMetadata();
-
-                //send the email
-                emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
-
-                //send the response
-                apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-                return;
-            }
+    recaptcha.verify(function(success, errorCode) {
+        if (!success) {
+          console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
+          apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+          return;
         }
-    );
+        else {
+          console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
+
+          // store in metadata
+          feedback.storeFeedbackInMetadata();
+
+          // send the email
+          emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
+
+          //send the response
+          apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+          return;
+        }
+    });
 };
