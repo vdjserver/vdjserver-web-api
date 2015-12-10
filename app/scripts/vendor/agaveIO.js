@@ -1164,17 +1164,6 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 
     var serviceAccount = new ServiceAccount();
 
-    var tmpReadDirection = '';
-    var tmpTags = [];
-
-    if (_.isEmpty(readDirection) !== true) {
-        tmpReadDirection = readDirection;
-    }
-
-    if (_.isEmpty(tags) !== true) {
-        tmpTags = tags;
-    }
-
     var postData = {
         associationIds: [
             fileUuid,
@@ -1187,9 +1176,9 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
             'name': name,
             'length': length,
             'isDeleted': false,
-            'readDirection': tmpReadDirection,
+            'readDirection': readDirection,
             'publicAttributes': {
-                'tags': tmpTags,
+                'tags': tags,
             },
         },
     };

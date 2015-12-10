@@ -118,12 +118,28 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
             var length = fileDetail[0].length;
             var name = fileDetail[0].name;
 
-            var tmpTags = null;
-            if (_.isEmpty(that.tags) !== false) {
-                tmpTags = that.tags.split(',');
+            // Read Direction
+            if (_.isEmpty(that.readDirection) === true) {
+                that.readDirection = '';
             }
 
-            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, 4, name, length, that.readDirection, tmpTags);
+            // Tags
+            if (_.isEmpty(that.tags) === true) {
+                that.tags = [];
+            }
+            else {
+
+                var splitTags = that.tags.split(',');
+
+                var tags = splitTags.map(function(tag) {
+
+                    return tag.trim();
+                });
+
+                that.tags = tags;
+            }
+
+            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, 4, name, length, that.readDirection, that.tags);
         })
         ;
 };
