@@ -22,6 +22,12 @@ var FileUploadJob = function(kueAttributes) {
         this.filePath  = kueAttributes.filePath  || '';
         this.fileSystem = kueAttributes.fileSystem || '';
         this.projectUuid = kueAttributes.projectUuid || '';
+        this.readDirection = kueAttributes.readDirection || '';
+        this.tags = kueAttributes.tags || '';
+    }
+
+    if (_.isEmpty(this.tags) === false) {
+        this.tags = decodeURIComponent(this.tags);
     }
 };
 
@@ -112,7 +118,12 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
             var length = fileDetail[0].length;
             var name = fileDetail[0].name;
 
-            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, 4, name, length);
+            var tmpTags = null;
+            if (_.isEmpty(that.tags) !== false) {
+                tmpTags = that.tags.split(',');
+            }
+
+            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, 4, name, length, that.readDirection, tmpTags);
         })
         ;
 };

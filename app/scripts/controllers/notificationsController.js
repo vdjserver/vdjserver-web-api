@@ -31,6 +31,8 @@ NotificationsController.processFileImportNotifications = function(request, respo
         filePath:    request.query.path,
         fileSystem:  request.query.system,
         projectUuid: request.query.projectUuid,
+        readDirection: request.query.readDirection,
+        tags: request.query.tags,
     };
 
     console.log('NotificationsController.processFileImportNotifications - event - begin for file uuid' + fileNotification.fileUuid);

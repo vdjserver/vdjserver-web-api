@@ -1158,11 +1158,22 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
     return deferred.promise;
 };
 
-agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length) {
+agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length, readDirection, tags) {
 
     var deferred = Q.defer();
 
     var serviceAccount = new ServiceAccount();
+
+    var tmpReadDirection = '';
+    var tmpTags = [];
+
+    if (_.isEmpty(readDirection) !== true) {
+        tmpReadDirection = readDirection;
+    }
+
+    if (_.isEmpty(tags) !== true) {
+        tmpTags = tags;
+    }
 
     var postData = {
         associationIds: [
@@ -1176,9 +1187,9 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
             'name': name,
             'length': length,
             'isDeleted': false,
-            'readDirection': '',
+            'readDirection': tmpReadDirection,
             'publicAttributes': {
-                'tags': [],
+                'tags': tmpTags,
             },
         },
     };
