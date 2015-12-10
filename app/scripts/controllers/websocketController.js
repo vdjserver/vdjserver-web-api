@@ -32,5 +32,5 @@ app.on('fileImportNotification', function(fileImportNotification) {
     //console.log("fileImportNotification received ok: " + JSON.stringify(fileImportNotification));
     //console.log("fileImportNotification recieved. Rooms are: " + JSON.stringify(io.sockets.adapter.rooms));
 
-    nsp.in(fileImportNotification.fileInformation.fileUuid).emit('fileImportUpdate', fileImportNotification);
+    nsp.in(fileImportNotification.fileInformation.projectUuid).emit('fileImportUpdate', fileImportNotification);
 });

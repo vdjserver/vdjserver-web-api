@@ -67,7 +67,10 @@ FilePermissionsQueueManager.processFileUploads = function() {
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.createAgaveFileMetadata()
-            .then(function() {
+            .then(function(response) {
+
+                fileQueueJob.data.metadata = response;
+
                 app.emit(
                     'fileImportNotification',
                     {

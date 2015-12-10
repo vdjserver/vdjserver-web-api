@@ -57,7 +57,7 @@ module.exports = function(app) {
 
     // Process File Import Notification
     app.post(
-        '/notifications/files/import/:uuid',
+        '/notifications/files/import',
         notificationsController.processFileImportNotifications
     );
 

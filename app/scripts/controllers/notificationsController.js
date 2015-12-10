@@ -25,11 +25,12 @@ module.exports = NotificationsController;
 NotificationsController.processFileImportNotifications = function(request, response) {
 
     var fileNotification = {
-        fileUuid:   request.params.uuid,
-        fileEvent:  request.query.event,
-        fileType:   request.query.type,
-        filePath:   request.query.path,
-        fileSystem: request.query.system,
+        fileUuid:    request.query.fileUuid,
+        fileEvent:   request.query.event,
+        fileType:    request.query.type,
+        filePath:    request.query.path,
+        fileSystem:  request.query.system,
+        projectUuid: request.query.projectUuid,
     };
 
     console.log('NotificationsController.processFileImportNotifications - event - begin for file uuid' + fileNotification.fileUuid);
