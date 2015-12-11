@@ -22,6 +22,7 @@ var FileUploadJob = function(kueAttributes) {
         this.filePath  = kueAttributes.filePath  || '';
         this.fileSystem = kueAttributes.fileSystem || '';
         this.projectUuid = kueAttributes.projectUuid || '';
+        this.vdjFileType = kueAttributes.vdjFileType || '';
         this.readDirection = kueAttributes.readDirection || '';
         this.tags = kueAttributes.tags || '';
     }
@@ -118,6 +119,22 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
             var length = fileDetail[0].length;
             var name = fileDetail[0].name;
 
+            const defaultVdjFileType = 4;
+
+            // VDJ File Type
+            if (_.isEmpty(that.vdjFileType) === false) {
+
+                try {
+                    that.vdjFileType = parseInt(that.vdjFileType);
+                }
+                catch (e) {
+                    that.vdjFileType = defaultVdjFileType;
+                }
+            }
+            else {
+                that.vdjFileType = defaultVdjFileType;
+            }
+
             // Read Direction
             if (_.isEmpty(that.readDirection) === true) {
                 that.readDirection = '';
@@ -139,7 +156,7 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
                 that.tags = tags;
             }
 
-            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, 4, name, length, that.readDirection, that.tags);
+            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, that.vdjFileType, name, length, that.readDirection, that.tags);
         })
         ;
 };

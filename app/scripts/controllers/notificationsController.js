@@ -31,6 +31,7 @@ NotificationsController.processFileImportNotifications = function(request, respo
         filePath:    request.query.path,
         fileSystem:  request.query.system,
         projectUuid: request.query.projectUuid,
+        vdjFileType: request.query.vdjFileType,
         readDirection: request.query.readDirection,
         tags: request.query.tags,
     };
