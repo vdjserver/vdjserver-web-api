@@ -6,7 +6,6 @@ var app = require('../app');
 var agaveSettings = require('../config/agaveSettings');
 
 // Models
-var FileUploadJob = require('../models/fileUploadJob');
 var ServiceAccount = require('../models/serviceAccount');
 
 // Processing

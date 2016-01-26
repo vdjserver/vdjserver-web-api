@@ -976,7 +976,7 @@ agaveIO.updateUserPassword = function(user) {
     return deferred.promise;
 };
 
-agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
+agaveIO.createJobPointerMetadata = function(projectUuid, jobUuid) {
 
     var deferred = Q.defer();
 
@@ -1073,7 +1073,7 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
     return deferred.promise;
 };
 
-agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListing, job, relativeArchivePath) {
+agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobName, relativeArchivePath) {
 
     var deferred = Q.defer();
 
@@ -1083,12 +1083,12 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
             projectUuid: projectUuid,
             jobUuid: jobUuid,
             fileType: 2,
-            name: jobFileListing.name,
-            length: jobFileListing.length,
+            name: jobFileListingName,
+            length: jobFileListingLength,
             isDeleted: false,
             readDirection: '',
             relativeArchivePath: relativeArchivePath,
-            jobName: job.name,
+            jobName: jobName,
             publicAttributes: {
                 'tags': [],
             },
@@ -1158,7 +1158,7 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
     return deferred.promise;
 };
 
-agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length) {
+agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length, readDirection, tags) {
 
     var deferred = Q.defer();
 
@@ -1176,9 +1176,9 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
             'name': name,
             'length': length,
             'isDeleted': false,
-            'readDirection': '',
+            'readDirection': readDirection,
             'publicAttributes': {
-                'tags': [],
+                'tags': tags,
             },
         },
     };
@@ -1393,6 +1393,70 @@ agaveIO.isDuplicateUsername = function(username) {
         })
         .fail(function(errorObject) {
             deferred.resolve(false);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
+
+    var deferred = Q.defer();
+
+    var postData = 'action=mkdir&path=' + relativeArchivePath;
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'PUT',
+        path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+                  + '//projects/'
+                  + '/' + projectUuid
+                  + '/analyses'
+                  ,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Length': postData.length,
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.launchJob = function(jobDataString) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/jobs/v2/'
+                  ,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Length': jobDataString.length,
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, jobDataString)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
         });
 
     return deferred.promise;

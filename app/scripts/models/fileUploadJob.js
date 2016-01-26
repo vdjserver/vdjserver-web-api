@@ -21,6 +21,14 @@ var FileUploadJob = function(kueAttributes) {
         this.fileType  = kueAttributes.fileType  || '';
         this.filePath  = kueAttributes.filePath  || '';
         this.fileSystem = kueAttributes.fileSystem || '';
+        this.projectUuid = kueAttributes.projectUuid || '';
+        this.vdjFileType = kueAttributes.vdjFileType || '';
+        this.readDirection = kueAttributes.readDirection || '';
+        this.tags = kueAttributes.tags || '';
+    }
+
+    if (_.isEmpty(this.tags) === false) {
+        this.tags = decodeURIComponent(this.tags);
     }
 };
 
@@ -40,6 +48,7 @@ FileUploadJob.prototype.getRelativeFilePath = function() {
     return response;
 };
 
+/*
 FileUploadJob.prototype.getProjectId = function() {
     var response = '';
 
@@ -54,6 +63,7 @@ FileUploadJob.prototype.getProjectId = function() {
 
     return response;
 };
+*/
 
 FileUploadJob.prototype.setMetadataPermissions = function() {
 
@@ -61,14 +71,14 @@ FileUploadJob.prototype.setMetadataPermissions = function() {
 
     var serviceAccount = new ServiceAccount();
 
-    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.getProjectId())
+    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.projectUuid)
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
 
             var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-            return agaveIO.getProjectFileMetadataByFilename(that.getProjectId(), that.fileUuid)
+            return agaveIO.getProjectFileMetadataByFilename(that.projectUuid, that.fileUuid)
                 .then(function(fileMetadata) {
 
                     var metadataUuid = fileMetadata[0].uuid;
@@ -109,7 +119,44 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
             var length = fileDetail[0].length;
             var name = fileDetail[0].name;
 
-            return agaveIO.createFileMetadata(that.fileUuid, that.getProjectId(), 4, name, length);
+            const defaultVdjFileType = 4;
+
+            // VDJ File Type
+            if (_.isEmpty(that.vdjFileType) === false) {
+
+                try {
+                    that.vdjFileType = parseInt(that.vdjFileType);
+                }
+                catch (e) {
+                    that.vdjFileType = defaultVdjFileType;
+                }
+            }
+            else {
+                that.vdjFileType = defaultVdjFileType;
+            }
+
+            // Read Direction
+            if (_.isEmpty(that.readDirection) === true) {
+                that.readDirection = '';
+            }
+
+            // Tags
+            if (_.isEmpty(that.tags) === true) {
+                that.tags = [];
+            }
+            else {
+
+                var splitTags = that.tags.split(',');
+
+                var tags = splitTags.map(function(tag) {
+
+                    return tag.trim();
+                });
+
+                that.tags = tags;
+            }
+
+            return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, that.vdjFileType, name, length, that.readDirection, that.tags);
         })
         ;
 };
@@ -122,12 +169,9 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
     // Set metadata pems
     var serviceAccount = new ServiceAccount();
 
-    //console.log("proj id is: " + this.getProjectId());
     //console.log("relativeFilePath is: " + this.getRelativeFilePath());
 
-    var projectId = this.getProjectId();
-
-    if (projectId === '') {
+    if (this.projectUuid === '') {
         var deferred = Q.defer();
 
         var error = new Error('Unable to parse project id for file: ' + this.fileUuid);
@@ -136,7 +180,7 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
         return deferred.promise;
     }
 
-    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.getProjectId())
+    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.projectUuid)
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
@@ -167,13 +211,6 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
             }
 
             return promises.reduce(Q.when, new Q());
-
-            /*
-            var deferred = Q.defer();
-            deferred.resolve();
-
-            return deferred.promise;
-            */
         })
         ;
 
