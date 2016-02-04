@@ -42,6 +42,10 @@ FileUploadJob.prototype.getRelativeFilePath = function() {
         var split = tmpFilePath.split('/');
         split = split.slice(3);
 
+        // urlencode filename, otherwise nonalphanumeric characters can cause Agave errors
+        // Be careful not to encode the entire file path though, because that can also cause errors
+        split[split.length - 1] = encodeURIComponent(split[split.length - 1]);
+
         response = split.join('/');
     }
 
