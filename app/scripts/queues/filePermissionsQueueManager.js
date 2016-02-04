@@ -32,6 +32,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
     var queue = kue.createQueue();
 
     queue.process('fileUploadPermissions', function(fileQueueJob, done) {
+        console.log('fileUploadPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.setAgaveFilePermissions()
@@ -58,12 +59,15 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
+                console.log('fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+
                 done(new Error('Agave error is: ' + error));
             })
             ;
     });
 
     queue.process('fileUploadMetadata', function(fileQueueJob, done) {
+        console.log('fileUploadMetadata queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.createAgaveFileMetadata()
@@ -93,6 +97,8 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
+                console.log('fileUploadMetadata queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+
                 done(new Error('Agave error is: ' + error));
             })
             ;
@@ -100,6 +106,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
     });
 
     queue.process('fileUploadMetadataPermissions', function(fileQueueJob, done) {
+        console.log('fileUploadMetadataPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.setMetadataPermissions()
@@ -126,6 +133,8 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
+                console.log('fileUploadMetadataPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+
                 done(new Error('Agave error is: ' + error));
             })
             ;
