@@ -16,7 +16,7 @@ module.exports = TelemetryController;
 TelemetryController.recordErrorTelemetry = function(request, response) {
 
     console.error('TelemetryController.recordErrorTelemetry - error - ' + JSON.stringify(request.body));
-    webhookIO.postToSlack(JSON.stringify(request.body));
+    webhookIO.postToSlack(JSON.stringify(request.body, null, 2));
 
     apiResponseController.sendSuccess('', response);
 };

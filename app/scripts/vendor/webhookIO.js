@@ -17,11 +17,12 @@ webhookIO.postToSlack = function(eventMessage, eventUsername) {
                   + 'Environment: ' + process.env.VDJ_BACKBONE_HOST + '\n'
                   + 'Timestamp: ' + moment().tz('America/Chicago').format()
                   ,
+            username: 'VDJ Telemetry Bot',
         },
         method: 'POST',
     },
     function(requestError, response, body) {
-        console.log('Posted slack webhook for message: "' + eventMessage + '", username is: ' + eventUsername);
+        console.log('Posted slack webhook for message: "' + eventMessage + '"');
     })
     ;
 };
