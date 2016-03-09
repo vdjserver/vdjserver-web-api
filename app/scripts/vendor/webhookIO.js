@@ -13,8 +13,7 @@ webhookIO.postToSlack = function(eventMessage, eventUsername) {
     request({
         url: process.env.SLACK_WEBHOOK_URL,
         json: {
-            text: 'Event: "' + eventMessage + '"\n'
-                  + 'Username: "' + eventUsername + '"\n'
+            text: 'Event: ' + eventMessage + '\n'
                   + 'Environment: ' + process.env.VDJ_BACKBONE_HOST + '\n'
                   + 'Timestamp: ' + moment().tz('America/Chicago').format()
                   ,

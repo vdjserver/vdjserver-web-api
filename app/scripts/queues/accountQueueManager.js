@@ -58,7 +58,7 @@ AccountQueueManager.processNewAccounts = function() {
             })
             .fail(function(error) {
 
-                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserProfileMetadataTask fail', user.username);
+                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserProfileMetadataTask fail for user: ' + user.username);
 
                 var errorMessage = 'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'
                                  + ' - error - user ' + user.username + ', error ' + error
@@ -93,7 +93,7 @@ AccountQueueManager.processNewAccounts = function() {
                 done();
             })
             .fail(function(error) {
-                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserVerificationMetadataTask fail', user.username);
+                webhookIO.postToSlack('AccountQueueManager.processNewAccounts createUserVerificationMetadataTask fail for user: ' + user.username);
 
                 var errorMessage = 'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'
                                  + ' - error - user ' + user.username + ', error ' + error
