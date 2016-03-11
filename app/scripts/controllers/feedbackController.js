@@ -84,7 +84,7 @@ FeedbackController.createPublicFeedback = function(request, response) {
 
             // send the email
             var emailFeedbackMessage = feedback.feedback
-                                     + '\n\n Automated note: user email address is: ' + feedback.email
+                                     + '\n\n VDJServer Automated Note: user email address is ' + feedback.email
                                      ;
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
