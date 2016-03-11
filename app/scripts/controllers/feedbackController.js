@@ -54,13 +54,13 @@ FeedbackController.createPublicFeedback = function(request, response) {
         feedback: request.body.feedback,
         email: request.body.email,
         remoteip: request.connection.remoteAddress,
-        g_recaptcha_response: request.body['g-recaptcha-response']
+        g_recaptcha_response: request.body['g-recaptcha-response'],
     });
 
     var recaptchaData = {
         remoteip:  feedback.remoteip,
         response: feedback.g_recaptcha_response,
-        secret: config.recaptchaSecret
+        secret: config.recaptchaSecret,
     };
 
     // verify the recaptcha
