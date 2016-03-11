@@ -20,7 +20,7 @@ FeedbackUtilities.storeFeedbackInMetadata = function() {
         return deferred.promise;
     }
 
-    return agaveIO.createFeedbackMetadata(this.feedback, this.username);
+    return agaveIO.createFeedbackMetadata(this.feedback, this.username, this.email);
 };
 
 module.exports = FeedbackUtilities;
