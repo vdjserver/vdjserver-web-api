@@ -67,22 +67,22 @@ FeedbackController.createPublicFeedback = function(request, response) {
 
     recaptcha.verify(function(success, errorCode) {
         if (!success) {
-          console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
-          apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-          return;
+            console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
+            apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+            return;
         }
         else {
-          console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
+            console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
-          // store in metadata
-          feedback.storeFeedbackInMetadata();
+            // store in metadata
+            feedback.storeFeedbackInMetadata();
 
-          // send the email
-          emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
+            // send the email
+            emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
 
-          //send the response
-          apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-          return;
+            //send the response
+            apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+            return;
         }
     });
 };

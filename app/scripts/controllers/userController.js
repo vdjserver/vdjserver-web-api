@@ -1,6 +1,8 @@
 
 'use strict';
 
+var config = require('../config/config');
+
 // App
 var app = require('../app');
 
@@ -20,6 +22,7 @@ var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
+var Recaptcha = require('recaptcha-v2').Recaptcha;
 
 var UserController = {};
 module.exports = UserController;
@@ -93,6 +96,32 @@ UserController.createUser = function(request, response) {
         return;
     }
     */
+
+    // BEGIN RECAPTCHA CHECK
+    var recaptchaData = {
+        remoteip:  request.connection.remoteAddress,
+        response: request.body['g-recaptcha-response'],
+        secret: config.recaptchaSecret,
+    };
+
+    var recaptcha = new Recaptcha(
+        config.recaptchaPublic,
+        config.recaptchaSecret,
+        recaptchaData
+    );
+
+    recaptcha.verify(function(success, errorCode) {
+        if (!success) {
+            console.log('UserController.createUser - recaptcha error for '
+                + JSON.stringify(user.getSanitizedAttributes())
+                + ' and error code is: ' + errorCode
+            );
+
+            apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+            return;
+        }
+    });
+    // END RECAPTCHA CHECK
 
     console.log('UserController.createUser - event - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
