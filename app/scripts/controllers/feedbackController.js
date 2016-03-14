@@ -52,18 +52,23 @@ FeedbackController.createFeedback = function(request, response) {
 FeedbackController.createPublicFeedback = function(request, response) {
     var feedback = new Feedback({
         feedback: request.body.feedback,
+        email: request.body.email,
         remoteip: request.connection.remoteAddress,
-        g_recaptcha_response: request.body['g-recaptcha-response']
+        g_recaptcha_response: request.body['g-recaptcha-response'],
     });
 
     var recaptchaData = {
         remoteip:  feedback.remoteip,
         response: feedback.g_recaptcha_response,
-        secret: config.recaptchaSecret
+        secret: config.recaptchaSecret,
     };
 
     // verify the recaptcha
-    var recaptcha = new Recaptcha(config.recaptchaPublic, config.recaptchaSecret, recaptchaData);
+    var recaptcha = new Recaptcha(
+        config.recaptchaPublic,
+        config.recaptchaSecret,
+        recaptchaData
+    );
 
     recaptcha.verify(function(success, errorCode) {
         if (!success) {
@@ -78,7 +83,11 @@ FeedbackController.createPublicFeedback = function(request, response) {
             feedback.storeFeedbackInMetadata();
 
             // send the email
-            emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
+            var emailFeedbackMessage = feedback.feedback
+                                     + '\n\n VDJServer Automated Note: user email address is ' + feedback.email
+                                     ;
+
+            emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
 
             //send the response
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);

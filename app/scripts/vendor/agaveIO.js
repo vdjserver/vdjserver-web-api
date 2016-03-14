@@ -1269,7 +1269,7 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
     return deferred.promise;
 };
 
-agaveIO.createFeedbackMetadata = function(feedback, username) {
+agaveIO.createFeedbackMetadata = function(feedback, username, email) {
 
     var deferred = Q.defer();
 
@@ -1279,6 +1279,10 @@ agaveIO.createFeedbackMetadata = function(feedback, username) {
 
     if (username.length > 0) {
         valueData.username = username;
+    }
+
+    if (email.length > 0) {
+        valueData.email = email;
     }
 
     var postData = {

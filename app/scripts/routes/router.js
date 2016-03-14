@@ -48,7 +48,13 @@ module.exports = function(app) {
         feedbackController.createPublicFeedback
     );
 
-    // Create Job Metadata
+    app.get(
+        '/jobs/queue/pending',
+        passport.authenticate('basic', {session: false}),
+        jobsController.getPendingJobs
+    );
+
+    // Queue Jobs
     app.post(
         '/jobs/queue',
         passport.authenticate('basic', {session: false}),
