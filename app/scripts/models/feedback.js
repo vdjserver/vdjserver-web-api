@@ -33,4 +33,12 @@ Feedback.prototype.storeFeedbackInMetadata = function() {
     );
 };
 
+Feedback.prototype.getEmailMessage = function() {
+    var emailFeedbackMessage = this.feedback
+                             + '\n\n VDJServer Automated Note: user email address is ' + this.email
+                             ;
+
+    return emailFeedbackMessage;
+};
+
 module.exports = Feedback;

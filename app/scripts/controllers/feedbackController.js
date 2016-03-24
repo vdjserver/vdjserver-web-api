@@ -10,6 +10,7 @@ var apiResponseController = require('./apiResponseController');
 var Feedback = require('../models/feedback');
 
 // Processing
+var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
@@ -40,13 +41,28 @@ FeedbackController.createFeedback = function(request, response) {
 
     console.log('FeedbackController.createFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
-    // store in metadata
-    feedback.storeFeedbackInMetadata();
+    agaveIO.getUserProfile(request.body.username)
+        .then(function(profile) {
+            profile = profile.pop();
 
-    // send as email
-    emailIO.sendFeedbackEmail(config.feedbackEmail, feedback.feedback);
+            feedback.email = profile.value.email;
 
-    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+	    // store in metadata
+	    feedback.storeFeedbackInMetadata();
+
+	    // send as email
+	    var emailFeedbackMessage = feedback.getEmailMessage();
+
+	    emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+
+	    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+        })
+        .fail(function(error) {
+            console.log('FeedbackController.createFeedback - event - failed to retrieve user profile. Feedback is: ' + JSON.stringify(feedback));
+
+	    apiResponseController.sendError('Unable to find associated user profile with feedback.', response);
+        })
+        ;
 };
 
 FeedbackController.createPublicFeedback = function(request, response) {
@@ -83,9 +99,7 @@ FeedbackController.createPublicFeedback = function(request, response) {
             feedback.storeFeedbackInMetadata();
 
             // send the email
-            var emailFeedbackMessage = feedback.feedback
-                                     + '\n\n VDJServer Automated Note: user email address is ' + feedback.email
-                                     ;
+            var emailFeedbackMessage = feedback.getEmailMessage();
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
 
