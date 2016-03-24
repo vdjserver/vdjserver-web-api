@@ -10,7 +10,6 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
     npm \
     sendmail-bin \
     supervisor \
-    vim \
     wget
 
 # Setup postfix
