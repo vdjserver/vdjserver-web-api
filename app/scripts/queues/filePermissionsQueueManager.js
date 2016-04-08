@@ -17,6 +17,7 @@ var FileUploadJob = require('../models/fileUploadJob');
 
 // Node Libraries
 var Q = require('q');
+var moment = require('moment');
 
 var FilePermissionsQueueManager = {};
 module.exports = FilePermissionsQueueManager;
@@ -27,9 +28,76 @@ module.exports = FilePermissionsQueueManager;
     2.) create file metadata
     3.) share file metadata w/ project users
 */
+
+/*
+    TODO:
+    Future fallback approach after file notifications work:
+
+    1.) poll on notification endpoint instead of file history
+*/
+
 FilePermissionsQueueManager.processFileUploads = function() {
 
     var queue = kue.createQueue();
+
+    queue.process('fileUploadPoll', function(fileQueueJob, done) {
+        console.log('fileUploadPoll queue begin for ' + JSON.stringify(fileQueueJob.data));
+
+        var fileUploadJob = new FileUploadJob(fileQueueJob.data);
+        fileUploadJob.checkFileAvailability()
+            .then(function(fileAvailability) {
+
+                let deferred = Q.defer();
+
+                if (fileAvailability === true) {
+                    deferred.resolve();
+                }
+                else {
+                    deferred.reject('file transformation not complete');
+                }
+
+                return deferred.promise;
+            })
+            .then(function() {
+                queue
+                    .create('fileUploadPermissions', fileQueueJob.data)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+                console.log('fileUploadPoll queue done for ' + JSON.stringify(fileQueueJob.data));
+                done();
+            })
+            .fail(function(error) {
+                console.log('fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+
+                // Stop retries after 20 minutes
+                var finishDatetime = moment(fileQueueJob.created_at, 'x').add(20, 'minutes');
+                var currentDatetime = moment();
+
+                var overTimeLimit = currentDatetime.isAfter(finishDatetime);
+
+                if (overTimeLimit === true) {
+                    queue
+                        .create('fileUploadPermissions', fileQueueJob.data)
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .backoff({delay: 60 * 1000, type: 'fixed'})
+                        .save()
+                        ;
+
+                    done();
+                }
+                else {
+                    done(new Error('Agave error is: ' + error));
+                }
+
+            })
+            ;
+    });
 
     queue.process('fileUploadPermissions', function(fileQueueJob, done) {
         console.log('fileUploadPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));

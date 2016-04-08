@@ -53,10 +53,10 @@ NotificationsController.processFileImportNotifications = function(request, respo
 
         return Q.fcall(function() {
             taskQueue
-                .create('fileUploadPermissions', fileNotification)
+                .create('fileUploadPoll', fileNotification)
                 .removeOnComplete(true)
-                .attempts(5)
-                //.backoff({delay: 60 * 1000, type: 'fixed'})
+                .attempts(50)
+                .backoff({delay: 90 * 1000, type: 'fixed'})
                 .save()
                 ;
         })
