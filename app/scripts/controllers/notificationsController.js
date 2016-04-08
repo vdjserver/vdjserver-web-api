@@ -56,7 +56,7 @@ NotificationsController.processFileImportNotifications = function(request, respo
                 .create('fileUploadPoll', fileNotification)
                 .removeOnComplete(true)
                 .attempts(50)
-                .backoff({delay: 90 * 1000, type: 'fixed'})
+                .backoff({delay: 30 * 1000, type: 'fixed'})
                 .save()
                 ;
         })
