@@ -54,7 +54,7 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
     );
 };
 
-emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
+emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
 
     var vdjWebappUrl = agaveSettings.vdjBackbone
                      + '/account'
@@ -69,7 +69,7 @@ emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
         generateTextFromHTML: true,
         html: 'Welcome to VDJServer.'
               + '<br>'
-              + 'Please verify your account by clicking on the link below:'
+              + 'Please verify your account "' + username + '" by clicking on the link below:'
               + '<br>'
               + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
               ,
@@ -81,25 +81,6 @@ emailIO.sendWelcomeEmail = function(recipientEmail, verificationId) {
         function(error /*, info*/) {
             if (error) {
                 console.log('Error sending account verification email.', error);
-            }
-        }
-    );
-};
-
-emailIO.sendDebugEmail = function(recipientEmail, debugMessage) {
-
-    var mailOptions = {
-        to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        subject: 'VDJServer.org Debug Email',
-        text: debugMessage,
-    };
-
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending debug email. Error: ', error);
             }
         }
     );

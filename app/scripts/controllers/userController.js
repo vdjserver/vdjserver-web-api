@@ -220,7 +220,7 @@ UserController.createUser = function(request, response) {
         return deferred.promise;
     })
     .then(function(userVerificationMetadata) {
-        emailIO.sendWelcomeEmail(user.email, userVerificationMetadata.uuid);
+        emailIO.sendWelcomeEmail(user.email, user.username, userVerificationMetadata.uuid);
         console.log('UserController.createUser - event - send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
     })
     .then(function() {
@@ -417,7 +417,7 @@ UserController.resendVerificationEmail = function(request, response) {
             console.log('UserController.resendVerificationEmail - event - get profile for ' + username);
 
             if (profileMetadata && profileMetadata[0] && profileMetadata[0].value && profileMetadata[0].value.email) {
-                return emailIO.sendWelcomeEmail(profileMetadata[0].value.email, verificationId);
+                return emailIO.sendWelcomeEmail(profileMetadata[0].value.email, username, verificationId);
             }
             else {
                 return Q.reject(

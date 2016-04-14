@@ -47,20 +47,20 @@ FeedbackController.createFeedback = function(request, response) {
 
             feedback.email = profile.value.email;
 
-	    // store in metadata
-	    feedback.storeFeedbackInMetadata();
+            // store in metadata
+            feedback.storeFeedbackInMetadata();
 
-	    // send as email
-	    var emailFeedbackMessage = feedback.getEmailMessage();
+            // send as email
+            var emailFeedbackMessage = feedback.getEmailMessage();
 
-	    emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+            emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
 
-	    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+            apiResponseController.sendSuccess('Feedback submitted successfully.', response);
         })
         .fail(function(error) {
             console.log('FeedbackController.createFeedback - event - failed to retrieve user profile. Feedback is: ' + JSON.stringify(feedback));
 
-	    apiResponseController.sendError('Unable to find associated user profile with feedback.', response);
+            apiResponseController.sendError('Unable to find associated user profile with feedback.', response);
         })
         ;
 };
