@@ -82,7 +82,7 @@ AccountQueueManager.processNewAccounts = function() {
                     + ' - event - created metadata successful for ' + user.username
                 );
 
-                emailIO.sendWelcomeEmail(user.email, userVerificationMetadata.uuid);
+                emailIO.sendWelcomeEmail(user.email, user.username, userVerificationMetadata.uuid);
             })
             .then(function() {
                 console.log(
