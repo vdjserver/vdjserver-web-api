@@ -528,6 +528,33 @@ agaveIO.getFileListings = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.getFileHistory = function(relativePath) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/files/v2/history/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken,
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
 
     var deferred = Q.defer();

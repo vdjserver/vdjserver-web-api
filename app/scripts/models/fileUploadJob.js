@@ -9,6 +9,7 @@ var FilePermissions = require('./filePermissions');
 
 // Node Libraries
 var Q = require('q');
+let moment = require('moment');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
@@ -218,6 +219,31 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
         })
         ;
 
+};
+
+FileUploadJob.prototype.checkFileAvailability = function() {
+
+    return agaveIO.getFileHistory(this.getRelativeFilePath())
+        .then(function(fileHistory) {
+
+            let isAvailable = false;
+
+            let availabilityTime = moment().subtract('2', 'minutes');
+
+            for (let i = 0; i < fileHistory.length; i++) {
+                let history = fileHistory[i];
+
+                let historyDatetime = moment(history.created);
+
+                if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED' && historyDatetime.isAfter(availabilityTime)) {
+                    isAvailable = true;
+                    break;
+                }
+            };
+
+            return isAvailable;
+        })
+        ;
 };
 
 module.exports = FileUploadJob;
