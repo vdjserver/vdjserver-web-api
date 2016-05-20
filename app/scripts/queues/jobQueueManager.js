@@ -32,9 +32,8 @@ JobQueueManager.processJobs = function() {
 
         1.) createArchivePath
         2.) launch job w/ notification embedded
-        3.) create pointer metadata
-        4.) share job
-        5.) share pointer metadata
+        3.) share job
+        4.) share pointer metadata
     */
 
     /*
@@ -96,7 +95,7 @@ JobQueueManager.processJobs = function() {
             .then(function() {
 
                 taskQueue
-                    .create('createJobPointerMetadataTask', jobData)
+                    .create('shareJobTask', jobData)
                     .removeOnComplete(true)
                     .attempts(5)
                     .backoff({delay: 60 * 1000, type: 'fixed'})
@@ -110,33 +109,6 @@ JobQueueManager.processJobs = function() {
             .fail(function(error) {
                 console.log('submitJobTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('submitJobTask error is: "' + error + '" for ' + jobData.jobId));
-            })
-            ;
-    });
-
-    taskQueue.process('createJobPointerMetadataTask', function(task, done) {
-        var jobData = task.data;
-
-        agaveIO.createJobPointerMetadata(jobData.projectUuid, jobData.jobId)
-            .then(function(jobPointerMetadata) {
-                jobData.jobPointerMetadataUuid = jobPointerMetadata.uuid;
-            })
-            .then(function() {
-                taskQueue
-                    .create('shareJobTask', jobData)
-                    .removeOnComplete(true)
-                    .attempts(5)
-                    .backoff({delay: 60 * 1000, type: 'fixed'})
-                    .save()
-                    ;
-            })
-            .then(function() {
-                console.log('createJobPointerMetadataTask done for ' + jobData.jobId);
-                done();
-            })
-            .fail(function(error) {
-                console.log('createJobPointerMetadataTask error is: "' + error + '" for ' + jobData.jobId);
-                done(new Error('createJobPointerMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
     });
@@ -169,58 +141,12 @@ JobQueueManager.processJobs = function() {
                 return promises.reduce(Q.when, new Q());
             })
             .then(function() {
-                taskQueue
-                    .create('shareJobPointerMetadataTask', jobData)
-                    .removeOnComplete(true)
-                    .attempts(5)
-                    .backoff({delay: 60 * 1000, type: 'fixed'})
-                    .save()
-                    ;
-            })
-            .then(function() {
                 console.log('shareJobTask done for ' + jobData.jobId);
                 done();
             })
             .fail(function(error) {
                 console.log('shareJobTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('shareJobTask error is: "' + error + '" for ' + jobData.jobId));
-            })
-            ;
-    });
-
-    taskQueue.process('shareJobPointerMetadataTask', function(task, done) {
-        var jobData = task.data;
-
-        var serviceAccount = new ServiceAccount();
-
-        // Get project users
-        agaveIO.getMetadataPermissions(serviceAccount.accessToken, jobData.projectUuid)
-            // Add users to metadata pems
-            .then(function(projectPermissions) {
-
-                var metadataPermissions = new MetadataPermissions();
-
-                var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
-
-                var promises = projectUsernames.map(function(username) {
-                    return function() {
-                        return agaveIO.addUsernameToMetadataPermissions(
-                            username,
-                            serviceAccount.accessToken,
-                            jobData.jobPointerMetadataUuid
-                        );
-                    };
-                });
-
-                return promises.reduce(Q.when, new Q()); // 3.
-            })
-            .then(function() {
-                console.log('shareJobPointerMetadataTask done for ' + jobData.jobId);
-                done();
-            })
-            .fail(function(error) {
-                console.log('shareJobPointerMetadataTask error is: "' + error + '" for ' + jobData.jobId);
-                done(new Error('shareJobPointerMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
     });
