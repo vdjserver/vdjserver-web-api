@@ -26,14 +26,15 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q --force-yes \
 RUN mkdir /vdjserver-web-api
 
 # Setup redis
-ENV REDIS_VERSION=3.0.7
+ENV REDIS_VERSION=3.2.0
 RUN cd /root \
     && wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz \
     && tar xvzf redis-$REDIS_VERSION.tar.gz \
     && cd redis-$REDIS_VERSION \
     && make \
     && cp src/redis-server /usr/local/bin \
-    && cp src/redis-cli /usr/local/bin
+    && cp src/redis-cli /usr/local/bin \
+    && rm -R /root/redis-$REDIS_VERSION
 
 COPY docker/redis/redis.conf /etc/redis/redis.conf
 
