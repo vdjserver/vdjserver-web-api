@@ -1,6 +1,7 @@
 # App specific files #
 ######################
 .env
+.test-env
 
 logs
 node_modules
