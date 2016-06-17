@@ -129,6 +129,14 @@ FilePermissionsQueueManager.processFileUploads = function() {
             .fail(function(error) {
                 console.log('fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
 
+                app.emit(
+                    'fileImportNotification',
+                    {
+                        'error': error,
+                        'fileInformation': fileQueueJob.data,
+                    }
+                );
+
                 done(new Error('Agave error is: ' + error));
             })
             ;

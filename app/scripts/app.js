@@ -73,7 +73,7 @@ else if (env === 'production') {
 require('./routes/router')(app);
 
 // WebsocketIO
-require('./controllers/websocketController');
+require('./utilities/websocketManager');
 
 // Queue Management
 var filePermissionsQueueManager = require('./queues/filePermissionsQueueManager');

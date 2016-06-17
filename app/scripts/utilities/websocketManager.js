@@ -6,8 +6,8 @@ var app = require('../app');
 var io = require('socket.io')(app.server);
 var nsp = io.of('/api/v1');
 
-var WebsocketsController = {};
-module.exports = WebsocketsController;
+var WebsocketManager = {};
+module.exports = WebsocketManager;
 
 nsp.on('connection', function(socket) {
 
