@@ -98,29 +98,35 @@ UserController.createUser = function(request, response) {
     */
 
     // BEGIN RECAPTCHA CHECK
-    var recaptchaData = {
-        remoteip:  request.connection.remoteAddress,
-        response: request.body['g-recaptcha-response'],
-        secret: config.recaptchaSecret,
-    };
+    //console.log(config.allowRecaptchaSkip);
+    //console.log(request.body['g-recaptcha-response']);
+    if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
+        console.log('UserController.createUser - WARNING - Recaptcha check is being skipped.');
+    } else {
+        var recaptchaData = {
+            remoteip:  request.connection.remoteAddress,
+            response: request.body['g-recaptcha-response'],
+            secret: config.recaptchaSecret,
+        };
 
-    var recaptcha = new Recaptcha(
-        config.recaptchaPublic,
-        config.recaptchaSecret,
-        recaptchaData
-    );
+        var recaptcha = new Recaptcha(
+            config.recaptchaPublic,
+            config.recaptchaSecret,
+            recaptchaData
+        );
 
-    recaptcha.verify(function(success, errorCode) {
-        if (!success) {
-            console.log('UserController.createUser - recaptcha error for '
-                + JSON.stringify(user.getSanitizedAttributes())
-                + ' and error code is: ' + errorCode
-            );
+        recaptcha.verify(function(success, errorCode) {
+            if (!success) {
+                console.log('UserController.createUser - recaptcha error for '
+                    + JSON.stringify(user.getSanitizedAttributes())
+                    + ' and error code is: ' + errorCode
+                );
 
-            apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-            return;
-        }
-    });
+                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+                return;
+            }
+        });
+    }
     // END RECAPTCHA CHECK
 
     console.log('UserController.createUser - event - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
