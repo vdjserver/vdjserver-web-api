@@ -1,3 +1,33 @@
-# General Test Account
-TEST_USERNAME=
-TEST_PASSWORD=
+# WSO2 Settings
+WSO2_CLIENT_KEY=
+WSO2_CLIENT_SECRET=
+WSO2_HOST=dev.tenants.staging.agaveapi.co
+
+# VDJ Service Account Settings
+VDJ_SERVICE_ACCOUNT=
+VDJ_SERVICE_ACCOUNT_SECRET=
+VDJ_SERVICE_ACCOUNT_TOKEN=
+
+# VDJ Backbone Settings
+VDJ_BACKBONE_HOST=
+
+# Agave Misc. Settings
+AGAVE_STORAGE_SYSTEM=data.vdjserver.org
+
+# VDJ API Settings
+VDJ_API_URL=
+VDJ_API_PORT=8081
+SESSION_SECRET=
+RECAPTCHA_SECRET=
+RECAPTCHA_PUBLIC=
+ALLOW_RECAPTCHA_SKIP=true
+
+# Email Settings
+EMAIL_ADDRESS=vdjserver@utsouthwestern.edu
+FEEDBACK_EMAIL_ADDRESS=vdjserver@utsouthwestern.edu
+POSTFIX_HOSTNAME=
+POSTFIX_RELAYHOST=
+
+# Dev Settings
+DEBUG_CONSOLE=false
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/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

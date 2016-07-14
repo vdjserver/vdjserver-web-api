@@ -11,6 +11,7 @@ config.sessionSecret = process.env.SESSION_SECRET;
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
 config.recaptchaPublic = process.env.RECAPTCHA_PUBLIC;
+config.allowRecaptchaSkip = process.env.ALLOW_RECAPTCHA_SKIP;
 
 // Feedback Email address
 config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
