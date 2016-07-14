@@ -11,7 +11,7 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
     wget \
     xz-utils
 
-ENV NODE_VERSION=4.4.5
+ENV NODE_VERSION=4.4.7
 RUN cd /root \
     && wget https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz \
     && ls \
@@ -35,7 +35,7 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q --force-yes \
 RUN mkdir /vdjserver-web-api
 
 # Setup redis
-ENV REDIS_VERSION=3.2.0
+ENV REDIS_VERSION=3.2.1
 RUN apt-get install -y gcc \
     && cd /root \
     && wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz \
