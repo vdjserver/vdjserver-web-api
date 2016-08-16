@@ -417,16 +417,16 @@ UserController.changePassword = function(request, response) {
         })
         .fail(function(error) {
             console.error('UserController.changePassword - error - username ' + username + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response); // 3b.
+            apiResponseController.sendError('Invalid authorization', 401, response); // 3b.
         })
         ;
 };
 
 UserController.verifyUser = function(request, response) {
 
-    var verificationId = request.params.verificationId;
+    var verificationId = request.params.verificationId.trim();
 
-    if (!verificationId) {
+    if (!verificationId || verificationId.length == 0) {
         console.error('UserController.verifyUser - error - missing verificationId parameter');
         apiResponseController.sendError('Verification Id required.', 400, response);
     }
@@ -441,6 +441,12 @@ UserController.verifyUser = function(request, response) {
 
             if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
                 var username = userVerificationMetadata.value.username;
+
+		if (!username) {
+                    console.log('UserController.verifyUser - error - metadata missing username: ' + verificationId);
+                    return Q.reject(new Error('UserController.verifyUser - error - metadata missing username: ' + verificationId));
+		}
+
                 return agaveIO.verifyUser(username, verificationId);
             }
             else {
@@ -453,7 +459,7 @@ UserController.verifyUser = function(request, response) {
         })
         .fail(function(error) {
             console.error('UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
+            apiResponseController.sendError('Invalid verification id: ' + verificationId, 500, response);
         })
         ;
 };
@@ -482,7 +488,7 @@ UserController.resendVerificationEmail = function(request, response) {
             }
             else {
                 return Q.reject(
-                    new Error('UserController.resendVerificationEmail - error - verification metadata failed comparison for ' + username)
+                    new Error('Non-existent verification for username: ' + username)
                 );
             }
         })
