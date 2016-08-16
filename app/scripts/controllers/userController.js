@@ -439,6 +439,11 @@ UserController.verifyUser = function(request, response) {
 
             console.log('UserController.verifyUser - event - getMetadata for ' + verificationId);
 
+	    if (userVerificationMetadata.name != 'userVerification') {
+                console.log('UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId);
+                return Q.reject(new Error('UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId));
+	    }
+
             if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
                 var username = userVerificationMetadata.value.username;
 
