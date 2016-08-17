@@ -185,6 +185,13 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
         ;
 };
 
+//
+// Add user to a project by giving them permissions on all of the project objects
+// 1. project metadata
+// 2. project files and subdirectories
+// 3. project file metadata
+// 4. project jobs
+//
 PermissionsController.addPermissionsForUsername = function(request, response) {
 
     var username    = request.body.username;
@@ -266,21 +273,27 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             return promises.reduce(Q.when, new Q());
         })
-        // get job metadatas
+        // get jobs for project
         .then(function() {
             console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
 
-            return agaveIO.getJobMetadataForProject(projectUuid);
+            //return agaveIO.getJobMetadataForProject(projectUuid);
+            return agaveIO.getJobsForProject(projectUuid);
         })
+/*
+  job metadata has been disabled for now
+
         // (loop) add to job metadata permissions
         .then(function(tmpJobMetadatas) {
-            console.log('PermissionsController.addPermissionsForUsername - event - getJobMetadataForProject for project ' + projectUuid);
+            console.log('PermissionsController.addPermissionsForUsername - event - getJobsForProject for project ' + projectUuid);
 
             // cache for later
             jobMetadatas = tmpJobMetadatas;
 
             var metadata = new MetadataPermissions();
             var uuids = metadata.getUuidsFromMetadataResponse(tmpJobMetadatas);
+	    console.log(jobMetadatas);
+	    console.log(uuids);
 
             var promises = [];
 
@@ -306,12 +319,16 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             return promises.reduce(Q.when, new Q());
         })
+*/
         // (loop) add to job permissions
-        .then(function() {
-            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
+        .then(function(tmpJobMetadatas) {
+            console.log('PermissionsController.addPermissionsForUsername - event - agaveIO.addUsernameToJobPermissions for project ' + projectUuid);
+
+            // cache for later
+            jobMetadatas = tmpJobMetadatas;
 
             var metadata = new MetadataPermissions();
-            var uuids = metadata.getJobUuidsFromMetadataResponse(jobMetadatas);
+            var uuids = metadata.getJobUuidsFromProjectResponse(jobMetadatas);
 
             var promises = [];
 

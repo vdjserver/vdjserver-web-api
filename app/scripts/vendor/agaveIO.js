@@ -882,6 +882,35 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.getJobsForProject = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var serviceAccount = new ServiceAccount();
+
+    var requestSettings = {
+        host:   agaveSettings.hostname,
+        method: 'GET',
+        path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
+                    + '&limit=5000'
+                    ,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + serviceAccount.accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.getPasswordResetMetadata = function(uuid) {
 
     var deferred = Q.defer();
