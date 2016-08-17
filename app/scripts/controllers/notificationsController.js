@@ -114,21 +114,16 @@ NotificationsController.processJobNotifications = function(request, response) {
         'NotificationsController.processJobNotifications - event - received notification for job id ' + jobId + ', new status is: ' + jobStatus
     );
 
-    app.emit(
-        'jobNotification',
-        {
-            jobId: jobId,
-            jobEvent: jobEvent,
-            jobStatus: jobStatus,
-            jobMessage: jobMessage,
-            projectUuid: projectUuid,
-            jobName: decodeURIComponent(jobName),
-        }
-    );
-
+    // we do not want to emit finished notification until permissions
+    // for all project users have been updated
     if (jobStatus === 'FINISHED') {
         var jobData = {
             jobId: jobId,
+	    jobEvent: jobEvent,
+	    jobStatus: jobStatus,
+	    jobMessage: jobMessage,
+	    projectUuid: projectUuid,
+	    jobName: jobName,
         };
 
         taskQueue
@@ -138,6 +133,18 @@ NotificationsController.processJobNotifications = function(request, response) {
             //.backoff({delay: 60 * 1000, type: 'fixed'})
             .save()
             ;
+    } else {
+	app.emit(
+            'jobNotification',
+            {
+		jobId: jobId,
+		jobEvent: jobEvent,
+		jobStatus: jobStatus,
+		jobMessage: jobMessage,
+		projectUuid: projectUuid,
+		jobName: decodeURIComponent(jobName),
+            }
+	);
     }
 
     apiResponseController.sendSuccess('ok', response);

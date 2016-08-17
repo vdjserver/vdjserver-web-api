@@ -311,6 +311,20 @@ JobQueueManager.processJobs = function() {
             })
             .then(function() {
                 console.log('shareJobOutputFileMetadataTask done for ' + jobData.jobId);
+
+		// all done, emit the FINISHED notification
+		app.emit(
+		    'jobNotification',
+		    {
+			jobId: jobData.jobId,
+			jobEvent: jobData.jobEvent,
+			jobStatus: jobData.jobStatus,
+			jobMessage: jobData.jobMessage,
+			projectUuid: jobData.projectUuid,
+			jobName: decodeURIComponent(jobData.jobName),
+		    }
+		);
+
                 done();
             })
             .fail(function(error) {
