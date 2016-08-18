@@ -27,10 +27,12 @@ AccountQueueManager.processNewAccounts = function() {
 
     taskQueue.process('createUserProfileMetadataTask', function(createUserJob, done) {
 
-        var serviceAccount = new ServiceAccount();
         var user = createUserJob.data;
 
-        agaveIO.createUserProfile(user, serviceAccount.accessToken)
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.createUserProfile(user, ServiceAccount.accessToken())
+	    })
             .then(function() {
                 console.log(
                     'AccountQueueManager.processNewAccounts createUserProfileMetadataTask'

@@ -215,21 +215,22 @@ agaveIO.createUser = function(user) {
                  + '&password=' + user.password
                  + '&email='    + user.email;
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/profiles/v2/',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/x-www-form-urlencoded',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/profiles/v2/',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/x-www-form-urlencoded',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -278,19 +279,20 @@ agaveIO.getUserProfile = function(username) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=5000',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=5000',
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -314,21 +316,22 @@ agaveIO.createProjectMetadata = function(projectName) {
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -345,20 +348,21 @@ agaveIO.createProjectDirectory = function(directory) {
 
     var postData = 'action=mkdir&path=' + directory;
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'PUT',
+		path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'PUT',
-        path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -532,19 +536,20 @@ agaveIO.getFileHistory = function(relativePath) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/files/v2/history/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/files/v2/history/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -674,21 +679,22 @@ agaveIO.createUserVerificationMetadata = function(username) {
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -703,27 +709,28 @@ agaveIO.getUserVerificationMetadata = function(username) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/meta/v2/data?q='
-                  + encodeURIComponent(
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
                         '{"name":"userVerification",'
-                        + ' "value.username":"' + username + '",'
-                        + ' "owner":"' + serviceAccount.username + '"'
-                        + '}'
-                  )
-                  + '&limit=5000'
-                  ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+                            + ' "value.username":"' + username + '",'
+                            + ' "owner":"' + ServiceAccount.username + '"'
+                            + '}'
+                    )
+                    + '&limit=5000'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -748,21 +755,22 @@ agaveIO.verifyUser = function(username, verificationId) {
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data/' + verificationId,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data/' + verificationId,
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -786,21 +794,22 @@ agaveIO.createPasswordResetMetadata = function(username) {
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -815,28 +824,29 @@ agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJob",'
                             + '"value.projectUuid":"' + projectUuid + '",'
                             + '"value.jobUuid":"' + jobUuid + '",'
-                        + '}'
+                            + '}'
                     )
                     + '&limit=5000'
-                    ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -851,27 +861,28 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJob",'
                             + '"value.projectUuid":"' + projectUuid + '"'
-                        + '}'
+                            + '}'
                     )
                     + '&limit=5000'
-                    ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -886,21 +897,21 @@ agaveIO.getJobsForProject = function(projectUuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
+                    + '&limit=5000',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
-                    + '&limit=5000'
-                    ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -915,26 +926,27 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/meta/v2/data?q='
-                  + encodeURIComponent(
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
                         '{"name":"passwordReset",'
-                        + ' "uuid":"' + uuid + '",'
-                        + ' "owner":"' + serviceAccount.username + '"}'
-                  )
-                  + '&limit=5000'
-                  ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+                            + ' "uuid":"' + uuid + '",'
+                            + ' "owner":"' + ServiceAccount.username + '"}'
+                    )
+                    + '&limit=5000'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -949,19 +961,20 @@ agaveIO.getMetadata = function(uuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data/' + uuid,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/meta/v2/data/' + uuid,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -976,19 +989,20 @@ agaveIO.deleteMetadata = function(uuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'DELETE',
+		path:     '/meta/v2/data/' + uuid,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'DELETE',
-        path:     '/meta/v2/data/' + uuid,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1007,21 +1021,22 @@ agaveIO.updateUserPassword = function(user) {
                  + '&password=' + user.password
                  + '&email='    + user.email;
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'PUT',
+		path:     '/profiles/v2/' + user.username + '/',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/x-www-form-urlencoded',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'PUT',
-        path:     '/profiles/v2/' + user.username + '/',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/x-www-form-urlencoded',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1036,19 +1051,20 @@ agaveIO.getJobOutput = function(jobId) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/jobs/v2/' + jobId,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/jobs/v2/' + jobId,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1063,23 +1079,24 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/files/v2/listings/system'
+                    + '/' + agaveSettings.storageSystem
+                    + '//projects/' + projectUuid
+                    + '/analyses'
+                    + '/' + relativeArchivePath,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/files/v2/listings/system'
-                  + '/' + agaveSettings.storageSystem
-                  + '//projects/' + projectUuid
-                  + '/analyses'
-                  + '/' + relativeArchivePath,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1114,21 +1131,22 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization':  'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1143,28 +1161,29 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJobFile",'
                             + '"value.projectUuid":"' + projectUuid + '",'
                             + '"value.jobUuid":"' + jobId + '"'
-                        + '}'
+                            + '}'
                     )
                     + '&limit=5000'
-                    ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1178,8 +1197,6 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
 agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length, readDirection, tags) {
 
     var deferred = Q.defer();
-
-    var serviceAccount = new ServiceAccount();
 
     var postData = {
         associationIds: [
@@ -1202,19 +1219,22 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 
     postData = JSON.stringify(postData);
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken
-        }
-    };
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1229,19 +1249,20 @@ agaveIO.getFileDetail = function(relativePath) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'GET',
-        path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1256,26 +1277,27 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
-                + encodeURIComponent('{'
-                    + '"name": "projectFile",'
-                    + '"value.projectUuid": "' + projectUuid + '",'
-                    + '"associationIds": { $in: ["' + fileUuid + '"] }'
-                + '}')
-                + '&limit=5000'
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
+                    + encodeURIComponent('{'
+					 + '"name": "projectFile",'
+					 + '"value.projectUuid": "' + projectUuid + '",'
+					 + '"associationIds": { $in: ["' + fileUuid + '"] }'
+					 + '}')
+                    + '&limit=5000'
                 ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        }
-    };
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1309,21 +1331,22 @@ agaveIO.createFeedbackMetadata = function(feedback, username, email) {
 
     postData = JSON.stringify(postData);
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/meta/v2/data',
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Type':   'application/json',
-            'Content-Length': postData.length,
-            'Authorization':  'Bearer ' + serviceAccount.accessToken
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1339,24 +1362,25 @@ agaveIO.getCommunityDataMetadata = function() {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
-                + encodeURIComponent('{'
-                    + '"name": "communityDataSRA"'
-                + '}')
-                + '&limit=5000'
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
+                    + encodeURIComponent('{'
+					 + '"name": "communityDataSRA"'
+					 + '}')
+                    + '&limit=5000'
                 ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        }
-    };
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1396,19 +1420,20 @@ agaveIO.isDuplicateUsername = function(username) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/profiles/v2/' + username,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
 
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/profiles/v2/' + username,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
         .then(function(responseObject) {
             deferred.resolve(true);
         })
@@ -1425,24 +1450,25 @@ agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
 
     var postData = 'action=mkdir&path=' + relativeArchivePath;
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'PUT',
+		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+                    + '//projects/'
+                    + '/' + projectUuid
+                    + '/analyses'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'PUT',
-        path:     '/files/v2/media/system/' + agaveSettings.storageSystem
-                  + '//projects/'
-                  + '/' + projectUuid
-                  + '/analyses'
-                  ,
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Length': postData.length,
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, postData)
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1457,22 +1483,23 @@ agaveIO.launchJob = function(jobDataString) {
 
     var deferred = Q.defer();
 
-    var serviceAccount = new ServiceAccount();
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/jobs/v2/'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Length': jobDataString.length,
+		    'Content-Type': 'application/json',
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
 
-    var requestSettings = {
-        host:     agaveSettings.hostname,
-        method:   'POST',
-        path:     '/jobs/v2/'
-                  ,
-        rejectUnauthorized: false,
-        headers: {
-            'Content-Length': jobDataString.length,
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + serviceAccount.accessToken,
-        },
-    };
-
-    agaveIO.sendRequest(requestSettings, jobDataString)
+	    return agaveIO.sendRequest(requestSettings, jobDataString);
+	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })

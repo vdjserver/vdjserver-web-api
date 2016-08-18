@@ -31,14 +31,15 @@ ProjectController.createProject = function(request, response) {
         return;
     }
 
-    var serviceAccount = new ServiceAccount();
-
     var projectMetadata;
     var uuid;
 
     console.log('ProjectController.createProject - event - begin for username: ' + username + ', project name: ' + projectName);
 
-    agaveIO.createProjectMetadata(projectName)
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.createProjectMetadata(projectName);
+	})
         .then(function(_projectMetadata) {
             console.log('ProjectController.createProject - event - metadata for username: ' + username + ', project name: ' + projectName);
 
@@ -46,7 +47,7 @@ ProjectController.createProject = function(request, response) {
             projectMetadata = _projectMetadata;
             uuid = projectMetadata.uuid;
 
-            return agaveIO.addUsernameToMetadataPermissions(username, serviceAccount.accessToken, uuid);
+            return agaveIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), uuid);
         })
         // create project/files directory
         .then(function() {
@@ -70,7 +71,7 @@ ProjectController.createProject = function(request, response) {
         .then(function() {
             console.log('ProjectController.createProject - event - dir pems for username: ' + username + ', project name: ' + projectName);
 
-            return agaveIO.addUsernameToFullFilePermissions(username, serviceAccount.accessToken, uuid);
+            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid);
         })
         .then(function() {
             console.log('ProjectController.createProject - event - complete for username: ' + username + ', project name: ' + projectName);
