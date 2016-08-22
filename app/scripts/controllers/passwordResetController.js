@@ -103,8 +103,8 @@ PasswordResetController.processResetPasswordRequest = function(request, response
         .then(function(passwordResetMetadata) {
             console.log('PasswordResetController.processResetPasswordRequest - event - getPasswordResetMetadata for user ' + username);
 
-	    console.log(passwordResetMetadata);
-	    console.log(passwordResetMetadata[0]);
+	    //console.log(passwordResetMetadata);
+	    //console.log(passwordResetMetadata[0]);
 	    if (passwordResetMetadata.length == 0)
 		return Q.reject(new Error('Invalid metadata id: ' + uuid));
 
