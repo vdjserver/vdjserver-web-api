@@ -1,7 +1,7 @@
 # WSO2 Settings
 WSO2_CLIENT_KEY=
 WSO2_CLIENT_SECRET=
-WSO2_HOST=vdj-agave-api.tacc.utexas.edu
+WSO2_HOST=dev.tenants.staging.agaveapi.co
 
 # VDJ Service Account Settings
 VDJ_SERVICE_ACCOUNT=
@@ -20,7 +20,7 @@ VDJ_API_PORT=8081
 SESSION_SECRET=
 RECAPTCHA_SECRET=
 RECAPTCHA_PUBLIC=
-ALLOW_RECAPTCHA_SKIP=false
+ALLOW_RECAPTCHA_SKIP=true
 
 # Email Settings
 EMAIL_ADDRESS=vdjserver@utsouthwestern.edu

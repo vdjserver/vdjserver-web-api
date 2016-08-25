@@ -117,10 +117,11 @@ JobQueueManager.processJobs = function() {
 
         var jobData = task.data;
 
-        var serviceAccount = new ServiceAccount();
-
         // Get project users
-        agaveIO.getMetadataPermissions(serviceAccount.accessToken, jobData.projectUuid)
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
             // (loop) add project users to job pems
             .then(function(projectPermissions) {
 
@@ -132,7 +133,7 @@ JobQueueManager.processJobs = function() {
                     return function() {
                         return agaveIO.addUsernameToJobPermissions(
                             username,
-                            serviceAccount.accessToken,
+                            ServiceAccount.accessToken(),
                             jobData.jobId
                         );
                     };
@@ -161,9 +162,10 @@ JobQueueManager.processJobs = function() {
 
         var jobData = task.data;
 
-        var serviceAccount = new ServiceAccount();
-
-        agaveIO.getJobOutput(jobData.jobId)
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getJobOutput(jobData.jobId);
+	    })
             .then(function(jobOutput) {
                 jobData.name = jobOutput.name;
 
@@ -175,7 +177,7 @@ JobQueueManager.processJobs = function() {
                 jobData.relativeArchivePath = deconstructedUrl.relativeArchivePath;
             })
             .then(function() {
-                return agaveIO.getMetadataPermissions(serviceAccount.accessToken, jobData.projectUuid);
+                return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
             })
             .then(function(projectPermissions) {
                 var metadataPermissions = new MetadataPermissions();
@@ -189,7 +191,7 @@ JobQueueManager.processJobs = function() {
                             return function() {
                                 return agaveIO.addUsernameToFullFilePermissions(
                                     username,
-                                    serviceAccount.accessToken,
+                                    ServiceAccount.accessToken(),
                                     jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath
                                 );
                             };
@@ -222,9 +224,10 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('createJobOutputFileMetadataTask', function(task, done) {
         var jobData = task.data;
 
-        var serviceAccount = new ServiceAccount();
-
-        agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath)
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath);
+	    })
             .then(function(jobFileListings) {
 
                 var job = new Job();
@@ -275,9 +278,10 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('shareJobOutputFileMetadataTask', function(task, done) {
         var jobData = task.data;
 
-        var serviceAccount = new ServiceAccount();
-
-        agaveIO.getMetadataPermissions(serviceAccount.accessToken, jobData.projectUuid)
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
             .then(function(projectPermissions) {
                 var metadataPermissions = new MetadataPermissions();
 
@@ -295,7 +299,7 @@ JobQueueManager.processJobs = function() {
                                 return function() {
                                     return agaveIO.addUsernameToMetadataPermissions(
                                         username,
-                                        serviceAccount.accessToken,
+                                        ServiceAccount.accessToken(),
                                         jobMetadata.uuid
                                     );
                                 };
@@ -311,6 +315,20 @@ JobQueueManager.processJobs = function() {
             })
             .then(function() {
                 console.log('shareJobOutputFileMetadataTask done for ' + jobData.jobId);
+
+		// all done, emit the FINISHED notification
+		app.emit(
+		    'jobNotification',
+		    {
+			jobId: jobData.jobId,
+			jobEvent: jobData.jobEvent,
+			jobStatus: jobData.jobStatus,
+			jobMessage: jobData.jobMessage,
+			projectUuid: jobData.projectUuid,
+			jobName: decodeURIComponent(jobData.jobName),
+		    }
+		);
+
                 done();
             })
             .fail(function(error) {

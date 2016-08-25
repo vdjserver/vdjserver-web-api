@@ -35,6 +35,17 @@ MetadataPermissions.prototype.getJobUuidsFromMetadataResponse = function(metadat
     return uuids;
 };
 
+MetadataPermissions.prototype.getJobUuidsFromProjectResponse = function(metadata) {
+
+    var uuids = [];
+
+    for (var i = 0; i < metadata.length; i++) {
+        uuids.push(metadata[i].id);
+    }
+
+    return uuids;
+};
+
 _.extend(MetadataPermissions.prototype, MetadataUtilities);
 
 module.exports = MetadataPermissions;

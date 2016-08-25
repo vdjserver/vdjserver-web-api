@@ -10,6 +10,20 @@ var passport     = require('passport');
 var _            = require('underscore');
 var app          = module.exports = express();
 
+var webhookIO = require('./vendor/webhookIO');
+
+// Verify we can login with service account
+var ServiceAccount = require('./models/serviceAccount');
+ServiceAccount.getToken()
+    .then(function(serviceToken) {
+	console.log('VDJ-API: Successfully acquired service token.');
+    })
+    .fail(function(error) {
+	console.error('VDJ-API ERROR: Service may need to be restarted.');
+	webhookIO.postToSlack('VDJ-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
+	//process.exit(1);
+    });
+
 // Server Options
 var config = require('./config/config');
 app.set('port', config.port);
@@ -73,7 +87,7 @@ else if (env === 'production') {
 require('./routes/router')(app);
 
 // WebsocketIO
-require('./controllers/websocketController');
+require('./utilities/websocketManager');
 
 // Queue Management
 var filePermissionsQueueManager = require('./queues/filePermissionsQueueManager');

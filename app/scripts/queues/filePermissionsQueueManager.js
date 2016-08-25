@@ -73,6 +73,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
             })
             .fail(function(error) {
                 console.log('fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.log(error.stack);
 
                 // Stop retries after 20 minutes
                 var finishDatetime = moment(fileQueueJob.created_at, 'x').add(20, 'minutes');
@@ -127,7 +128,16 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.log('fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.log(error.stack);
+
+                app.emit(
+                    'fileImportNotification',
+                    {
+                        'error': error,
+                        'fileInformation': fileQueueJob.data,
+                    }
+                );
 
                 done(new Error('Agave error is: ' + error));
             })
@@ -166,6 +176,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
             })
             .fail(function(error) {
                 console.log('fileUploadMetadata queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.log(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })
@@ -202,6 +213,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
             })
             .fail(function(error) {
                 console.log('fileUploadMetadataPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.log(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })

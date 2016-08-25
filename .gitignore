@@ -1,6 +1,9 @@
 # App specific files #
 ######################
 .env
+.test-env
+.test-env.prod
+.test-env.staging
 
 logs
 node_modules

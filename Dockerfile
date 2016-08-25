@@ -3,6 +3,12 @@ FROM debian:jessie
 
 MAINTAINER Walter Scarborough <wscarbor@tacc.utexas.edu>
 
+# PROXY: uncomment these if building behind UTSW proxy
+#ENV http_proxy 'http://proxy.swmed.edu:3128/'
+#ENV https_proxy 'https://proxy.swmed.edu:3128/'
+#ENV HTTP_PROXY 'http://proxy.swmed.edu:3128/'
+#ENV HTTPS_PROXY 'https://proxy.swmed.edu:3128/'
+
 # Install OS Dependencies
 RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
     nodejs \
@@ -39,6 +45,10 @@ COPY docker/redis/redis.conf /etc/redis/redis.conf
 
 # Setup supervisor
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
+
+# PROXY: More UTSW proxy settings
+#RUN npm config set proxy http://proxy.swmed.edu:3128
+#RUN npm config set https-proxy http://proxy.swmed.edu:3128
 
 # Install npm dependencies (optimized for cache)
 COPY package.json /vdjserver-web-api/

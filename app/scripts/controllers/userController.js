@@ -27,6 +27,27 @@ var Recaptcha = require('recaptcha-v2').Recaptcha;
 var UserController = {};
 module.exports = UserController;
 
+var verifyRecaptcha = function(recaptchaData) {
+
+    var deferred = Q.defer();
+
+    var recaptcha = new Recaptcha(
+        config.recaptchaPublic,
+        config.recaptchaSecret,
+        recaptchaData
+    );
+
+    recaptcha.verify(function(success, errorCode) {
+        if (!success) {
+	    deferred.reject(errorCode);
+        } else {
+	    deferred.resolve();
+	}
+    });
+
+    return deferred.promise;
+};
+
 UserController.createUser = function(request, response) {
 
     var user = new User({
@@ -97,35 +118,87 @@ UserController.createUser = function(request, response) {
     }
     */
 
+    //console.log(response);
     // BEGIN RECAPTCHA CHECK
-    var recaptchaData = {
-        remoteip:  request.connection.remoteAddress,
-        response: request.body['g-recaptcha-response'],
-        secret: config.recaptchaSecret,
-    };
+    //console.log(config.allowRecaptchaSkip);
+    //console.log(request.body['g-recaptcha-response']);
+/*
+    if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
+        console.log('UserController.createUser - WARNING - Recaptcha check is being skipped.');
+    } else {
+        var recaptchaData = {
+            remoteip:  request.connection.remoteAddress,
+            response: request.body['g-recaptcha-response'],
+            secret: config.recaptchaSecret,
+        };
 
-    var recaptcha = new Recaptcha(
-        config.recaptchaPublic,
-        config.recaptchaSecret,
-        recaptchaData
-    );
+	verifyRecaptcha(recaptchaData)
+	.then(function() {
+	    console.log('passed recaptcha');
+	})
+	.fail(function() {
+	    console.log('failed recaptcha');
+	})
 
-    recaptcha.verify(function(success, errorCode) {
-        if (!success) {
-            console.log('UserController.createUser - recaptcha error for '
-                + JSON.stringify(user.getSanitizedAttributes())
-                + ' and error code is: ' + errorCode
-            );
+        var recaptcha = new Recaptcha(
+            config.recaptchaPublic,
+            config.recaptchaSecret,
+            recaptchaData
+        );
 
-            apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-            return;
-        }
-    });
+	var that = response;
+        recaptcha.verify(function(success, errorCode) {
+            if (!success) {
+                console.log('UserController.createUser - recaptcha error for '
+                    + JSON.stringify(user.getSanitizedAttributes())
+                    + ' and error code is: ' + errorCode
+                );
+
+		console.log(response);
+		//console.log(JSON.stringify(that));
+                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+                return;
+            }
+        });
+    }
+*/
     // END RECAPTCHA CHECK
 
     console.log('UserController.createUser - event - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     Q.fcall(function() {
+        var deferred = Q.defer();
+
+	// BEGIN RECAPTCHA CHECK
+	if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
+            console.log('UserController.createUser - WARNING - Recaptcha check is being skipped.');
+	    deferred.resolve();
+	} else {
+            var recaptchaData = {
+		remoteip:  request.connection.remoteAddress,
+		response: request.body['g-recaptcha-response'],
+		secret: config.recaptchaSecret,
+            };
+
+	    verifyRecaptcha(recaptchaData)
+		.then(function() {
+		    console.log('passed recaptcha');
+		    deferred.resolve();
+		})
+		.fail(function(errorCode) {
+                    console.log('UserController.createUser - recaptcha error for '
+				+ JSON.stringify(user.getSanitizedAttributes())
+				+ ' and error code is: ' + errorCode
+			       );
+		    var error = new Error('Recaptcha response invalid: ' + errorCode);
+		    deferred.reject(error);
+		});
+	}
+	// END RECAPTCHA CHECK
+
+        return deferred.promise;
+    })
+    .then(function() {
         var deferred = Q.defer();
 
         agaveIO.isDuplicateUsername(user.username)
@@ -344,16 +417,16 @@ UserController.changePassword = function(request, response) {
         })
         .fail(function(error) {
             console.error('UserController.changePassword - error - username ' + username + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response); // 3b.
+            apiResponseController.sendError('Invalid authorization', 401, response); // 3b.
         })
         ;
 };
 
 UserController.verifyUser = function(request, response) {
 
-    var verificationId = request.params.verificationId;
+    var verificationId = request.params.verificationId.trim();
 
-    if (!verificationId) {
+    if (!verificationId || verificationId.length == 0) {
         console.error('UserController.verifyUser - error - missing verificationId parameter');
         apiResponseController.sendError('Verification Id required.', 400, response);
     }
@@ -366,8 +439,19 @@ UserController.verifyUser = function(request, response) {
 
             console.log('UserController.verifyUser - event - getMetadata for ' + verificationId);
 
+	    if (userVerificationMetadata.name != 'userVerification') {
+                console.log('UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId);
+                return Q.reject(new Error('UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId));
+	    }
+
             if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
                 var username = userVerificationMetadata.value.username;
+
+		if (!username) {
+                    console.log('UserController.verifyUser - error - metadata missing username: ' + verificationId);
+                    return Q.reject(new Error('UserController.verifyUser - error - metadata missing username: ' + verificationId));
+		}
+
                 return agaveIO.verifyUser(username, verificationId);
             }
             else {
@@ -380,7 +464,7 @@ UserController.verifyUser = function(request, response) {
         })
         .fail(function(error) {
             console.error('UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
+            apiResponseController.sendError('Invalid verification id: ' + verificationId, 500, response);
         })
         ;
 };
@@ -409,7 +493,7 @@ UserController.resendVerificationEmail = function(request, response) {
             }
             else {
                 return Q.reject(
-                    new Error('UserController.resendVerificationEmail - error - verification metadata failed comparison for ' + username)
+                    new Error('Non-existent verification for username: ' + username)
                 );
             }
         })

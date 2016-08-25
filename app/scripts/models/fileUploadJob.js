@@ -74,9 +74,10 @@ FileUploadJob.prototype.setMetadataPermissions = function() {
 
     var that = this;
 
-    var serviceAccount = new ServiceAccount();
-
-    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.projectUuid)
+    return ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid);
+	})
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
@@ -96,7 +97,7 @@ FileUploadJob.prototype.setMetadataPermissions = function() {
 
                             return agaveIO.addUsernameToMetadataPermissions(
                                 username,
-                                serviceAccount.accessToken,
+                                ServiceAccount.accessToken(),
                                 metadataUuid
                             );
                         };
@@ -172,7 +173,6 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
 
     // Create file metadata
     // Set metadata pems
-    var serviceAccount = new ServiceAccount();
 
     //console.log("relativeFilePath is: " + this.getRelativeFilePath());
 
@@ -185,7 +185,10 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
         return deferred.promise;
     }
 
-    return agaveIO.getMetadataPermissions(serviceAccount.accessToken, this.projectUuid)
+    return ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid)
+	})
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
@@ -202,7 +205,7 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
 
                     return agaveIO.addUsernameToFullFilePermissions(
                         username,
-                        serviceAccount.accessToken,
+                        ServiceAccount.accessToken(),
                         that.getRelativeFilePath()
                     );
                 };
