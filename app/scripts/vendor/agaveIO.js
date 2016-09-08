@@ -11,10 +11,14 @@ var ServiceAccount = require('../models/serviceAccount');
 var Q = require('q');
 var _ = require('underscore');
 var jsonApprover = require('json-approver');
+var FormData = require('form-data');
 
 var agaveIO  = {};
 module.exports = agaveIO;
 
+//
+// Generic send request
+//
 agaveIO.sendRequest = function(requestSettings, postData) {
 
     var deferred = Q.defer();
@@ -70,6 +74,70 @@ agaveIO.sendRequest = function(requestSettings, postData) {
     if (postData) {
         // Request body parameters
         request.write(postData);
+    }
+
+    request.end();
+
+    return deferred.promise;
+};
+
+//
+// This is specific to sending multi-part form post data, i.e. uploading files
+//
+agaveIO.sendFormRequest = function(requestSettings, formData) {
+
+    var deferred = Q.defer();
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+            var responseObject;
+
+            if (output && jsonApprover.isJSON(output)) {
+                responseObject = JSON.parse(output);
+            }
+            else {
+
+                if (agaveSettings.debugConsole === true) {
+                    console.log('Agave response is not json.');
+                }
+
+                deferred.reject(new Error('Agave response is not json'));
+            }
+
+            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                deferred.resolve(responseObject);
+            }
+            else {
+
+                if (agaveSettings.debugConsole === true) {
+                    console.error('Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                    console.error('Agave returned an error. it is: ' + responseObject);
+                }
+
+                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
+            }
+
+        });
+    });
+
+    request.on('error', function(error) {
+        if (agaveSettings.debugConsole === true) {
+            console.error('Agave connection error.' + JSON.stringify(error));
+        }
+
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    if (formData) {
+	formData.pipe(request);
     }
 
     request.end();
@@ -1468,6 +1536,40 @@ agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
 	    };
 
 	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.uploadFileToJobArchiveDirectory = function(archivePath, filename, filedata) {
+
+    var deferred = Q.defer();
+
+    // filedata should be data stored in a Buffer()
+    var form = new FormData();
+    form.append('fileToUpload', filedata);
+    form.append('filename', filename);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var formHeaders = form.getHeaders();
+	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+                    + '/' + archivePath,
+		rejectUnauthorized: false,
+		headers: formHeaders
+	    };
+
+	    return agaveIO.sendFormRequest(requestSettings, form);
 	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
