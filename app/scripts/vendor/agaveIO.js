@@ -6,6 +6,7 @@ var agaveSettings = require('../config/agaveSettings');
 
 // Models
 var ServiceAccount = require('../models/serviceAccount');
+var MetadataPermissions = require('../models/metadataPermissions');
 
 // Node Libraries
 var Q = require('q');
@@ -214,6 +215,47 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
     return deferred.promise;
 };
 
+//
+// For retrieving file data
+//
+agaveIO.sendFileRequest = function(requestSettings, postData) {
+
+    var deferred = Q.defer();
+
+    var request = require('https').request(requestSettings, function(response) {
+
+        var output = '';
+
+        response.on('data', function(chunk) {
+            output += chunk;
+        });
+
+        response.on('end', function() {
+
+	    // do not attempt to parse
+	    deferred.resolve(output);
+
+        });
+    });
+
+    request.on('error', function(error) {
+        if (agaveSettings.debugConsole === true) {
+            console.error('Agave connection error.' + JSON.stringify(error));
+        }
+
+        deferred.reject(new Error('Agave connection error'));
+    });
+
+    if (postData) {
+        // Request body parameters
+        request.write(postData);
+    }
+
+    request.end();
+
+    return deferred.promise;
+};
+
 // Fetches a user token based on the supplied auth object
 // and returns the auth object with token data on success
 agaveIO.getToken = function(auth) {
@@ -400,6 +442,31 @@ agaveIO.createProjectMetadata = function(projectName) {
 
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+	host:     agaveSettings.hostname,
+	method:   'GET',
+	path:     '/meta/v2/data/' + projectUuid,
+	rejectUnauthorized: false,
+	headers: {
+	    'Authorization': 'Bearer ' + accessToken
+	}
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1175,6 +1242,108 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
     return deferred.promise;
 };
 
+agaveIO.getJobProcessMetadataFileListing = function(projectUuid, relativeArchivePath) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/files/v2/listings/system'
+                    + '/' + agaveSettings.storageSystem
+                    + '//projects/' + projectUuid
+                    + '/analyses'
+                    + '/' + relativeArchivePath + '/process_metadata.json',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobProcessMetadataFileContents = function(projectUuid, relativeArchivePath) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/files/v2/media/system'
+                    + '/' + agaveSettings.storageSystem
+                    + '//projects/' + projectUuid
+                    + '/analyses'
+                    + '/' + relativeArchivePath + '/process_metadata.json',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
+
+	    return agaveIO.sendFileRequest(requestSettings, null);
+	})
+        .then(function(fileData) {
+            deferred.resolve(fileData);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: 'processMetadata',
+	associationIds: [ projectUuid, jobUuid ],
+        value: data
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': postData.length,
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobName, relativeArchivePath) {
 
     var deferred = Q.defer();
@@ -1604,6 +1773,77 @@ agaveIO.launchJob = function(jobDataString) {
 	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getSampleMetadata = function(accessToken, projectUuid) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+	host:     agaveSettings.hostname,
+	method:   'GET',
+	path:   '/meta/v2/data?q='
+            + encodeURIComponent('{'
+				 + '"name": "sample",'
+				 + '"value.project_uuid": "' + projectUuid + '"'
+				 + '}')
+            + '&limit=5000',
+	rejectUnauthorized: false,
+	headers: {
+	    'Authorization': 'Bearer ' + accessToken
+	}
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+//
+// Higher level composite functions
+//
+
+// 
+agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(projectPermissions) {
+            var metadataPermissions = new MetadataPermissions();
+
+            var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+            var promises = projectUsernames.map(function(username) {
+
+                return function() {
+                    return agaveIO.addUsernameToMetadataPermissions(
+                        username,
+                        ServiceAccount.accessToken(),
+                        metadataUuid
+                    );
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+            deferred.resolve();
         })
         .fail(function(errorObject) {
             deferred.reject(errorObject);
