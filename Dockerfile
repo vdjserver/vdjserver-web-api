@@ -1,5 +1,5 @@
 # Base Image
-FROM debian:jessie
+FROM ubuntu:16.04
 
 MAINTAINER Walter Scarborough <wscarbor@tacc.utexas.edu>
 
@@ -11,12 +11,16 @@ MAINTAINER Walter Scarborough <wscarbor@tacc.utexas.edu>
 
 # Install OS Dependencies
 RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
+    make \
     nodejs \
     nodejs-legacy \
     npm \
+    redis-server \
+    redis-tools \
     sendmail-bin \
     supervisor \
-    wget
+    wget \
+    xz-utils
 
 # Setup postfix
 # The postfix install won't respect noninteractivity unless this config is set beforehand.
@@ -29,18 +33,12 @@ COPY docker/scripts/postfix-config-replace.sh /root/postfix-config-replace.sh
 RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q --force-yes \
     postfix
 
+##################
+##################
+
 RUN mkdir /vdjserver-web-api
 
 # Setup redis
-ENV REDIS_VERSION=3.0.7
-RUN cd /root \
-    && wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz \
-    && tar xvzf redis-$REDIS_VERSION.tar.gz \
-    && cd redis-$REDIS_VERSION \
-    && make \
-    && cp src/redis-server /usr/local/bin \
-    && cp src/redis-cli /usr/local/bin
-
 COPY docker/redis/redis.conf /etc/redis/redis.conf
 
 # Setup supervisor
