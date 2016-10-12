@@ -86,11 +86,20 @@ JobQueueManager.processJobs = function() {
 	    .then(function(projectMetadata) {
 		metadata.project = projectMetadata;
 
+		return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
+	    .then(function(subjectMetadata) {
+		metadata.subjects = subjectMetadata;
+
 		return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
 	    .then(function(sampleMetadata) {
 		metadata.samples = sampleMetadata;
-		//console.log(metadata);
+
+		return agaveIO.getSampleGroupsMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
+	    .then(function(sampleGroupsMetadata) {
+		metadata.sampleGroups = sampleGroupsMetadata;
 
 		return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
@@ -123,7 +132,9 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: createArchiveMetadataTask error is: "' + error + '" for ' + jobData.config.name);
+		var msg = 'VDJ-API ERROR: createArchiveMetadataTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid;
+                console.log(msg);
+		webhookIO.postToSlack(msg);
                 done(new Error('createArchiveMetadataTask error is: "' + error + '" for ' + jobData.config.name));
             })
             ;
@@ -158,10 +169,10 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-		var msg = 'VDJ-API ERROR: submitJobTask error is: "' + error + '" for ' + jobData;
+		var msg = 'VDJ-API ERROR: submitJobTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid;
                 console.log(msg);
 		webhookIO.postToSlack(msg);
-                done(new Error('submitJobTask error is: "' + error + '" for ' + jobData.jobId));
+                done(new Error('submitJobTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid));
             })
             ;
     });
@@ -381,8 +392,11 @@ JobQueueManager.processJobs = function() {
                             };
 			} else {
 			    var job = new Job();
-			    if (!job.isWhitelistedFiletype(jobFileListing.name))
-				console.log('VDJ-API INFO: createJobOutputFileMetadataTask job ' + jobData.jobId + ' has output file "' + jobFileListing.name + '" which is not in process metadata.');
+			    if (!job.isWhitelistedFiletype(jobFileListing.name)) {
+				var msg = 'VDJ-API INFO: createJobOutputFileMetadataTask job ' + jobData.jobId + ' has output file "' + jobFileListing.name + '" which is not in process metadata.';
+				console.log(msg);
+				webhookIO.postToSlack(msg);
+			    }
 			}
 		    }
                 });
