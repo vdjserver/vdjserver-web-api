@@ -10,7 +10,8 @@ MAINTAINER Walter Scarborough <wscarbor@tacc.utexas.edu>
 #ENV HTTPS_PROXY 'https://proxy.swmed.edu:3128/'
 
 # Install OS Dependencies
-RUN DEBIAN_FRONTEND='noninteractive' apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND='noninteractive' apt-get update
+RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y \
     make \
     nodejs \
     nodejs-legacy \
