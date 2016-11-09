@@ -1376,6 +1376,41 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
     return deferred.promise;
 };
 
+agaveIO.getProcessMetadataForProject = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"processMetadata",'
+                            + '"associationIds":"' + projectUuid + '"'
+                            + '}'
+                    )
+                    + '&limit=5000',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobName, relativeArchivePath) {
 
     var deferred = Q.defer();
@@ -1816,6 +1851,40 @@ agaveIO.uploadFileToProjectDirectory = function(projectUuid, filename, filedata)
     return deferred.promise;
 };
 
+agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filedata) {
+
+    var deferred = Q.defer();
+
+    // filedata should be data stored in a Buffer()
+    var form = new FormData();
+    form.append('fileToUpload', filedata);
+    form.append('filename', filename);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var formHeaders = form.getHeaders();
+	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+                    + '//projects/' + projectUuid + '/deleted',
+		rejectUnauthorized: false,
+		headers: formHeaders
+	    };
+
+	    return agaveIO.sendFormRequest(requestSettings, form);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.launchJob = function(jobDataString) {
 
     var deferred = Q.defer();
@@ -1847,6 +1916,10 @@ agaveIO.launchJob = function(jobDataString) {
     return deferred.promise;
 };
 
+//
+// Subject metadata
+//
+
 agaveIO.getSubjectMetadata = function(accessToken, projectUuid) {
 
     var deferred = Q.defer();
@@ -1857,7 +1930,7 @@ agaveIO.getSubjectMetadata = function(accessToken, projectUuid) {
 	path:   '/meta/v2/data?q='
             + encodeURIComponent('{'
 				 + '"name": "subject",'
-				 + '"value.project_uuid": "' + projectUuid + '"'
+				 + '"associationIds": "' + projectUuid + '"'
 				 + '}')
             + '&limit=5000',
 	rejectUnauthorized: false,
@@ -1877,6 +1950,121 @@ agaveIO.getSubjectMetadata = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.createSubjectMetadata = function(projectUuid, value) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid ],
+        name: 'subject',
+        value: value,
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getSubjectColumns = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:   '/meta/v2/data?q='
+		    + encodeURIComponent('{'
+		    + '"name": "subjectColumns",'
+		    + '"associationIds": "' + projectUuid + '"'
+		    + '}')
+		    + '&limit=5000',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null)
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createSubjectColumns = function(projectUuid, value, metadataUuid) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid ],
+        name: 'subjectColumns',
+        value: value,
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var path = '/meta/v2/data'
+	    if (metadataUuid) path = path + '/' + metadataUuid;
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     path,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+//
+// Sample metadata
+//
+
 agaveIO.getSampleMetadata = function(accessToken, projectUuid) {
 
     var deferred = Q.defer();
@@ -1887,7 +2075,7 @@ agaveIO.getSampleMetadata = function(accessToken, projectUuid) {
 	path:   '/meta/v2/data?q='
             + encodeURIComponent('{'
 				 + '"name": "sample",'
-				 + '"value.project_uuid": "' + projectUuid + '"'
+				 + '"associationIds": "' + projectUuid + '"'
 				 + '}')
             + '&limit=5000',
 	rejectUnauthorized: false,
@@ -1911,8 +2099,8 @@ agaveIO.createSampleMetadata = function(projectUuid, value) {
 
     var deferred = Q.defer();
 
-    value.project_uuid = projectUuid;
     var postData = {
+	associationIds: [ projectUuid ],
         name: 'sample',
         value: value,
     };
@@ -1957,7 +2145,7 @@ agaveIO.getSampleColumns = function(projectUuid) {
 		path:   '/meta/v2/data?q='
 		    + encodeURIComponent('{'
 		    + '"name": "sampleColumns",'
-		    + '"value.project_uuid": "' + projectUuid + '"'
+		    + '"associationIds": "' + projectUuid + '"'
 		    + '}')
 		    + '&limit=5000',
 		rejectUnauthorized: false,
@@ -1982,8 +2170,8 @@ agaveIO.createSampleColumns = function(projectUuid, value, metadataUuid) {
 
     var deferred = Q.defer();
 
-    value.project_uuid = projectUuid;
     var postData = {
+	associationIds: [ projectUuid ],
         name: 'sampleColumns',
         value: value,
     };
@@ -2077,6 +2265,36 @@ agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUu
                         ServiceAccount.accessToken(),
                         metadataUuid
                     );
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+            deferred.resolve();
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+// delete all subject metadata for a project
+agaveIO.deleteAllSubjectMetadata = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(subjectMetadata) {
+
+            var promises = subjectMetadata.map(function(metadata) {
+
+                return function() {
+                    return agaveIO.deleteMetadata(metadata.uuid);
                 };
             });
 

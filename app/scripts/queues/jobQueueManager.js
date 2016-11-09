@@ -89,17 +89,38 @@ JobQueueManager.processJobs = function() {
 		return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
 	    .then(function(subjectMetadata) {
-		metadata.subjects = subjectMetadata;
+		metadata.subjects = {};
+		for (var i = 0; i < subjectMetadata.length; ++i) {
+		    var uuid = subjectMetadata[i].uuid;
+		    metadata.subjects[uuid] = subjectMetadata[i];
+		}
 
 		return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
 	    .then(function(sampleMetadata) {
-		metadata.samples = sampleMetadata;
+		metadata.samples = {};
+		for (var i = 0; i < sampleMetadata.length; ++i) {
+		    var uuid = sampleMetadata[i].uuid;
+		    metadata.samples[uuid] = sampleMetadata[i];
+		}
 
 		return agaveIO.getSampleGroupsMetadata(jobData.projectUuid);
 	    })
 	    .then(function(sampleGroupsMetadata) {
-		metadata.sampleGroups = sampleGroupsMetadata;
+		metadata.sampleGroups = {};
+		for (var i = 0; i < sampleGroupsMetadata.length; ++i) {
+		    var uuid = sampleGroupsMetadata[i].uuid;
+		    metadata.sampleGroups[uuid] = sampleGroupsMetadata[i];
+		}
+
+		return agaveIO.getProcessMetadataForProject(jobData.projectUuid);
+	    })
+	    .then(function(processMetadata) {
+		metadata.processMetadata = {};
+		for (var i = 0; i < processMetadata.length; ++i) {
+		    var uuid = processMetadata[i].value.process.jobId;
+		    metadata.processMetadata[uuid] = processMetadata[i];
+		}
 
 		return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
