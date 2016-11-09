@@ -114,6 +114,30 @@ module.exports = function(app) {
         projectController.createProject
     );
 
+    // Import/export subject metadata
+    app.get(
+        '/projects/:projectUuid/metadata/subject/export',
+        passport.authenticate('basic', {session: false}),
+        projectController.exportSubjectMetadata
+    );
+    app.post(
+        '/projects/:projectUuid/metadata/subject/import',
+        passport.authenticate('basic', {session: false}),
+        projectController.importSubjectMetadata
+    );
+
+    // Import/export sample metadata
+    app.get(
+        '/projects/:projectUuid/metadata/sample/export',
+        passport.authenticate('basic', {session: false}),
+        projectController.exportSampleMetadata
+    );
+    app.post(
+        '/projects/:projectUuid/metadata/sample/import',
+        passport.authenticate('basic', {session: false}),
+        projectController.importSampleMetadata
+    );
+
     // Record Telemetry Data
     app.post(
         '/telemetry',

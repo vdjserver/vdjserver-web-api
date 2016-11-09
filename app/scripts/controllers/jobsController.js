@@ -85,6 +85,50 @@ JobsController.getPendingJobs = function(request, response) {
         .then(function() {
             let deferred = Q.defer();
 
+            kue.Job.rangeByType('createArchiveMetadataTask', 'active', 0, 1000, 'asc', function(error, jobs) {
+                jobs.forEach(function(job) {
+                    if (job.data.projectUuid === projectUuid) {
+
+                        let pendingJob = new PendingJob({
+                            'name': job.data.config.name,
+                            'executionSystem': job.data.config.executionSystem,
+                            'appId': job.data.config.appId,
+                        });
+
+                        pendingJobs.push(pendingJob.getAgaveFormattedJobObject());
+                    }
+                });
+
+                deferred.resolve();
+            });
+
+            return deferred.promise;
+        })
+        .then(function() {
+            let deferred = Q.defer();
+
+            kue.Job.rangeByType('createArchiveMetadataTask', 'inactive', 0, 1000, 'asc', function(error, jobs) {
+                jobs.forEach(function(job) {
+                    if (job.data.projectUuid === projectUuid) {
+
+                        let pendingJob = new PendingJob({
+                            'name': job.data.config.name,
+                            'executionSystem': job.data.config.executionSystem,
+                            'appId': job.data.config.appId,
+                        });
+
+                        pendingJobs.push(pendingJob.getAgaveFormattedJobObject());
+                    }
+                });
+
+                deferred.resolve();
+            });
+
+            return deferred.promise;
+        })
+        .then(function() {
+            let deferred = Q.defer();
+
             kue.Job.rangeByType('submitJobTask', 'active', 0, 1000, 'asc', function(error, jobs) {
                 jobs.forEach(function(job) {
                     if (job.data.projectUuid === projectUuid) {

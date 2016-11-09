@@ -16,7 +16,7 @@ var webhookIO = require('./vendor/webhookIO');
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-	console.log('VDJ-API: Successfully acquired service token.');
+	console.log('VDJ-API INFO: Successfully acquired service token.');
     })
     .fail(function(error) {
 	console.error('VDJ-API ERROR: Service may need to be restarted.');
