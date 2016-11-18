@@ -987,6 +987,47 @@ agaveIO.createPasswordResetMetadata = function(username) {
     return deferred.promise;
 };
 
+agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid, jobUuid ],
+        name: 'projectJob',
+        value: {
+            projectUuid: projectUuid,
+            jobUuid: jobUuid,
+        },
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+		},
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
     var deferred = Q.defer();
@@ -1411,7 +1452,7 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
     return deferred.promise;
 };
 
-agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobName, relativeArchivePath) {
+agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobFileType, jobName, relativeArchivePath) {
 
     var deferred = Q.defer();
 
@@ -1420,10 +1461,11 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
         value: {
             projectUuid: projectUuid,
             jobUuid: jobUuid,
-            fileType: 2,
+            fileType: jobFileType,
             name: jobFileListingName,
             length: jobFileListingLength,
             isDeleted: false,
+	    showInProjectData: false,
             readDirection: '',
             relativeArchivePath: relativeArchivePath,
             jobName: jobName,
