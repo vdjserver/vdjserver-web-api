@@ -23,6 +23,12 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
+var fileTypeMapping = {
+    'read': 2,
+    'tsv': 6,
+    'vdjml': 8
+};
+
 var JobQueueManager = {};
 module.exports = JobQueueManager;
 
@@ -228,6 +234,20 @@ JobQueueManager.processJobs = function() {
                 return promises.reduce(Q.when, new Q());
             })
             .then(function() {
+		console.log('VDJ-API INFO: shareJobTask gave project users permissions for job ' + jobData.jobId);
+		
+		// create job metadata
+		return agaveIO.createJobMetadata(jobData.projectUuid, jobData.jobId);
+            })
+            .then(function(resultObject) {
+		if (resultObject) {
+		    jobData.processMetadataUuid = resultObject.uuid;
+		    console.log('VDJ-API INFO: shareJobTask created job metadata ' + resultObject.uuid + ' for job ' + jobData.jobId);
+
+		    return agaveIO.addMetadataPermissionsForProjectUsers(jobData.projectUuid, resultObject.uuid);
+		}
+            })
+            .then(function() {
                 console.log('VDJ-API INFO: shareJobTask done for ' + jobData.jobId);
                 done();
             })
@@ -393,8 +413,11 @@ JobQueueManager.processJobs = function() {
 		    if (jobData.processMetadata) {
 			for (var file in jobData.processMetadata.files) {
 			    for (var key in jobData.processMetadata.files[file]) {
-				if (jobData.processMetadata.files[file][key] == jobFileListing.name) {
+				if (jobData.processMetadata.files[file][key]['value'] == jobFileListing.name) {
 				    found = true;
+				    var fileType = fileTypeMapping[jobData.processMetadata.files[file][key]['type']]
+				    if (!fileType) jobFileListing.fileType = 0;
+				    else jobFileListing.fileType = fileType;
 				    break;
 				}
 			    }
@@ -407,6 +430,7 @@ JobQueueManager.processJobs = function() {
                                     jobData.jobId,
                                     jobFileListing.name,
                                     jobFileListing.length,
+                                    jobFileListing.fileType,
                                     jobData.name,
                                     jobData.relativeArchivePath
 				);
