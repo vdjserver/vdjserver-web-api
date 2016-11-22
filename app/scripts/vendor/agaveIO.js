@@ -2260,7 +2260,7 @@ agaveIO.getSampleGroupsMetadata = function(projectUuid) {
 		path:   '/meta/v2/data?q='
 		    + encodeURIComponent('{'
 		    + '"name": "sampleGroup",'
-		    + '"value.project_uuid": "' + projectUuid + '"'
+		    + '"associationIds": "' + projectUuid + '"'
 		    + '}')
 		    + '&limit=5000',
 		rejectUnauthorized: false,
