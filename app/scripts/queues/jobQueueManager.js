@@ -128,7 +128,8 @@ JobQueueManager.processJobs = function() {
 		    metadata.processMetadata[uuid] = processMetadata[i];
 		}
 
-		return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+		//return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+		return agaveIO.getProjectFileMetadata(jobData.projectUuid);
 	    })
 	    .then(function(fileMetadata) {
 		metadata.fileMetadata = {};
@@ -269,6 +270,41 @@ JobQueueManager.processJobs = function() {
       4. share project file metadata for job output files
       5. emit job complete webhook
     */
+
+    /* We use a redis guard for when duplicate FINISHED notifications are sent, but that
+       only works within a short period of time as the guard expires. For longer term,
+       check the existence of the process metadata. */
+
+    taskQueue.process('checkJobTask', function(task, done) {
+        var jobData = task.data;
+
+        // Get process metadata
+	agaveIO.getProcessMetadataForJob(jobData.jobId)
+            .then(function(resultObject) {
+		//console.log(resultObject);
+		if (resultObject.length != 0) {
+		    return Q.reject(new Error('VDJ-API ERROR: checkJobTask for job ' + jobData.jobId + ' already has process metadata entry, possible duplicate FINISHED notification'));
+		} else {
+                    taskQueue
+			.create('shareJobOutputFilesTask', jobData)
+			.removeOnComplete(true)
+			.attempts(5)
+			.backoff({delay: 60 * 1000, type: 'fixed'})
+			.save()
+                    ;
+		}
+            })
+            .then(function() {
+                console.log('VDJ-API INFO: checkJobTask done for ' + jobData.jobId);
+                done();
+            })
+            .fail(function(error) {
+                console.log(error);
+		webhookIO.postToSlack(error);
+                done(error);
+            })
+            ;
+    });
 
     taskQueue.process('shareJobOutputFilesTask', function(task, done) {
 
