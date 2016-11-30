@@ -283,46 +283,6 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
             //return agaveIO.getJobMetadataForProject(projectUuid);
             return agaveIO.getJobsForProject(projectUuid);
         })
-/*
-  job metadata has been disabled for now
-
-        // (loop) add to job metadata permissions
-        .then(function(tmpJobMetadatas) {
-            console.log('PermissionsController.addPermissionsForUsername - event - getJobsForProject for project ' + projectUuid);
-
-            // cache for later
-            jobMetadatas = tmpJobMetadatas;
-
-            var metadata = new MetadataPermissions();
-            var uuids = metadata.getUuidsFromMetadataResponse(tmpJobMetadatas);
-	    console.log(jobMetadatas);
-	    console.log(uuids);
-
-            var promises = [];
-
-            function createAgaveCall(username, token, uuid) {
-
-                return function() {
-
-                    return agaveIO.addUsernameToMetadataPermissions(
-                        username,
-                        token,
-                        uuid
-                    );
-                };
-            }
-
-            for (var i = 0; i < uuids.length; i++) {
-                promises[i] = createAgaveCall(
-                    username,
-                    ServiceAccount.accessToken(),
-                    uuids[i]
-                );
-            }
-
-            return promises.reduce(Q.when, new Q());
-        })
-*/
         // (loop) add to job permissions
         .then(function(tmpJobMetadatas) {
             console.log('PermissionsController.addPermissionsForUsername - event - agaveIO.addUsernameToJobPermissions for project ' + projectUuid);
@@ -340,6 +300,48 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
                 return function() {
 
                     return agaveIO.addUsernameToJobPermissions(
+                        username,
+                        token,
+                        uuid
+                    );
+                };
+            }
+
+            for (var i = 0; i < uuids.length; i++) {
+                promises[i] = createAgaveCall(
+                    username,
+                    ServiceAccount.accessToken(),
+                    uuids[i]
+                );
+            }
+
+            return promises.reduce(Q.when, new Q());
+        })
+        // get all project associated metadata
+        // TODO: this technically should be sufficient for all metadata except for the sole project metadata entry
+        // but not currently as many old metadata entries are missing the associationId
+        .then(function() {
+            console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
+
+            return agaveIO.getAllProjectAssociatedMetadata(projectUuid);
+        })
+        // (loop) add permissions for user
+        .then(function(allMetadatas) {
+            console.log('PermissionsController.addPermissionsForUsername - event - getAllProjectAssociatedMetadata for project ' + projectUuid);
+
+            var metadata = new MetadataPermissions();
+            var uuids = metadata.getUuidsFromMetadataResponse(allMetadatas);
+	    //console.log(allMetadatas);
+	    console.log(uuids.length);
+	    console.log(uuids);
+
+            var promises = [];
+
+            function createAgaveCall(username, token, uuid) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToMetadataPermissions(
                         username,
                         token,
                         uuid

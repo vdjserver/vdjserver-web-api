@@ -617,6 +617,103 @@ agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.getProjectFileMetadata = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(projectUuid, offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"name": { $in: ["projectFile", "projectJobFile"] },'
+					     + '"value.projectUuid":"' + projectUuid + '"'
+					     + '}')
+			+ '&limit=5000&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(projectUuid, newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(projectUuid, 0);
+
+    return deferred.promise;
+};
+
+agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(projectUuid, offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"associationIds":"' + projectUuid + '"'
+					     + '}')
+			+ '&limit=100&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(projectUuid, newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(projectUuid, 0);
+
+    return deferred.promise;
+};
+
 agaveIO.getFilePermissions = function(accessToken, filePath) {
 
     var deferred = Q.defer();
@@ -1452,12 +1549,48 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.getProcessMetadataForJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"processMetadata",'
+                            + '"associationIds":"' + jobUuid + '"'
+                            + '}'
+                    )
+                    + '&limit=5000',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobFileType, jobName, relativeArchivePath) {
 
     var deferred = Q.defer();
 
     var postData = {
         name: 'projectJobFile',
+	associationIds: [ projectUuid, jobUuid ],
         value: {
             projectUuid: projectUuid,
             jobUuid: jobUuid,
@@ -1547,6 +1680,7 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
     var postData = {
         associationIds: [
             fileUuid,
+	    projectUuid,
         ],
         name: 'projectFile',
         owner: '',
