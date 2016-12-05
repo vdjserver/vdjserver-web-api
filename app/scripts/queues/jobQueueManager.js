@@ -119,6 +119,15 @@ JobQueueManager.processJobs = function() {
 		    metadata.sampleGroups[uuid] = sampleGroupsMetadata[i];
 		}
 
+		// specific job selected?
+		if (jobData.config.parameters.JobSelected)
+		    return agaveIO.getJobOutput(jobData.config.parameters.JobSelected);
+		else
+		    return null;
+	    })
+	    .then(function(jobOutput) {
+		if (jobOutput) metadata.jobSelected = jobOutput;
+
 		return agaveIO.getProcessMetadataForProject(jobData.projectUuid);
 	    })
 	    .then(function(processMetadata) {
@@ -568,22 +577,29 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('jobCompleteTask', function(task, done) {
         var jobData = task.data;
 
-	// all done, emit the FINISHED notification
-	app.emit(
-	    'jobNotification',
-	    {
-		jobId: jobData.jobId,
-		jobEvent: jobData.jobEvent,
-		jobStatus: jobData.jobStatus,
-		jobMessage: jobData.jobMessage,
-		projectUuid: jobData.projectUuid,
-		jobName: decodeURIComponent(jobData.jobName),
-	    }
-	);
+	// remove the guard
+	var guardKey = 'guard-' + jobData.jobId;
+	var redisClient = kue.redis.createClient();
 
-        console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+	Q.ninvoke(redisClient, 'del', guardKey)
+	    .finally(function() {
+		// all done, emit the FINISHED notification
+		app.emit(
+		    'jobNotification',
+		    {
+			jobId: jobData.jobId,
+			jobEvent: jobData.jobEvent,
+			jobStatus: jobData.jobStatus,
+			jobMessage: jobData.jobMessage,
+			projectUuid: jobData.projectUuid,
+			jobName: decodeURIComponent(jobData.jobName),
+		    }
+		);
 
-        done();
+		console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+		
+		done();
+	    });
     });
 
 };
