@@ -403,8 +403,13 @@ ProjectController.exportSampleMetadata = function(request, response) {
 	.then(function(sampleMetadata) {
 	    //console.log(sampleMetadata);
 
-	    // convert to TSV format
+	    // default
 	    var tsvData = '';
+	    if (sampleMetadata.length == 0) {		
+		tsvData = 'Name\tDescription\tSampleID\tBarcode\tproject_file\n';
+	    }
+
+	    // convert to TSV format
 	    for (var i = 0; i < sampleMetadata.length; ++i) {
 		var value = sampleMetadata[i].value;
 
