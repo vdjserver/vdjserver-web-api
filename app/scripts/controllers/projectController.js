@@ -406,7 +406,7 @@ ProjectController.exportSampleMetadata = function(request, response) {
 	    // default
 	    var tsvData = '';
 	    if (sampleMetadata.length == 0) {		
-		tsvData = 'Name\tDescription\tSampleID\tBarcode\tproject_file\n';
+		tsvData = 'Name\tDescription\tSampleID\tBarcode\tsubject_uuid\tproject_file\n';
 	    }
 
 	    // convert to TSV format
