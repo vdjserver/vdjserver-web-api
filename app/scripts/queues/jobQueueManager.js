@@ -390,6 +390,7 @@ JobQueueManager.processJobs = function() {
 		//console.log(jobProcessMetadataListing);
 
 		if (jobProcessMetadataListing.length > 0) {
+                    console.log('VDJ-API INFO: createProcessMetadataTask: job ' + jobData.jobId + ' has process_metadata.json');
 		    return agaveIO.getJobProcessMetadataFileContents(jobData.projectUuid, jobData.relativeArchivePath);
 		} else {
                     console.log('VDJ-API INFO: createProcessMetadataTask: job ' + jobData.jobId + ' is missing process_metadata.json');
@@ -402,6 +403,7 @@ JobQueueManager.processJobs = function() {
 		    //console.log(fileData);
 		    if (jsonApprover.isJSON(fileData)) {
 			jobData.processMetadata = JSON.parse(fileData);
+			console.log('VDJ-API INFO: createProcessMetadataTask: job ' + jobData.jobId + ' loaded process_metadata.json');
 			return agaveIO.createProcessMetadata(jobData.projectUuid, jobData.jobId, jobData.processMetadata);
 		    } else {
 			console.log('VDJ-API INFO: createProcessMetadataTask: process_metadata.json for job ' + jobData.jobId + ' is invalid JSON.');
@@ -435,8 +437,18 @@ JobQueueManager.processJobs = function() {
                 console.log('VDJ-API INFO: createProcessMetadataTask done for ' + jobData.jobId);
                 done();
             })
+	    .fin(function() {
+		taskQueue
+		    .create('removeJobGuardTask', jobData)
+		    .removeOnComplete(true)
+		    .attempts(5)
+		    .backoff({delay: 60 * 1000, type: 'fixed'})
+		    .save()
+		;
+	    })
             .fail(function(error) {
                 console.log('VDJ-API ERROR: createProcessMetadataTask error is: "' + error + '" for ' + jobData.jobId);
+
                 done(new Error('createProcessMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
@@ -577,26 +589,34 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('jobCompleteTask', function(task, done) {
         var jobData = task.data;
 
+	// all done, emit the FINISHED notification
+	app.emit(
+	    'jobNotification',
+	    {
+		jobId: jobData.jobId,
+		jobEvent: jobData.jobEvent,
+		jobStatus: jobData.jobStatus,
+		jobMessage: jobData.jobMessage,
+		projectUuid: jobData.projectUuid,
+		jobName: decodeURIComponent(jobData.jobName),
+	    }
+	);
+
+	console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+		
+	done();
+    });
+
+    taskQueue.process('removeJobGuardTask', function(task, done) {
+        var jobData = task.data;
+
 	// remove the guard
 	var guardKey = 'guard-' + jobData.jobId;
 	var redisClient = kue.redis.createClient();
 
 	Q.ninvoke(redisClient, 'del', guardKey)
 	    .finally(function() {
-		// all done, emit the FINISHED notification
-		app.emit(
-		    'jobNotification',
-		    {
-			jobId: jobData.jobId,
-			jobEvent: jobData.jobEvent,
-			jobStatus: jobData.jobStatus,
-			jobMessage: jobData.jobMessage,
-			projectUuid: jobData.projectUuid,
-			jobName: decodeURIComponent(jobData.jobName),
-		    }
-		);
-
-		console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+		console.log('VDJ-API INFO: removeJobGuardTask for job ' + jobData.jobId);
 		
 		done();
 	    });

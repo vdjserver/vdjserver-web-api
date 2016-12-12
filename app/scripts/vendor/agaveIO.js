@@ -634,7 +634,7 @@ agaveIO.getProjectFileMetadata = function(projectUuid) {
 					     + '"name": { $in: ["projectFile", "projectJobFile"] },'
 					     + '"value.projectUuid":"' + projectUuid + '"'
 					     + '}')
-			+ '&limit=5000&offset=' + offset
+			+ '&limit=50&offset=' + offset
                     ,
 		    rejectUnauthorized: false,
 		    headers: {
@@ -1497,7 +1497,7 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
