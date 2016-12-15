@@ -586,44 +586,13 @@ agaveIO.getMetadataPermissions = function(accessToken, uuid) {
     return deferred.promise;
 };
 
-agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
-
-    var deferred = Q.defer();
-
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
-                + encodeURIComponent('{'
-                    + '"name": { $in: ["projectFile", "projectJobFile"] },'
-                    + '"value.projectUuid":"' + projectUuid + '"'
-                + '}')
-                + '&limit=5000'
-                ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        }
-    };
-
-    agaveIO.sendRequest(requestSettings, null)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
-};
-
 agaveIO.getProjectFileMetadata = function(projectUuid) {
 
     var deferred = Q.defer();
 
     var models = [];
 
-    var doFetch = function(projectUuid, offset) {
+    var doFetch = function(offset) {
 	return ServiceAccount.getToken()
 	    .then(function(token) {
 		var requestSettings = {
@@ -650,7 +619,7 @@ agaveIO.getProjectFileMetadata = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(projectUuid, newOffset);
+		    doFetch(newOffset);
 		} else {
 		    // no more data
 		    deferred.resolve(models);
@@ -661,7 +630,7 @@ agaveIO.getProjectFileMetadata = function(projectUuid) {
             });
     }
 
-    doFetch(projectUuid, 0);
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -672,7 +641,7 @@ agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
 
     var models = [];
 
-    var doFetch = function(projectUuid, offset) {
+    var doFetch = function(offset) {
 	return ServiceAccount.getToken()
 	    .then(function(token) {
 		var requestSettings = {
@@ -698,7 +667,7 @@ agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(projectUuid, newOffset);
+		    doFetch(newOffset);
 		} else {
 		    // no more data
 		    deferred.resolve(models);
@@ -709,7 +678,7 @@ agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
             });
     }
 
-    doFetch(projectUuid, 0);
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -1384,30 +1353,48 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system'
-                    + '/' + agaveSettings.storageSystem
-                    + '//projects/' + projectUuid
-                    + '/analyses'
-                    + '/' + relativeArchivePath,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+    var models = [];
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:     agaveSettings.hostname,
+		    method:   'GET',
+		    path:     '/files/v2/listings/system'
+			+ '/' + agaveSettings.storageSystem
+			+ '//projects/' + projectUuid
+			+ '/analyses'
+			+ '/' + relativeArchivePath
+			+ '?limit=50&offset=' + offset,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    },
+		};
+		//console.log(requestSettings);
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		//console.log(result);
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };

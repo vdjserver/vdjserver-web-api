@@ -243,11 +243,11 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
         .then(function() {
             console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToFullFilePermissions for project ' + projectUuid);
 
-            return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectFileMetadata(projectUuid);
         })
         // (loop) add to file metadata pems
         .then(function(projectFileMetadataPermissions) {
-            console.log('PermissionsController.addPermissionsForUsername - event - getProjectFileMetadataPermissions for project ' + projectUuid);
+            console.log('PermissionsController.addPermissionsForUsername - event - getProjectFileMetadata for project ' + projectUuid);
 
             var metadata = new MetadataPermissions();
             var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
@@ -427,11 +427,11 @@ PermissionsController.removePermissionsForUsername = function(request, response)
         .then(function() {
             console.log('PermissionsController.removePermissionsForUsername - event - removeUsernameFromFilePermissions for project ' + projectUuid);
 
-            return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectFileMetadata(projectUuid);
         })
         // (loop) Remove from File Metadata pems
         .then(function(projectFileMetadataPermissions) {
-            console.log('PermissionsController.removePermissionsForUsername - event - getProjectFileMetadataPermissions for project ' + projectUuid);
+            console.log('PermissionsController.removePermissionsForUsername - event - getProjectFileMetadata for project ' + projectUuid);
 
             var metadata = new MetadataPermissions();
             var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
