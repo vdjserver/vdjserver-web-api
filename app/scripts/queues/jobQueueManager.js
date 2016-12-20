@@ -110,7 +110,7 @@ JobQueueManager.processJobs = function() {
 		    metadata.samples[uuid] = sampleMetadata[i];
 		}
 
-		return agaveIO.getSampleGroupsMetadata(jobData.projectUuid);
+		return agaveIO.getSampleGroupsMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
 	    })
 	    .then(function(sampleGroupsMetadata) {
 		metadata.sampleGroups = {};
