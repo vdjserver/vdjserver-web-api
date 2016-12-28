@@ -1143,6 +1143,44 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
     return deferred.promise;
 };
 
+agaveIO.updateJobMetadata = function(uuid, name, value) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ value.projectUuid, value.jobUuid ],
+        name: name,
+        value: value
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data/' + uuid,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
     var deferred = Q.defer();
@@ -1227,6 +1265,78 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
     }
 
     doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.getJobMetadataForJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"projectJob",'
+                            + '"associationIds":"' + jobUuid + '"'
+                            + '}'
+                    )
+                    + '&limit=1'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"projectJobArchive",'
+                            + '"associationIds":"' + jobUuid + '"'
+                            + '}'
+                    )
+                    + '&limit=1'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
 
     return deferred.promise;
 };
@@ -1407,6 +1517,34 @@ agaveIO.getJobOutput = function(jobId) {
 		host:     agaveSettings.hostname,
 		method:   'GET',
 		path:     '/jobs/v2/' + jobId,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobPermissions = function(jobId) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:     '/jobs/v2/' + jobId + '/pems',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
