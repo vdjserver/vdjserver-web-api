@@ -8,6 +8,9 @@ var apiResponseController = require('./apiResponseController');
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 
+// Models
+var ServiceAccount = require('../models/serviceAccount');
+
 // Node Libraries
 var Q = require('q');
 
