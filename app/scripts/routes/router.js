@@ -61,6 +61,19 @@ module.exports = function(app) {
         jobsController.queueJob
     );
 
+    // Archive/Unarchive Jobs
+    app.post(
+        '/jobs/archive/:jobId',
+        passport.authenticate('basic', {session: false}),
+        jobsController.archiveJob
+    );
+
+    app.post(
+        '/jobs/unarchive/:jobId',
+        passport.authenticate('basic', {session: false}),
+        jobsController.unarchiveJob
+    );
+
     // Process File Import Notification
     app.post(
         '/notifications/files/import',

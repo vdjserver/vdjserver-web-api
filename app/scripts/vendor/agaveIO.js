@@ -42,7 +42,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.log('Agave response is not json.');
+                    console.error('VDJ-API ERROR: Agave response is not json.');
                 }
 
                 deferred.reject(new Error('Agave response is not json'));
@@ -54,8 +54,8 @@ agaveIO.sendRequest = function(requestSettings, postData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.error('Agave returned an error. it is: ' + JSON.stringify(responseObject));
-                    console.error('Agave returned an error. it is: ' + responseObject);
+                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + responseObject);
                 }
 
                 deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
@@ -66,7 +66,7 @@ agaveIO.sendRequest = function(requestSettings, postData) {
 
     request.on('error', function(error) {
         if (agaveSettings.debugConsole === true) {
-            console.error('Agave connection error.' + JSON.stringify(error));
+            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
         }
 
         deferred.reject(new Error('Agave connection error'));
@@ -107,7 +107,7 @@ agaveIO.sendFormRequest = function(requestSettings, formData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.log('Agave response is not json.');
+                    console.error('VDJ-API ERROR: Agave response is not json.');
                 }
 
                 deferred.reject(new Error('Agave response is not json'));
@@ -119,8 +119,8 @@ agaveIO.sendFormRequest = function(requestSettings, formData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.error('Agave returned an error. it is: ' + JSON.stringify(responseObject));
-                    console.error('Agave returned an error. it is: ' + responseObject);
+                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + JSON.stringify(responseObject));
+                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + responseObject);
                 }
 
                 deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
@@ -131,7 +131,7 @@ agaveIO.sendFormRequest = function(requestSettings, formData) {
 
     request.on('error', function(error) {
         if (agaveSettings.debugConsole === true) {
-            console.error('Agave connection error.' + JSON.stringify(error));
+            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
         }
 
         deferred.reject(new Error('Agave connection error'));
@@ -168,7 +168,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.error('Agave token response is not json.');
+                    console.error('VDJ-API ERROR: Agave token response is not json.');
                 }
 
                 deferred.reject(new Error('Agave response is not json'));
@@ -186,8 +186,8 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.error('Agave returned a token error. it is: ' + JSON.stringify(responseObject));
-                    console.error('Agave returned a token error. it is: ' + responseObject);
+                    console.error('VDJ-API ERROR: Agave returned a token error. it is: ' + JSON.stringify(responseObject));
+                    console.error('VDJ-API ERROR: Agave returned a token error. it is: ' + responseObject);
                 }
 
                 deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
@@ -199,7 +199,7 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
     request.on('error', function() {
 
         if (agaveSettings.debugConsole === true) {
-            console.error('Agave token connection error.');
+            console.error('VDJ-API ERROR: Agave token connection error.');
         }
 
         deferred.reject(new Error('Agave connection error'));
@@ -240,7 +240,7 @@ agaveIO.sendFileRequest = function(requestSettings, postData) {
 
     request.on('error', function(error) {
         if (agaveSettings.debugConsole === true) {
-            console.error('Agave connection error.' + JSON.stringify(error));
+            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
         }
 
         deferred.reject(new Error('Agave connection error'));
@@ -394,7 +394,7 @@ agaveIO.getUserProfile = function(username) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
 		method:   'GET',
-		path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=5000',
+		path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=1',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
@@ -586,33 +586,148 @@ agaveIO.getMetadataPermissions = function(accessToken, uuid) {
     return deferred.promise;
 };
 
-agaveIO.getProjectFileMetadataPermissions = function(accessToken, projectUuid) {
+agaveIO.getProjectFileMetadata = function(projectUuid) {
 
     var deferred = Q.defer();
 
-    var requestSettings = {
-        host:   agaveSettings.hostname,
-        method: 'GET',
-        path:   '/meta/v2/data?q='
-                + encodeURIComponent('{'
-                    + '"name": { $in: ["projectFile", "projectJobFile"] },'
-                    + '"value.projectUuid":"' + projectUuid + '"'
-                + '}')
-                + '&limit=5000'
-                ,
-        rejectUnauthorized: false,
-        headers: {
-            'Authorization': 'Bearer ' + accessToken
-        }
-    };
+    var models = [];
 
-    agaveIO.sendRequest(requestSettings, null)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"name": { $in: ["projectFile", "projectJobFile"] },'
+					     + '"value.projectUuid":"' + projectUuid + '"'
+					     + '}')
+			+ '&limit=50&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.getProjectFiles = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"name": { $in: ["projectFile"] },'
+					     + '"associationIds":"' + projectUuid + '"'
+					     + '}')
+			+ '&limit=50&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"associationIds":"' + projectUuid + '"'
+					     + '}')
+			+ '&limit=100&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -888,7 +1003,7 @@ agaveIO.getUserVerificationMetadata = function(username) {
                             + ' "owner":"' + ServiceAccount.username + '"'
                             + '}'
                     )
-                    + '&limit=5000'
+                    + '&limit=1'
                 ,
 		rejectUnauthorized: false,
 		headers: {
@@ -1028,6 +1143,44 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
     return deferred.promise;
 };
 
+agaveIO.updateJobMetadata = function(uuid, name, value) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ value.projectUuid, value.jobUuid ],
+        name: name,
+        value: value
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data/' + uuid,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
     var deferred = Q.defer();
@@ -1045,7 +1198,7 @@ agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
                             + '"value.jobUuid":"' + jobUuid + '",'
                             + '}'
                     )
-                    + '&limit=5000'
+                    + '&limit=1'
                 ,
 		rejectUnauthorized: false,
 		headers: {
@@ -1069,6 +1222,57 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
 
     var deferred = Q.defer();
 
+    var models = [];
+
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent(
+                            '{'
+				+ '"name":"projectJob",'
+				+ '"value.projectUuid":"' + projectUuid + '"'
+				+ '}'
+			)
+			+ '&limit=50&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.getJobMetadataForJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
     ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
@@ -1078,10 +1282,46 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJob",'
-                            + '"value.projectUuid":"' + projectUuid + '"'
+                            + '"associationIds":"' + jobUuid + '"'
                             + '}'
                     )
-                    + '&limit=5000'
+                    + '&limit=1'
+                ,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{'
+                            + '"name":"projectJobArchive",'
+                            + '"associationIds":"' + jobUuid + '"'
+                            + '}'
+                    )
+                    + '&limit=1'
                 ,
 		rejectUnauthorized: false,
 		headers: {
@@ -1105,27 +1345,42 @@ agaveIO.getJobsForProject = function(projectUuid) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
-                    + '&limit=5000',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var models = [];
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
+			+ '&limit=50&offset=' + offset,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -1145,7 +1400,7 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
                             + ' "uuid":"' + uuid + '",'
                             + ' "owner":"' + ServiceAccount.username + '"}'
                     )
-                    + '&limit=5000'
+                    + '&limit=1'
                 ,
 		rejectUnauthorized: false,
 		headers: {
@@ -1193,24 +1448,21 @@ agaveIO.getMetadata = function(uuid) {
     return deferred.promise;
 };
 
-agaveIO.deleteMetadata = function(uuid) {
+agaveIO.deleteMetadata = function(accessToken, uuid) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'DELETE',
-		path:     '/meta/v2/data/' + uuid,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var requestSettings = {
+	host:     agaveSettings.hostname,
+	method:   'DELETE',
+	path:     '/meta/v2/data/' + uuid,
+	rejectUnauthorized: false,
+	headers: {
+	    'Authorization': 'Bearer ' + accessToken
+	}
+    };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+    agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -1283,7 +1535,7 @@ agaveIO.getJobOutput = function(jobId) {
     return deferred.promise;
 };
 
-agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
+agaveIO.getJobPermissions = function(jobId) {
 
     var deferred = Q.defer();
 
@@ -1292,15 +1544,11 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
 		method:   'GET',
-		path:     '/files/v2/listings/system'
-                    + '/' + agaveSettings.storageSystem
-                    + '//projects/' + projectUuid
-                    + '/analyses'
-                    + '/' + relativeArchivePath,
+		path:     '/jobs/v2/' + jobId + '/pems',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
+		}
 	    };
 
 	    return agaveIO.sendRequest(requestSettings, null);
@@ -1311,6 +1559,56 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
         .fail(function(errorObject) {
             deferred.reject(errorObject);
         });
+
+    return deferred.promise;
+};
+
+agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:     agaveSettings.hostname,
+		    method:   'GET',
+		    path:     '/files/v2/listings/system'
+			+ '/' + agaveSettings.storageSystem
+			+ '//projects/' + projectUuid
+			+ '/analyses'
+			+ '/' + relativeArchivePath
+			+ '?limit=50&offset=' + offset,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    },
+		};
+		//console.log(requestSettings);
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		//console.log(result);
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -1400,7 +1698,7 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -1421,6 +1719,56 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
 
     var deferred = Q.defer();
 
+    var models = [];
+
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:     agaveSettings.hostname,
+		    method:   'GET',
+		    path:     '/meta/v2/data?q='
+			+ encodeURIComponent(
+                            '{'
+				+ '"name":"processMetadata",'
+				+ '"associationIds":"' + projectUuid + '"'
+				+ '}'
+			)
+			+ '&limit=50&offset=' + offset,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.getProcessMetadataForJob = function(jobUuid) {
+
+    var deferred = Q.defer();
+
     ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
@@ -1430,10 +1778,10 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
                     + encodeURIComponent(
                         '{'
                             + '"name":"processMetadata",'
-                            + '"associationIds":"' + projectUuid + '"'
+                            + '"associationIds":"' + jobUuid + '"'
                             + '}'
                     )
-                    + '&limit=5000',
+                    + '&limit=1',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
@@ -1458,6 +1806,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 
     var postData = {
         name: 'projectJobFile',
+	associationIds: [ projectUuid, jobUuid ],
         value: {
             projectUuid: projectUuid,
             jobUuid: jobUuid,
@@ -1507,35 +1856,50 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
-                    + encodeURIComponent(
-                        '{'
-                            + '"name":"projectJobFile",'
-                            + '"value.projectUuid":"' + projectUuid + '",'
-                            + '"value.jobUuid":"' + jobId + '"'
-                            + '}'
-                    )
-                    + '&limit=5000'
-                ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var models = [];
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent(
+                            '{'
+				+ '"name":"projectJobFile",'
+				+ '"value.projectUuid":"' + projectUuid + '",'
+				+ '"value.jobUuid":"' + jobId + '"'
+				+ '}'
+			)
+			+ '&limit=50&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -1547,6 +1911,7 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
     var postData = {
         associationIds: [
             fileUuid,
+	    projectUuid,
         ],
         name: 'projectFile',
         owner: '',
@@ -1623,33 +1988,48 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
-                    + encodeURIComponent('{'
-					 + '"name": "projectFile",'
-					 + '"value.projectUuid": "' + projectUuid + '",'
-					 + '"associationIds": { $in: ["' + fileUuid + '"] }'
-					 + '}')
-                    + '&limit=5000'
-                ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var models = [];
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:   agaveSettings.hostname,
+		    method: 'GET',
+		    path:   '/meta/v2/data?q='
+			+ encodeURIComponent('{'
+					     + '"name": "projectFile",'
+					     + '"value.projectUuid": "' + projectUuid + '",'
+					     + '"associationIds": { $in: ["' + fileUuid + '"] }'
+					     + '}')
+			+ '&limit=50&offset=' + offset
+                    ,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -1966,28 +2346,43 @@ agaveIO.getSubjectMetadata = function(accessToken, projectUuid) {
 
     var deferred = Q.defer();
 
-    var requestSettings = {
-	host:     agaveSettings.hostname,
-	method:   'GET',
-	path:   '/meta/v2/data?q='
-            + encodeURIComponent('{'
-				 + '"name": "subject",'
-				 + '"associationIds": "' + projectUuid + '"'
-				 + '}')
-            + '&limit=5000',
-	rejectUnauthorized: false,
-	headers: {
-	    'Authorization': 'Bearer ' + accessToken
-	}
-    };
+    var models = [];
 
-    agaveIO.sendRequest(requestSettings, null)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	var requestSettings = {
+	    host:     agaveSettings.hostname,
+	    method:   'GET',
+	    path:   '/meta/v2/data?q='
+		+ encodeURIComponent('{'
+				     + '"name": "subject",'
+				     + '"associationIds": "' + projectUuid + '"'
+				     + '}')
+		+ '&limit=50&offset=' + offset,
+	    rejectUnauthorized: false,
+	    headers: {
+		'Authorization': 'Bearer ' + accessToken
+	    }
+	};
+
+	return agaveIO.sendRequest(requestSettings, null)
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -2044,7 +2439,7 @@ agaveIO.getSubjectColumns = function(projectUuid) {
 		    + '"name": "subjectColumns",'
 		    + '"associationIds": "' + projectUuid + '"'
 		    + '}')
-		    + '&limit=5000',
+		    + '&limit=1',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
@@ -2111,33 +2506,48 @@ agaveIO.getSampleMetadata = function(accessToken, projectUuid) {
 
     var deferred = Q.defer();
 
-    var requestSettings = {
-	host:     agaveSettings.hostname,
-	method:   'GET',
-	path:   '/meta/v2/data?q='
-            + encodeURIComponent('{'
-				 + '"name": "sample",'
-				 + '"associationIds": "' + projectUuid + '"'
-				 + '}')
-            + '&limit=5000',
-	rejectUnauthorized: false,
-	headers: {
-	    'Authorization': 'Bearer ' + accessToken
-	}
-    };
+    var models = [];
 
-    agaveIO.sendRequest(requestSettings, null)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	var requestSettings = {
+	    host:     agaveSettings.hostname,
+	    method:   'GET',
+	    path:   '/meta/v2/data?q='
+		+ encodeURIComponent('{'
+				     + '"name": "sample",'
+				     + '"associationIds": "' + projectUuid + '"'
+				     + '}')
+		+ '&limit=50&offset=' + offset,
+	    rejectUnauthorized: false,
+	    headers: {
+		'Authorization': 'Bearer ' + accessToken
+	    }
+	};
+
+	return agaveIO.sendRequest(requestSettings, null)
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
 
-agaveIO.createSampleMetadata = function(projectUuid, value) {
+agaveIO.createSampleMetadata = function(accessToken, projectUuid, value) {
 
     var deferred = Q.defer();
 
@@ -2149,22 +2559,19 @@ agaveIO.createSampleMetadata = function(projectUuid, value) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var requestSettings = {
+	host:     agaveSettings.hostname,
+	method:   'POST',
+	path:     '/meta/v2/data',
+	rejectUnauthorized: false,
+	headers: {
+	    'Content-Type':   'application/json',
+	    'Content-Length': Buffer.byteLength(postData),
+	    'Authorization': 'Bearer ' + accessToken
+	}
+    };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+    agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
         })
@@ -2189,7 +2596,7 @@ agaveIO.getSampleColumns = function(projectUuid) {
 		    + '"name": "sampleColumns",'
 		    + '"associationIds": "' + projectUuid + '"'
 		    + '}')
-		    + '&limit=5000',
+		    + '&limit=1',
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
@@ -2248,35 +2655,47 @@ agaveIO.createSampleColumns = function(projectUuid, value, metadataUuid) {
     return deferred.promise;
 };
 
-agaveIO.getSampleGroupsMetadata = function(projectUuid) {
+agaveIO.getSampleGroupsMetadata = function(accessToken, projectUuid) {
 
     var deferred = Q.defer();
 
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:   '/meta/v2/data?q='
-		    + encodeURIComponent('{'
-		    + '"name": "sampleGroup",'
-		    + '"value.project_uuid": "' + projectUuid + '"'
-		    + '}')
-		    + '&limit=5000',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+    var models = [];
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+    var doFetch = function(offset) {
+	var requestSettings = {
+	    host:     agaveSettings.hostname,
+	    method:   'GET',
+	    path:   '/meta/v2/data?q='
+		+ encodeURIComponent('{'
+				     + '"name": "sampleGroup",'
+				     + '"associationIds": "' + projectUuid + '"'
+				     + '}')
+		+ '&limit=50&offset=' + offset,
+	    rejectUnauthorized: false,
+	    headers: {
+		'Authorization': 'Bearer ' + accessToken
+	    }
+	};
+
+	return agaveIO.sendRequest(requestSettings, null)
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
 
     return deferred.promise;
 };
@@ -2333,10 +2752,11 @@ agaveIO.deleteAllSubjectMetadata = function(projectUuid) {
 	})
         .then(function(subjectMetadata) {
 
+	    console.log('VDJ-API INFO: agaveIO.deleteAllSubjectMetadata - deleting ' + subjectMetadata.length + ' metadata entries');
             var promises = subjectMetadata.map(function(metadata) {
 
                 return function() {
-                    return agaveIO.deleteMetadata(metadata.uuid);
+                    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
                 };
             });
 
@@ -2363,10 +2783,11 @@ agaveIO.deleteAllSampleMetadata = function(projectUuid) {
 	})
         .then(function(sampleMetadata) {
 
+	    console.log('VDJ-API INFO: agaveIO.deleteAllSampleMetadata - deleting ' + sampleMetadata.length + ' metadata entries');
             var promises = sampleMetadata.map(function(metadata) {
 
                 return function() {
-                    return agaveIO.deleteMetadata(metadata.uuid);
+                    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
                 };
             });
 

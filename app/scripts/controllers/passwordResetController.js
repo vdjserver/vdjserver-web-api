@@ -8,6 +8,9 @@ var apiResponseController = require('./apiResponseController');
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 
+// Models
+var ServiceAccount = require('../models/serviceAccount');
+
 // Node Libraries
 var Q = require('q');
 
@@ -132,7 +135,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
                 while metadata is deleted, service returns 500 error;
                 don't let this short-circuit the process
             */
-            agaveIO.deleteMetadata(passwordReset.uuid) // 5.
+            agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid) // 5.
                 .fail(function(error) { // 5a.
                     console.error(error.message, error);
                 });
