@@ -126,13 +126,33 @@ NotificationsController.processJobNotifications = function(request, response) {
 	    jobName: jobName,
         };
 
-        taskQueue
-            .create('shareJobOutputFilesTask', jobData)
-            .removeOnComplete(true)
-            .attempts(5)
-            //.backoff({delay: 60 * 1000, type: 'fixed'})
-            .save()
-            ;
+	// guard against multiple FINISHED notifications coming at same time
+	var guardKey = 'guard-' + jobId;
+	var redisClient = kue.redis.createClient();
+
+	Q.ninvoke(redisClient, 'exists', guardKey)
+	    .then(function(isMember) {
+            if (isMember === 1) {
+                // error out
+		console.log('VDJ-API WARNING: NotificationsController.processJobNotifications - received duplicate FINISHED notification for job ' + jobId + ', caught by guard');
+		return Q.reject(new Error('VDJ-API WARNING: NotificationsController.processJobNotifications - received duplicate FINISHED notification for job ' + jobId + ', caught by guard'));
+            }
+            else {
+                return Q.ninvoke(redisClient, 'set', guardKey, 'ok');
+            }
+        })
+        .then(function() {
+            return Q.ninvoke(redisClient, 'expire', guardKey, 600);
+        })
+        .then(function() {
+	    taskQueue
+		.create('checkJobTask', jobData)
+		.removeOnComplete(true)
+		.attempts(1)
+	        //.backoff({delay: 60 * 1000, type: 'fixed'})
+		.save()
+	    ;
+	})
     } else {
 	app.emit(
             'jobNotification',

@@ -61,6 +61,19 @@ module.exports = function(app) {
         jobsController.queueJob
     );
 
+    // Archive/Unarchive Jobs
+    app.post(
+        '/jobs/archive/:jobId',
+        passport.authenticate('basic', {session: false}),
+        jobsController.archiveJob
+    );
+
+    app.post(
+        '/jobs/unarchive/:jobId',
+        passport.authenticate('basic', {session: false}),
+        jobsController.unarchiveJob
+    );
+
     // Process File Import Notification
     app.post(
         '/notifications/files/import',
@@ -112,6 +125,30 @@ module.exports = function(app) {
     app.post(
         '/projects',
         projectController.createProject
+    );
+
+    // Import/export subject metadata
+    app.get(
+        '/projects/:projectUuid/metadata/subject/export',
+        passport.authenticate('basic', {session: false}),
+        projectController.exportSubjectMetadata
+    );
+    app.post(
+        '/projects/:projectUuid/metadata/subject/import',
+        passport.authenticate('basic', {session: false}),
+        projectController.importSubjectMetadata
+    );
+
+    // Import/export sample metadata
+    app.get(
+        '/projects/:projectUuid/metadata/sample/export',
+        passport.authenticate('basic', {session: false}),
+        projectController.exportSampleMetadata
+    );
+    app.post(
+        '/projects/:projectUuid/metadata/sample/import',
+        passport.authenticate('basic', {session: false}),
+        projectController.importSampleMetadata
     );
 
     // Record Telemetry Data

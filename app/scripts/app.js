@@ -16,7 +16,7 @@ var webhookIO = require('./vendor/webhookIO');
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-	console.log('VDJ-API: Successfully acquired service token.');
+	console.log('VDJ-API INFO: Successfully acquired service token.');
     })
     .fail(function(error) {
 	console.error('VDJ-API ERROR: Service may need to be restarted.');
@@ -62,7 +62,7 @@ app.redisConfig = {
 var env = process.env.NODE_ENV || 'production';
 if (env === 'test') {
     app.server = require('http').createServer(app).listen(8442, function() {
-        console.log('Express Test HTTP server listening on port ' + app.get('port'));
+        console.log('VDJ-API INFO: Express Test HTTP server listening on port ' + app.get('port'));
     });
 }
 else if (env === 'development') {
@@ -72,14 +72,14 @@ else if (env === 'development') {
     }));
 
     app.server = require('http').createServer(app).listen(app.get('port'), function() {
-        console.log('Express Dev HTTP server listening on port ' + app.get('port'));
+        console.log('VDJ-API INFO: Express Dev HTTP server listening on port ' + app.get('port'));
     });
 }
 else if (env === 'production') {
     app.use(errorHandler());
 
     app.server = require('http').createServer(app).listen(app.get('port'), function() {
-        console.log('Express Prod HTTP server listening on port ' + app.get('port'));
+        console.log('VDJ-API INFO: Express Prod HTTP server listening on port ' + app.get('port'));
     });
 }
 
