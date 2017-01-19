@@ -272,7 +272,7 @@ agaveIO.getToken = function(auth) {
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
-            'Content-Length': postData.length
+            'Content-Length': Buffer.byteLength(postData)
         }
     };
 
@@ -302,7 +302,7 @@ agaveIO.refreshToken = function(auth) {
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/x-www-form-urlencoded',
-            'Content-Length': postData.length
+            'Content-Length': Buffer.byteLength(postData)
         }
     };
 
@@ -334,7 +334,7 @@ agaveIO.createUser = function(user) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/x-www-form-urlencoded',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -369,7 +369,7 @@ agaveIO.createUserProfile = function(user, userAccessToken) {
         rejectUnauthorized: false,
         headers: {
             'Content-Type':   'application/json',
-            'Content-Length': postData.length,
+            'Content-Length': Buffer.byteLength(postData),
             'Authorization': 'Bearer ' + userAccessToken
         }
     };
@@ -435,7 +435,7 @@ agaveIO.createProjectMetadata = function(projectName) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -491,7 +491,7 @@ agaveIO.createProjectDirectory = function(directory) {
 		path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
 		rejectUnauthorized: false,
 		headers: {
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
 		}
 	    };
@@ -520,7 +520,7 @@ agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid)
         path:     '/meta/v2/data/' + uuid + '/pems',
         rejectUnauthorized: false,
         headers: {
-            'Content-Length': postData.length,
+            'Content-Length': Buffer.byteLength(postData),
             'Authorization': 'Bearer ' + accessToken,
         },
     };
@@ -860,7 +860,7 @@ agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': postData.length,
+            'Content-Length': Buffer.byteLength(postData),
             'Authorization': 'Bearer ' + accessToken,
         },
     };
@@ -895,7 +895,7 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': postData.length,
+            'Content-Length': Buffer.byteLength(postData),
             'Authorization': 'Bearer ' + accessToken,
         }
     };
@@ -931,7 +931,7 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
         rejectUnauthorized: false,
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': postData.length,
+            'Content-Length': Buffer.byteLength(postData),
             'Authorization': 'Bearer ' + accessToken,
         },
     };
@@ -970,7 +970,7 @@ agaveIO.createUserVerificationMetadata = function(username) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -1046,7 +1046,7 @@ agaveIO.verifyUser = function(username, verificationId) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
 		},
 	    };
@@ -1085,7 +1085,7 @@ agaveIO.createPasswordResetMetadata = function(username) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -1490,7 +1490,7 @@ agaveIO.updateUserPassword = function(user) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/x-www-form-urlencoded',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -1835,7 +1835,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
 		},
 	    };
@@ -1939,7 +1939,7 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
@@ -2066,7 +2066,7 @@ agaveIO.createFeedbackMetadata = function(feedback, username, email) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
 		},
 	    };
@@ -2188,7 +2188,7 @@ agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
                 ,
 		rejectUnauthorized: false,
 		headers: {
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		},
 	    };
@@ -2320,7 +2320,7 @@ agaveIO.launchJob = function(jobDataString) {
                 ,
 		rejectUnauthorized: false,
 		headers: {
-		    'Content-Length': jobDataString.length,
+		    'Content-Length': Buffer.byteLength(jobDataString),
 		    'Content-Type': 'application/json',
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		},
@@ -2638,7 +2638,7 @@ agaveIO.createSampleColumns = function(projectUuid, value, metadataUuid) {
 		rejectUnauthorized: false,
 		headers: {
 		    'Content-Type':   'application/json',
-		    'Content-Length': postData.length,
+		    'Content-Length': Buffer.byteLength(postData),
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		}
 	    };
