@@ -47,6 +47,21 @@ ApiResponseController.send404 = function(request, response) {
     }
 };
 
+// Sends a 401 response with an error message to the client
+ApiResponseController.send401 = function(request, response) {
+
+    var apiResponse = new ApiResponse();
+
+    apiResponse.setError();
+    apiResponse.message = 'Unauthorized';
+
+    console.error('Error ApiResponseController.send401: ' + JSON.stringify(request.route));
+
+    if (response) {
+        response.status(401).send(apiResponse);
+    }
+};
+
 ApiResponseController.confirmUpStatus = function(request, response) {
     ApiResponseController.sendSuccess('', response);
 };
