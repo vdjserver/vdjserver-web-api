@@ -1448,6 +1448,45 @@ agaveIO.getMetadata = function(uuid) {
     return deferred.promise;
 };
 
+agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        name: name,
+        value: value
+    };
+    if (associationIds) post.data.associationIds = associationIds;
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data/' + uuid,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+	    console.log(requestSettings);
+	    console.log(postData);
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.deleteMetadata = function(accessToken, uuid) {
 
     var deferred = Q.defer();

@@ -1,6 +1,9 @@
 
 'use strict';
 
+// App
+var app = require('../app');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
@@ -9,10 +12,15 @@ var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Q = require('q');
 var d3 = require('d3');
+var kue = require('kue');
+var taskQueue = kue.createQueue({
+    redis: app.redisConfig,
+});
 
 var ProjectController = {};
 module.exports = ProjectController;
@@ -450,6 +458,122 @@ ProjectController.exportSampleMetadata = function(request, response) {
         .fail(function(error) {
             console.error('VDJ-API ERROR: ProjectController.exportSampleMetadata - project ', projectUuid, ' error ' + error);
             apiResponseController.sendError(error.message, 500, response);
+        })
+        ;
+};
+
+// Publish project to community data
+
+ProjectController.publishProject = function(request, response) {
+    var projectUuid = request.params.projectUuid;
+
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: ProjectController.publishProject - missing Project id parameter');
+        apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    console.log('VDJ-API INFO: ProjectController.publishProject - start, project: ' + projectUuid);
+
+    // First step is to modify project metadata to be in process.
+    // This removes the project from users' list so no changes
+    // are accidently made while the project is being published.
+    // Publishing may take awhile so we use a queue which breaks
+    // it up into steps.
+    // If this first step completes fine, then return success to
+    // the user that publishing is in process.
+
+    var msg = null;
+    ServiceAccount.getToken()
+        .then(function(token) {
+	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+	.then(function(projectMetadata) {
+	    if (projectMetadata.name == 'project') {
+		projectMetadata.name = 'projectPublishInProcess';
+		console.log(projectMetadata);
+		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+	    } else {
+		msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
+		return Q.reject(new Error(msg));
+	    }
+	})
+        .then(function(responseObject) {
+            console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' publishing in process.');
+	    console.log(responseObject);
+
+	    taskQueue
+		.create('publishProjectMoveFilesTask', projectUuid)
+		.removeOnComplete(true)
+		.attempts(5)
+		.backoff({delay: 60 * 1000, type: 'fixed'})
+		.save()
+            ;
+
+	    return apiResponseController.sendSuccess('ok', response);
+        })
+        .fail(function(error) {
+	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.sendError(msg, 500, response);
+        })
+        ;
+};
+
+// Unpublish project from community data
+
+ProjectController.unpublishProject = function(request, response) {
+    var projectUuid = request.params.projectUuid;
+
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: ProjectController.unpublishProject - missing Project id parameter');
+        apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    console.log('VDJ-API INFO: ProjectController.unpublishProject - start, project: ' + projectUuid);
+
+    // First step is to modify project metadata to be in process.
+    // This removes the project from community data list so users
+    // do not accidently try to copy it or look at files.
+    // Unpublishing may take awhile so we use a queue which breaks
+    // it up into steps.
+    // If this first step completes fine, then return success to
+    // the user that unpublishing is in process.
+
+    var msg = null;
+    ServiceAccount.getToken()
+        .then(function(token) {
+	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+	.then(function(projectMetadata) {
+	    if (projectMetadata.name == 'publicProject') {
+		projectMetadata.name = 'projectUnpublishInProcess';
+		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+	    } else {
+		msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
+		return Q.reject(new Error(msg));
+	    }
+	})
+        .then(function() {
+            console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' unpublishing in process.');
+
+	    taskQueue
+		.create('unpublishProjectMoveFilesTask', projectUuid)
+		.removeOnComplete(true)
+		.attempts(5)
+		.backoff({delay: 60 * 1000, type: 'fixed'})
+		.save()
+            ;
+
+	    return apiResponseController.sendSuccess('ok', response);
+        })
+        .fail(function(error) {
+	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.sendError(msg, 500, response);
         })
         ;
 };
