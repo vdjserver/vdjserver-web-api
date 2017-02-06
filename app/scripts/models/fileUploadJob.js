@@ -206,7 +206,8 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
                     return agaveIO.addUsernameToFullFilePermissions(
                         username,
                         ServiceAccount.accessToken(),
-                        that.getRelativeFilePath()
+                        that.getRelativeFilePath(),
+			true
                     );
                 };
             }

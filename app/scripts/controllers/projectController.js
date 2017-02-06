@@ -83,7 +83,7 @@ ProjectController.createProject = function(request, response) {
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - dir pems for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid);
+            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid, true);
         })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - complete for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
@@ -491,7 +491,7 @@ ProjectController.publishProject = function(request, response) {
 	.then(function(projectMetadata) {
 	    if (projectMetadata.name == 'project') {
 		projectMetadata.name = 'projectPublishInProcess';
-		console.log(projectMetadata);
+		//console.log(projectMetadata);
 		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
 	    } else {
 		msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
@@ -500,7 +500,7 @@ ProjectController.publishProject = function(request, response) {
 	})
         .then(function(responseObject) {
             console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' publishing in process.');
-	    console.log(responseObject);
+	    //console.log(responseObject);
 
 	    taskQueue
 		.create('publishProjectMoveFilesTask', projectUuid)

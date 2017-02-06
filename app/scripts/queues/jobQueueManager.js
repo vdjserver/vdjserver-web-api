@@ -349,7 +349,8 @@ JobQueueManager.processJobs = function() {
                                 return agaveIO.addUsernameToFullFilePermissions(
                                     username,
                                     ServiceAccount.accessToken(),
-                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath
+                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
+				    true
                                 );
                             };
                         });

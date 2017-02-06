@@ -65,12 +65,11 @@ PermissionsController.syncFilePermissionsWithProject = function(request, respons
 
                     return agaveIO.addUsernameToFullFilePermissions(
                         username,
-
                         ServiceAccount.accessToken(),
-
                         projectUuid
                             + '/files'
-                            + '/' + encodeURIComponent(filename)
+                            + '/' + encodeURIComponent(filename),
+			true
                     );
                 };
             }
@@ -237,7 +236,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
         .then(function() {
             console.log('PermissionsController.addPermissionsForUsername - event - addUsernameToMetadataPermissions for project ' + projectUuid);
 
-            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid, true);
         })
         // get file metadata pems
         .then(function() {
@@ -561,7 +560,8 @@ PermissionsController.addPermissionsForJob = function(request, response) {
                     return agaveIO.addUsernameToFullFilePermissions(
                         username,
                         token,
-                        path
+                        path,
+			true
                     );
                 };
             }

@@ -32,23 +32,50 @@ ProjectQueueManager.processProjects = function() {
     //
     // 1. Move project files to community data
     // 2. Move job output files to community data
-    // 3. Set permissions on files, metadata and jobs
+    // 3. Set permissions on metadata
     // 4. Update project metadata to public
 
     taskQueue.process('publishProjectMoveFilesTask', function(task, done) {
 	// 1. Move project files to community data
+
+	// This assumes that moving a file on the storage system does not
+	// change the UUID thus the metadata entries do not need to be updated.
+	// This seems to be true if moving individual files, but does not hold
+	// for moving directories.
+	//
+	// Permissions are set when the file is moved.
 
         var projectUuid = task.data;
 	var msg = null;
 
 	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectMoveFilesTask.');
 
-        agaveIO.getProjectFiles(projectUuid)
+        // create community/files directory
+	agaveIO.createCommunityDirectory(projectUuid + '/files')
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.publishProject, created files directory for community data uuid: ' + projectUuid);
+
+		// create community/analyses directory
+		return agaveIO.createCommunityDirectory(projectUuid + '/analyses');
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.publishProject, created analyses directory for community data uuid: ' + projectUuid); 
+
+		return agaveIO.getProjectFiles(projectUuid);
+            })
             .then(function(projectFiles) {
+		console.log('VDJ-API INFO: ProjectController.publishProject, moving project files (' + projectFiles.length + ' files) for community data uuid: ' + projectUuid);
+		var promises = projectFiles.map(function(entry) {
+                    return function() {
+			return agaveIO.moveProjectFileToCommunity(projectUuid, entry.value.name, true);
+		    }
+		});
+
+		return promises.reduce(Q.when, new Q());
 	    })
             .then(function() {
                 taskQueue
-                    .create('publishProjectFinishTask', projectUuid)
+                    .create('publishProjectMoveJobsTask', projectUuid)
                     .removeOnComplete(true)
                     .attempts(5)
                     .backoff({delay: 60 * 1000, type: 'fixed'})
@@ -68,6 +95,78 @@ ProjectQueueManager.processProjects = function() {
             ;
     });
 
+    taskQueue.process('publishProjectMoveJobsTask', function(task, done) {
+	// 2. Move job output files to community data
+
+        var projectUuid = task.data;
+	var msg = null;
+
+	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectMoveJobsTask.');
+
+        // get jobs (this leaves behind the archived jobs)
+	agaveIO.getJobMetadataForProject(projectUuid)
+            .then(function(jobMetadata) {
+		console.log('VDJ-API INFO: ProjectController.publishProject, moving job data (' + jobMetadata.length + ' jobs) for community data uuid: ' + projectUuid);
+		var promises = jobMetadata.map(function(entry) {
+                    return function() {
+			return agaveIO.moveJobToCommunity(projectUuid, entry.value.jobUuid, true);
+		    }
+		});
+
+		return promises.reduce(Q.when, new Q());
+            })
+            .then(function() {
+                taskQueue
+                    .create('publishProjectSetMetadataPermissionsTask', projectUuid)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectMoveJobsTask.');
+                done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - publishProjectMoveJobsTask - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            })
+            ;
+    });
+
+    taskQueue.process('publishProjectSetMetadataPermissionsTask', function(task, done) {
+	// 3. Set permissions on metadata
+
+        var projectUuid = task.data;
+	var msg;
+
+	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectSetMetadataPermissionsTask.');
+
+	agaveIO.setCommunityMetadataPermissions(projectUuid, true)
+            .then(function() {
+                taskQueue
+                    .create('publishProjectFinishTask', projectUuid)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectSetMetadataPermissionsTask.');
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
     taskQueue.process('publishProjectFinishTask', function(task, done) {
 	// 4. Update project metadata to public
 
@@ -81,6 +180,7 @@ ProjectQueueManager.processProjects = function() {
 	    .then(function(projectMetadata) {
 		if (projectMetadata.name == 'projectPublishInProcess') {
 		    projectMetadata.name = 'publicProject';
+		    projectMetadata.value.showArchivedJobs = false;
 		    return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
 		} else {
 		    msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in state: projectPublishInProcess.';
@@ -103,7 +203,7 @@ ProjectQueueManager.processProjects = function() {
     //
     // 1. Move project files from community data
     // 2. Move job output files from community data
-    // 3. Set permissions on files, metadata and jobs
+    // 3. Set permissions on metadata
     // 4. Update project metadata to private
 
     taskQueue.process('unpublishProjectMoveFilesTask', function(task, done) {
@@ -116,10 +216,18 @@ ProjectQueueManager.processProjects = function() {
 
         agaveIO.getProjectFiles(projectUuid)
             .then(function(projectFiles) {
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, moving community data files back to project uuid: ' + projectUuid);
+		var promises = projectFiles.map(function(entry) {
+                    return function() {
+			return agaveIO.moveProjectFileToCommunity(projectUuid, entry.value.name, false);
+		    }
+		});
+
+		return promises.reduce(Q.when, new Q());
 	    })
             .then(function() {
                 taskQueue
-                    .create('unpublishProjectFinishTask', projectUuid)
+                    .create('unpublishProjectMoveJobsTask', projectUuid)
                     .removeOnComplete(true)
                     .attempts(5)
                     .backoff({delay: 60 * 1000, type: 'fixed'})
@@ -137,6 +245,78 @@ ProjectQueueManager.processProjects = function() {
 		done(new Error(msg));
             })
             ;
+    });
+
+    taskQueue.process('unpublishProjectMoveJobsTask', function(task, done) {
+	// 2. Move job output files from community data
+
+        var projectUuid = task.data;
+	var msg = null;
+
+	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectMoveJobsTask.');
+
+        // get jobs (this leaves behind the archived jobs)
+	agaveIO.getJobMetadataForProject(projectUuid)
+            .then(function(jobMetadata) {
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, moving job data (' + jobMetadata.length + ' jobs) for community data uuid: ' + projectUuid);
+		var promises = jobMetadata.map(function(entry) {
+                    return function() {
+			return agaveIO.moveJobToCommunity(projectUuid, entry.value.jobUuid, false);
+		    }
+		});
+
+		return promises.reduce(Q.when, new Q());
+            })
+            .then(function() {
+                taskQueue
+                    .create('unpublishProjectSetMetadataPermissionsTask', projectUuid)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectMoveJobsTask.');
+                done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - unpublishProjectMoveJobsTask - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            })
+            ;
+    });
+
+    taskQueue.process('unpublishProjectSetMetadataPermissionsTask', function(task, done) {
+	// 3. Set permissions on metadata
+
+        var projectUuid = task.data;
+	var msg;
+
+	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectSetMetadataPermissionsTask.');
+
+	agaveIO.setCommunityMetadataPermissions(projectUuid, false)
+            .then(function() {
+                taskQueue
+                    .create('unpublishProjectFinishTask', projectUuid)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectSetMetadataPermissionsTask.');
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
     });
 
     taskQueue.process('unpublishProjectFinishTask', function(task, done) {
