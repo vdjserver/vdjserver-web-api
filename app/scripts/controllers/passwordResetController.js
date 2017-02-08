@@ -7,6 +7,7 @@ var apiResponseController = require('./apiResponseController');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Models
 var ServiceAccount = require('../models/serviceAccount');
@@ -22,12 +23,12 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
     var username = request.body.username;
 
     if (!username) {
-        console.error('PasswordResetController.createResetPasswordRequest - error - missing username parameter');
+        console.error('VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
-    console.log('PasswordResetController.createResetPasswordRequest - event - begin for user ' + username);
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
 
     var userProfile;
 
@@ -38,7 +39,7 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
     // 4b. Send response error
     agaveIO.getUserProfile(username) // 1.
         .then(function(profile) {
-            console.log('PasswordResetController.createResetPasswordRequest - event - getUserProfile for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
 
             if (profile[0]) {
                 userProfile = profile[0];
@@ -49,17 +50,19 @@ PasswordResetController.createResetPasswordRequest = function(request, response)
             }
         })
         .then(function(passwordReset) {
-            console.log('PasswordResetController.createResetPasswordRequest - event - createPasswordResetMetadata for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - createPasswordResetMetadata for user ' + username);
 
             return emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid); // 3.
         })
         .then(function() {
-            console.log('PasswordResetController.createResetPasswordRequest - event - sendPasswordResetEmail for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
 
             apiResponseController.sendSuccess('Password reset email sent.', response); // 4a.
         })
         .fail(function(error) {
-            console.error('PasswordResetController.createResetPasswordRequest - error - username ' + username + ', error ' + error);
+            var msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - username ' + username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 500, response); // 4b.
         })
         ;
@@ -72,24 +75,24 @@ PasswordResetController.processResetPasswordRequest = function(request, response
     var newPassword = request.body.newPassword;
 
     if (!username) {
-        console.error('PasswordResetController.processResetPasswordRequest - error - missing username parameter');
+        console.error('VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - missing username parameter');
         apiResponseController.sendError('Username required.', 400, response);
         return;
     }
 
     if (!uuid) {
-        console.error('PasswordResetController.processResetPasswordRequest - error - missing uuid parameter');
+        console.error('VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - missing uuid parameter');
         apiResponseController.sendError('Password reset id required.', 400, response);
         return;
     }
 
     if (!newPassword) {
-        console.error('PasswordResetController.processResetPasswordRequest - error - missing newPassword parameter');
+        console.error('VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - missing newPassword parameter');
         apiResponseController.sendError('New password required.', 400, response);
         return;
     }
 
-    console.log('PasswordResetController.processResetPasswordRequest - event - begin for user ' + username);
+    console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - begin for user ' + username);
 
     var passwordReset;
 
@@ -104,7 +107,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
     // 6b. Error
     agaveIO.getPasswordResetMetadata(uuid) // 1.
         .then(function(passwordResetMetadata) {
-            console.log('PasswordResetController.processResetPasswordRequest - event - getPasswordResetMetadata for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
 
 	    //console.log(passwordResetMetadata);
 	    //console.log(passwordResetMetadata[0]);
@@ -120,7 +123,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             }
         })
         .then(function(profile) {
-            console.log('PasswordResetController.processResetPasswordRequest - event - getUserProfile for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getUserProfile for user ' + username);
 
             return agaveIO.updateUserPassword({
                 'username': username,
@@ -129,7 +132,7 @@ PasswordResetController.processResetPasswordRequest = function(request, response
             }); // 4.
         })
         .then(function() {
-            console.log('PasswordResetController.processResetPasswordRequest - event - updateUserPassword for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
 
             /*
                 while metadata is deleted, service returns 500 error;
@@ -141,13 +144,14 @@ PasswordResetController.processResetPasswordRequest = function(request, response
                 });
         })
         .then(function() {
-            console.log('PasswordResetController.processResetPasswordRequest - event - deleteMetadata for user ' + username);
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
 
             apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
         })
         .fail(function(error) {
-            console.error('PasswordResetController.processResetPasswordRequest - error - username ' + username + ', error ' + error);
-
+            var msg = 'VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - username ' + username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 500, response); // 6b.
         })
         ;
