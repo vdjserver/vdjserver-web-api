@@ -351,6 +351,34 @@ agaveIO.createUser = function(user) {
     return deferred.promise;
 };
 
+agaveIO.getAgaveUserProfile = function(accessToken, username) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/profiles/v2/' + username,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + accessToken
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createUserProfile = function(user, userAccessToken) {
 
     var deferred = Q.defer();
@@ -466,6 +494,7 @@ agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
 	}
     };
 
+    console.log(requestSettings);
     agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
@@ -569,6 +598,31 @@ agaveIO.getMetadataPermissions = function(accessToken, uuid) {
         host:     agaveSettings.hostname,
         method:   'GET',
         path:     '/meta/v2/data/' + uuid + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getMetadataPermissionsForUser = function(accessToken, uuid, username) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data/' + uuid + '/pems/' + username,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + accessToken
