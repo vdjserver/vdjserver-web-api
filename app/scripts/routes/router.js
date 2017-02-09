@@ -13,6 +13,7 @@ var projectController     = require('../controllers/projectController');
 var telemetryController   = require('../controllers/telemetryController');
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
+var authController        = require('../controllers/authController');
 
 // Passport
 var passport      = require('passport');
@@ -20,6 +21,7 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 
 passport.use(new BasicStrategy(
     function(userKey, userSecret, next) {
+	console.log(userKey);
         return next(null, {username: userKey, password: userSecret});
     }
 ));
@@ -111,6 +113,9 @@ module.exports = function(app) {
     app.post(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
+	authController.authForProjectFromBody,
         permissionsController.addPermissionsForUsername
     );
 
@@ -118,12 +123,18 @@ module.exports = function(app) {
     app.delete(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
+	authController.authForProjectFromBody,
         permissionsController.removePermissionsForUsername
     );
 
     // Create a project
     app.post(
         '/projects',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
         projectController.createProject
     );
 
@@ -131,11 +142,15 @@ module.exports = function(app) {
     app.get(
         '/projects/:projectUuid/metadata/subject/export',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.exportSubjectMetadata
     );
     app.post(
         '/projects/:projectUuid/metadata/subject/import',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.importSubjectMetadata
     );
 
@@ -143,11 +158,15 @@ module.exports = function(app) {
     app.get(
         '/projects/:projectUuid/metadata/sample/export',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.exportSampleMetadata
     );
     app.post(
         '/projects/:projectUuid/metadata/sample/import',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.importSampleMetadata
     );
 
