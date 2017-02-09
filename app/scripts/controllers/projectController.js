@@ -35,6 +35,12 @@ ProjectController.createProject = function(request, response) {
         return;
     }
 
+    if (username != request.user.username) {
+        console.error('VDJ-API ERROR: ProjectController.createProject - error - cannot create project for different user');
+        apiResponseController.sendError('Cannot create project for another user.', 400, response);
+        return;
+    }
+
     var projectMetadata;
     var uuid;
 
