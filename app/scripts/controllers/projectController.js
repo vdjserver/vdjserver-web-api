@@ -121,6 +121,7 @@ ProjectController.importSubjectMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - get import file contents');
 	    if (fileData) {
 		//console.log(fileData);
+		fileData = fileData.trim();
 
 		data = d3.tsvParse(fileData);
 		//console.log(data);
@@ -292,6 +293,7 @@ ProjectController.importSampleMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - get import file contents');
 	    if (fileData) {
 		//console.log(fileData);
+		fileData = fileData.trim();
 
 		data = d3.tsvParse(fileData);
 		//console.log(data);
