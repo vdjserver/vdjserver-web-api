@@ -33,11 +33,12 @@ module.exports = function(app) {
         apiResponseController.confirmUpStatus
     );
 
-    app.get(
-        '/export/community',
-        passport.authenticate('basic', {session: false}),
-        communityDataController.getCommunityData
-    );
+    // not used, so disabled
+    //app.get(
+    //    '/export/community',
+    //    passport.authenticate('basic', {session: false}),
+    //    communityDataController.getCommunityData
+    //);
 
     // Send feedback
     app.post(
@@ -81,6 +82,9 @@ module.exports = function(app) {
         '/notifications/files/import',
         notificationsController.processFileImportNotifications
     );
+//        passport.authenticate('basic', {session: false}),
+//	authController.authUser,
+//	authController.authForProjectFromQuery,
 
     // Process Job Create Notification
     app.post(
@@ -89,23 +93,28 @@ module.exports = function(app) {
     );
 
     // Update file permissions
-    app.post(
-        '/permissions/files',
-        passport.authenticate('basic', {session: false}),
-        permissionsController.syncFilePermissionsWithProject
-    );
+    // not used, so disabled
+    //app.post(
+    //    '/permissions/files',
+    //    passport.authenticate('basic', {session: false}),
+    //    permissionsController.syncFilePermissionsWithProject
+    //);
 
     // Share Job With Project Member (update job permissions)
-    app.post(
-        '/permissions/jobs',
-        passport.authenticate('basic', {session: false}),
-        permissionsController.addPermissionsForJob
-    );
+    // not used, so disabled
+    //app.post(
+    //    '/permissions/jobs',
+    //    passport.authenticate('basic', {session: false}),
+    //    permissionsController.addPermissionsForJob
+    //);
 
     // Update metadata permissions
     app.post(
         '/permissions/metadata',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromBody,
+	authController.authForMetadataFromBody,
         permissionsController.syncMetadataPermissionsWithProject
     );
 

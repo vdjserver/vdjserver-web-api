@@ -130,3 +130,38 @@ AuthController.authForProjectFromParams = function(request, response, next) {
 AuthController.authForProjectFromBody = function(request, response, next) {
     return AuthController.authForProject(request, response, next, request.body.projectUuid);
 }
+
+AuthController.authForProjectFromQuery = function(request, response, next) {
+    return AuthController.authForProject(request, response, next, request.query.projectUuid);
+}
+
+//
+// verify user has access to metadata entry
+//
+AuthController.authForMetadata = function(request, response, next, uuid) {
+
+    if (!uuid) {
+        return apiResponseController.sendError('Metadata uuid required.', 400, response);
+    }
+
+    agaveIO.getMetadataPermissionsForUser(request.user.password, uuid, request.user.username)
+        .then(function(metadataPermissions) {
+	    // we can read the metadata, but do we have write permission?
+	    if (metadataPermissions && metadataPermissions.permission.write)
+		return next();
+	    else {
+		return apiResponseController.send401(request, response);
+	    }
+        })
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: AuthController.authForMetadata - uuid: ' + uuid + ', route '
+		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.send401(request, response);
+        });
+}
+
+AuthController.authForMetadataFromBody = function(request, response, next) {
+    return AuthController.authForMetadata(request, response, next, request.body.uuid);
+}
