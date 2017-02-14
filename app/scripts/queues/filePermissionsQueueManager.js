@@ -104,9 +104,9 @@ FilePermissionsQueueManager.processFileUploads = function() {
 		} else {
                     var msg = 'VDJ-API ERROR: fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error;
 		    console.error(msg);
-		    console.error(error.stack);
+		    //console.error(error.stack);
 		    webhookIO.postToSlack(msg);
-                    done(new Error(msg));
+                    done(); // no retry
 		}
             })
             ;

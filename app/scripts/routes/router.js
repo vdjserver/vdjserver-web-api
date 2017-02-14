@@ -80,11 +80,11 @@ module.exports = function(app) {
     // Process File Import Notification
     app.post(
         '/notifications/files/import',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromQuery,
         notificationsController.processFileImportNotifications
     );
-//        passport.authenticate('basic', {session: false}),
-//	authController.authUser,
-//	authController.authForProjectFromQuery,
 
     // Process Job Create Notification
     app.post(

@@ -13,6 +13,10 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
+// Processing
+var agaveIO = require('../vendor/agaveIO');
+var webhookIO = require('../vendor/webhookIO');
+
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
 
@@ -36,22 +40,14 @@ NotificationsController.processFileImportNotifications = function(request, respo
         tags: request.query.tags,
     };
 
-    console.log('NotificationsController.processFileImportNotifications - event - begin for file uuid' + fileNotification.fileUuid);
+    console.log('VDJ-API INFO: NotificationsController.processFileImportNotifications - event - begin for file uuid ' + fileNotification.fileUuid);
 
-    /*
-        1.) Send response to prevent blocking notification client
-        2.) Check if this fileId has been received in the past 5 minutes-ish or so (Agave is sending duplicates as of 17/June/2015)
-        3.) Add to queues
-        4.) Run filePermission task and dequeue if successful
-        5.) Run fileMetadata task and dequeue if successful
-        6.) Run fileMetadataPermission task and dequeue if successful
-        7.) ???
-        8.) Profit
-    */
-    Q.when(apiResponseController.sendSuccess('', response), function() {
-        console.log('NotificationsController.processFileImportNotifications - event - queued for file uuid' + fileNotification.fileUuid);
+    // verify file notification
+    var fileUploadJob = new FileUploadJob(fileNotification);
 
-        return Q.fcall(function() {
+    fileUploadJob.verifyFileNotification()
+	.then(function() {
+	    // queue file upload task
             taskQueue
                 .create('fileUploadPoll', fileNotification)
                 .removeOnComplete(true)
@@ -59,10 +55,18 @@ NotificationsController.processFileImportNotifications = function(request, respo
                 .backoff({delay: 30 * 1000, type: 'fixed'})
                 .save()
                 ;
+	})
+	.then(function() {
+            console.log('VDJ-API INFO: NotificationsController.processFileImportNotifications - event - queued for file uuid ' + fileNotification.fileUuid);
+	    return apiResponseController.sendSuccess('', response);
+	})
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: NotificationsController.processFileImportNotifications - fileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.sendError(msg, 500, response);
         })
         ;
-    })
-    ;
 };
 
 NotificationsController.processJobNotifications = function(request, response) {
