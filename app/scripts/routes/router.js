@@ -54,6 +54,8 @@ module.exports = function(app) {
     app.get(
         '/jobs/queue/pending',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromQuery,
         jobsController.getPendingJobs
     );
 
@@ -68,12 +70,14 @@ module.exports = function(app) {
     app.post(
         '/jobs/archive/:jobId',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
         jobsController.archiveJob
     );
 
     app.post(
         '/jobs/unarchive/:jobId',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
         jobsController.unarchiveJob
     );
 
