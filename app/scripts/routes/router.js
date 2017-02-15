@@ -63,6 +63,8 @@ module.exports = function(app) {
     app.post(
         '/jobs/queue',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromBody,
         jobsController.queueJob
     );
 
