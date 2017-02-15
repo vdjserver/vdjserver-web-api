@@ -190,6 +190,8 @@ module.exports = function(app) {
     // Record Telemetry Data
     app.post(
         '/telemetry',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
         telemetryController.recordErrorTelemetry
     );
 
