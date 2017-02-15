@@ -230,14 +230,16 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
 
 };
 
+
 FileUploadJob.prototype.checkFileAvailability = function() {
 
     var path = this.getRelativeFilePath();
 
+    var isAvailable = false;
+
+    var that = this;
     return agaveIO.getFileHistory(path)
         .then(function(fileHistory) {
-
-            let isAvailable = false;
 
             let availabilityTime = moment().subtract('2', 'minutes');
 
@@ -252,12 +254,36 @@ FileUploadJob.prototype.checkFileAvailability = function() {
                 //if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED' && historyDatetime.isAfter(availabilityTime)) {
                 if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED') {
                     isAvailable = true;
-                    break;
+		    return agaveIO.getFileDetail(path);
                 }
-            };
 
-            return isAvailable;
+		// this is a drop through for directories
+                if (history.hasOwnProperty('status') && history.status === 'CREATED') {
+		    return agaveIO.getFileDetail(path);
+                }
+
+            };
+	    
+	    return null;
         })
+        .then(function(fileHistory) {
+	    if (!fileHistory) return isAvailable;
+
+	    if (fileHistory.length > 1) {
+		return Q.reject(new Error('file path: ' + path + ' returned more than one detail records, maybe a directory?'))
+	    } else {
+		if (fileHistory[0].format == 'folder') {
+		    return Q.reject(new Error('file path: ' + path + ' is a directory.'))
+		} else {
+		    var metadataString = fileHistory[0]._links.metadata.href;
+		    var split = metadataString.split('%22');
+		    //console.log(split);
+		    if (split[3] != that.fileUuid) return Q.reject(new Error('fileUuid: ' + that.fileUuid + ' does not match uuid ' + split[3] + ' for filePath: ' + path));
+
+		    return isAvailable;
+		}
+	    }
+	})
         ;
 };
 
@@ -272,24 +298,7 @@ FileUploadJob.prototype.verifyFileNotification = function() {
     var uuid = this.getProjectId();
     if (uuid != this.projectUuid) return Q.reject(new Error('file path: ' + path + ' does not match project id: ' + this.projectUuid));
 
-    var that = this;
-    return agaveIO.getFileDetail(path)
-        .then(function(fileHistory) {
-	    if (fileHistory.length > 1) {
-		return Q.reject(new Error('file path: ' + path + ' returned more than one detail records, maybe a directory?'))
-	    } else {
-		if (fileHistory[0].format == 'folder') {
-		    return Q.reject(new Error('file path: ' + path + ' is a directory.'))
-		} else {
-		    var metadataString = fileHistory[0]._links.metadata.href;
-		    var split = metadataString.split('%22');
-		    console.log(split);
-		    if (split[3] != that.fileUuid) return Q.reject(new Error('fileUuid: ' + that.fileUuid + ' does not match uuid ' + split[3] + ' for filePath: ' + path));
-		    else return;
-		}
-	    }
-	})
-        ;
+    return Q.resolve();
 };
 
 module.exports = FileUploadJob;
