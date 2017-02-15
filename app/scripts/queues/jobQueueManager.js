@@ -217,7 +217,7 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('shareJobTask', function(task, done) {
 
         var jobData = task.data;
-	console.log(jobData);
+	//console.log(jobData);
 
         // Get project users
 	ServiceAccount.getToken()

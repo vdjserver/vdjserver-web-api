@@ -39,14 +39,14 @@ AuthController.verifyUser = function(request, response, next, username) {
                 return next();
             }
             else {
-		apiResponseController.sendError('Invalid username.', 400, response);
+		return apiResponseController.sendError('Invalid username.', 400, response);
             }
         })
         .fail(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
-            apiResponseController.sendError(msg, 500, response);
+            return apiResponseController.sendError(msg, 500, response);
         })
         ;
 }
@@ -69,7 +69,7 @@ AuthController.authUser = function(request, response, next) {
 	    if (userProfile && userProfile.username == request.user.username)
 		return next();
 	    else {
-		console.log(userProfile);
+		//console.log(userProfile);
 		var msg = 'VDJ-API ERROR: AuthController.authUser - route '
 		    + JSON.stringify(request.route) + ', authentication token ' + request.user.password + ' provided with non-matching username: '
 		    + userProfile.username + ' != ' + request.user.username;

@@ -184,7 +184,7 @@ NotificationsController.processJobNotifications = function(request, response) {
 		);
 	    }
 
-	    apiResponseController.sendSuccess('ok', response);
+	    return apiResponseController.sendSuccess('ok', response);
 	})
         .fail(function(error) {
 	    if (!msg) msg = 'VDJ-API ERROR: NotificationsController.processJobNotifications - ' + message + ' - job ' + jobId + ', error ' + error;

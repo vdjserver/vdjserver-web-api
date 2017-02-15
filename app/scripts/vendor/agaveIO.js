@@ -494,7 +494,6 @@ agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
 	}
     };
 
-    console.log(requestSettings);
     agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
@@ -1674,13 +1673,11 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		    },
 		};
-		//console.log(requestSettings);
 
 		return agaveIO.sendRequest(requestSettings, null)
 	    })
             .then(function(responseObject) {
 		var result = responseObject.result;
-		//console.log(result);
 		if (result.length > 0) {
 		    // maybe more data
 		    models = models.concat(result);

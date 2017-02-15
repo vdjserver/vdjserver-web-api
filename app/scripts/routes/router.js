@@ -21,7 +21,6 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 
 passport.use(new BasicStrategy(
     function(userKey, userSecret, next) {
-	console.log(userKey);
         return next(null, {username: userKey, password: userSecret});
     }
 ));
