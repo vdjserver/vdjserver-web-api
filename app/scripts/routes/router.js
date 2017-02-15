@@ -43,6 +43,8 @@ module.exports = function(app) {
     // Send feedback
     app.post(
         '/feedback',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
         feedbackController.createFeedback
     );
 
