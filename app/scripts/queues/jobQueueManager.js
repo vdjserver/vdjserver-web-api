@@ -73,7 +73,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: createArchivePathDirectoryTask error is: "' + error + '" for ' + jobData.config.name);
+                console.error('VDJ-API ERROR: createArchivePathDirectoryTask error is: "' + error + '" for ' + jobData.config.name);
                 done(new Error('createArchivePathDirectoryTask error is: "' + error + '" for ' + jobData.config.name));
             })
             ;
@@ -170,7 +170,7 @@ JobQueueManager.processJobs = function() {
             })
             .fail(function(error) {
 		var msg = 'VDJ-API ERROR: createArchiveMetadataTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid;
-                console.log(msg);
+                console.error(msg);
 		webhookIO.postToSlack(msg);
                 done(new Error('createArchiveMetadataTask error is: "' + error + '" for ' + jobData.config.name));
             })
@@ -207,7 +207,7 @@ JobQueueManager.processJobs = function() {
             })
             .fail(function(error) {
 		var msg = 'VDJ-API ERROR: submitJobTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid;
-                console.log(msg);
+                console.error(msg);
 		webhookIO.postToSlack(msg);
                 done(new Error('submitJobTask error is: "' + error + '" for "' + jobData.config.name + '" project ' + jobData.projectUuid));
             })
@@ -217,7 +217,7 @@ JobQueueManager.processJobs = function() {
     taskQueue.process('shareJobTask', function(task, done) {
 
         var jobData = task.data;
-	console.log(jobData);
+	//console.log(jobData);
 
         // Get project users
 	ServiceAccount.getToken()
@@ -262,7 +262,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: shareJobTask error is: "' + error + '" for ' + jobData.jobId);
+                console.error('VDJ-API ERROR: shareJobTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('shareJobTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
@@ -308,7 +308,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log(error);
+                console.error(error);
 		webhookIO.postToSlack(error);
                 done(error);
             })
@@ -372,7 +372,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: shareJobOutputFilesTask error is: "' + error + '" for ' + jobData.jobId);
+                console.error('VDJ-API ERROR: shareJobOutputFilesTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('shareJobOutputFilesTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
@@ -447,7 +447,9 @@ JobQueueManager.processJobs = function() {
 		;
 	    })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: createProcessMetadataTask error is: "' + error + '" for ' + jobData.jobId);
+                var msg = 'VDJ-API ERROR: createProcessMetadataTask error is: "' + error + '" for ' + jobData.jobId;
+                console.error(msg);
+		webhookIO.postToSlack(msg);
 
                 done(new Error('createProcessMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
@@ -519,7 +521,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: createJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId);
+                console.error('VDJ-API ERROR: createJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('createJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;
@@ -580,7 +582,7 @@ JobQueueManager.processJobs = function() {
                 done();
             })
             .fail(function(error) {
-                console.log('VDJ-API ERROR: shareJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId);
+                console.error('VDJ-API ERROR: shareJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId);
                 done(new Error('shareJobOutputFileMetadataTask error is: "' + error + '" for ' + jobData.jobId));
             })
             ;

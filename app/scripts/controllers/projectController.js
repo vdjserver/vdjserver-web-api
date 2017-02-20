@@ -35,6 +35,12 @@ ProjectController.createProject = function(request, response) {
         return;
     }
 
+    if (username != request.user.username) {
+        console.error('VDJ-API ERROR: ProjectController.createProject - error - cannot create project for different user');
+        apiResponseController.sendError('Cannot create project for another user.', 400, response);
+        return;
+    }
+
     var projectMetadata;
     var uuid;
 
@@ -115,6 +121,7 @@ ProjectController.importSubjectMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - get import file contents');
 	    if (fileData) {
 		//console.log(fileData);
+		fileData = fileData.trim();
 
 		data = d3.tsvParse(fileData);
 		//console.log(data);
@@ -286,6 +293,7 @@ ProjectController.importSampleMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - get import file contents');
 	    if (fileData) {
 		//console.log(fileData);
+		fileData = fileData.trim();
 
 		data = d3.tsvParse(fileData);
 		//console.log(data);

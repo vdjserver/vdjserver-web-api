@@ -13,6 +13,7 @@ var projectController     = require('../controllers/projectController');
 var telemetryController   = require('../controllers/telemetryController');
 var tokenController       = require('../controllers/tokenController');
 var userController        = require('../controllers/userController');
+var authController        = require('../controllers/authController');
 
 // Passport
 var passport      = require('passport');
@@ -31,15 +32,18 @@ module.exports = function(app) {
         apiResponseController.confirmUpStatus
     );
 
-    app.get(
-        '/export/community',
-        passport.authenticate('basic', {session: false}),
-        communityDataController.getCommunityData
-    );
+    // not used, so disabled
+    //app.get(
+    //    '/export/community',
+    //    passport.authenticate('basic', {session: false}),
+    //    communityDataController.getCommunityData
+    //);
 
     // Send feedback
     app.post(
         '/feedback',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
         feedbackController.createFeedback
     );
 
@@ -51,6 +55,8 @@ module.exports = function(app) {
     app.get(
         '/jobs/queue/pending',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromQuery,
         jobsController.getPendingJobs
     );
 
@@ -58,6 +64,8 @@ module.exports = function(app) {
     app.post(
         '/jobs/queue',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromBody,
         jobsController.queueJob
     );
 
@@ -65,18 +73,23 @@ module.exports = function(app) {
     app.post(
         '/jobs/archive/:jobId',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
         jobsController.archiveJob
     );
 
     app.post(
         '/jobs/unarchive/:jobId',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
         jobsController.unarchiveJob
     );
 
     // Process File Import Notification
     app.post(
         '/notifications/files/import',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromQuery,
         notificationsController.processFileImportNotifications
     );
 
@@ -87,23 +100,28 @@ module.exports = function(app) {
     );
 
     // Update file permissions
-    app.post(
-        '/permissions/files',
-        passport.authenticate('basic', {session: false}),
-        permissionsController.syncFilePermissionsWithProject
-    );
+    // not used, so disabled
+    //app.post(
+    //    '/permissions/files',
+    //    passport.authenticate('basic', {session: false}),
+    //    permissionsController.syncFilePermissionsWithProject
+    //);
 
     // Share Job With Project Member (update job permissions)
-    app.post(
-        '/permissions/jobs',
-        passport.authenticate('basic', {session: false}),
-        permissionsController.addPermissionsForJob
-    );
+    // not used, so disabled
+    //app.post(
+    //    '/permissions/jobs',
+    //    passport.authenticate('basic', {session: false}),
+    //    permissionsController.addPermissionsForJob
+    //);
 
     // Update metadata permissions
     app.post(
         '/permissions/metadata',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromBody,
+	authController.authForMetadataFromBody,
         permissionsController.syncMetadataPermissionsWithProject
     );
 
@@ -111,6 +129,9 @@ module.exports = function(app) {
     app.post(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
+	authController.authForProjectFromBody,
         permissionsController.addPermissionsForUsername
     );
 
@@ -118,12 +139,18 @@ module.exports = function(app) {
     app.delete(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
+	authController.authForProjectFromBody,
         permissionsController.removePermissionsForUsername
     );
 
     // Create a project
     app.post(
         '/projects',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.verifyUserFromBody,
         projectController.createProject
     );
 
@@ -131,11 +158,15 @@ module.exports = function(app) {
     app.get(
         '/projects/:projectUuid/metadata/subject/export',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.exportSubjectMetadata
     );
     app.post(
         '/projects/:projectUuid/metadata/subject/import',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.importSubjectMetadata
     );
 
@@ -143,17 +174,23 @@ module.exports = function(app) {
     app.get(
         '/projects/:projectUuid/metadata/sample/export',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.exportSampleMetadata
     );
     app.post(
         '/projects/:projectUuid/metadata/sample/import',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
         projectController.importSampleMetadata
     );
 
     // Record Telemetry Data
     app.post(
         '/telemetry',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
         telemetryController.recordErrorTelemetry
     );
 

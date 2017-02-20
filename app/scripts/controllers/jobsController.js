@@ -30,6 +30,12 @@ JobsController.getPendingJobs = function(request, response) {
 
     let projectUuid = request.query.projectUuid;
 
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: JobsController.getPendingJobs - missing projectUuid parameter');
+        apiResponseController.sendError('Project uuid required.', 400, response);
+        return;
+    }
+
     let pendingJobs = [];
 
     Q()
@@ -367,7 +373,7 @@ JobsController.archiveJob = function(request, response) {
 	.then(function(jobMetadata) {
 	    //console.log(jobMetadata);	    
 
-	    if (jobMetadata[0].name == 'projectJob') {
+	    if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJob') {
 		// archive the job
 		return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJobArchive', jobMetadata[0].value);
 	    } else {
@@ -424,7 +430,7 @@ JobsController.unarchiveJob = function(request, response) {
 	.then(function(jobMetadata) {
 	    //console.log(jobMetadata);	    
 
-	    if (jobMetadata[0].name == 'projectJobArchive') {
+	    if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJobArchive') {
 		// unarchive the job
 		return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJob', jobMetadata[0].value);
 	    } else {
