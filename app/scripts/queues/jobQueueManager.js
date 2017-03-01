@@ -128,6 +128,9 @@ JobQueueManager.processJobs = function() {
 	    .then(function(jobOutput) {
 		if (jobOutput) metadata.jobSelected = jobOutput;
 
+		// secondary inputs provided?
+		if (jobData.config.secondaryInputs) metadata.secondaryInputs = jobData.config.secondaryInputs;
+
 		return agaveIO.getProcessMetadataForProject(jobData.projectUuid);
 	    })
 	    .then(function(processMetadata) {
@@ -137,7 +140,6 @@ JobQueueManager.processJobs = function() {
 		    metadata.processMetadata[uuid] = processMetadata[i];
 		}
 
-		//return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
 		return agaveIO.getProjectFileMetadata(jobData.projectUuid);
 	    })
 	    .then(function(fileMetadata) {
