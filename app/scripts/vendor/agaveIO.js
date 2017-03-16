@@ -1189,7 +1189,7 @@ agaveIO.createPasswordResetMetadata = function(username) {
     return deferred.promise;
 };
 
-agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
+agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 
     var deferred = Q.defer();
 
@@ -1201,6 +1201,7 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
             jobUuid: jobUuid,
         },
     };
+    if (secondaryInputs) postData.value.secondaryInputs = secondaryInputs;
 
     postData = JSON.stringify(postData);
 
