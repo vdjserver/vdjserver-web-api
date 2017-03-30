@@ -60,7 +60,7 @@ FeedbackController.createFeedback = function(request, response) {
         .fail(function(error) {
             console.log('FeedbackController.createFeedback - event - failed to retrieve user profile. Feedback is: ' + JSON.stringify(feedback));
 
-            apiResponseController.sendError('Unable to find associated user profile with feedback.', response);
+            apiResponseController.sendError('Unable to find associated user profile with feedback.', 400, response);
         })
         ;
 };

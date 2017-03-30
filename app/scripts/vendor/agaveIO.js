@@ -419,6 +419,34 @@ agaveIO.createUser = function(user) {
     return deferred.promise;
 };
 
+agaveIO.getAgaveUserProfile = function(accessToken, username) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:   agaveSettings.hostname,
+		method: 'GET',
+		path:   '/profiles/v2/' + username,
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + accessToken
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.createUserProfile = function(user, userAccessToken) {
 
     var deferred = Q.defer();
@@ -637,6 +665,31 @@ agaveIO.getMetadataPermissions = function(accessToken, uuid) {
         host:     agaveSettings.hostname,
         method:   'GET',
         path:     '/meta/v2/data/' + uuid + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
+    };
+
+    agaveIO.sendRequest(requestSettings, null)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getMetadataPermissionsForUser = function(accessToken, uuid, username) {
+
+    var deferred = Q.defer();
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data/' + uuid + '/pems/' + username,
         rejectUnauthorized: false,
         headers: {
             'Authorization': 'Bearer ' + accessToken
@@ -917,6 +970,40 @@ agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
     var postData = {
         'username': username,
         'permission': 'ALL',
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/jobs/v2/' + jobId + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData),
+            'Authorization': 'Bearer ' + accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.removeUsernameFromJobPermissions = function(username, accessToken, jobId) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        'username': username,
+        'permission': 'NONE',
     };
 
     postData = JSON.stringify(postData);
@@ -1278,7 +1365,7 @@ agaveIO.createPasswordResetMetadata = function(username) {
     return deferred.promise;
 };
 
-agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
+agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 
     var deferred = Q.defer();
 
@@ -1290,6 +1377,7 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid) {
             jobUuid: jobUuid,
         },
     };
+    if (secondaryInputs) postData.value.secondaryInputs = secondaryInputs;
 
     postData = JSON.stringify(postData);
 
@@ -1799,13 +1887,11 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
 		    },
 		};
-		//console.log(requestSettings);
 
 		return agaveIO.sendRequest(requestSettings, null)
 	    })
             .then(function(responseObject) {
 		var result = responseObject.result;
-		//console.log(result);
 		if (result.length > 0) {
 		    // maybe more data
 		    models = models.concat(result);
