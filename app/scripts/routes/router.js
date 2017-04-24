@@ -197,7 +197,7 @@ module.exports = function(app) {
     app.put(
         '/projects/:projectUuid/publish',
         passport.authenticate('basic', {session: false}),
-	authForProject,
+	authController.authUser,
         projectController.publishProject
     );
 
@@ -205,6 +205,7 @@ module.exports = function(app) {
     app.put(
         '/projects/:projectUuid/unpublish',
         passport.authenticate('basic', {session: false}),
+	authController.authUser,
         projectController.unpublishProject
     );
 
