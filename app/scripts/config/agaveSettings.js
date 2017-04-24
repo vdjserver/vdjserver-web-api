@@ -8,7 +8,10 @@ module.exports = {
     // VDJ Service Account User
     serviceAccountKey: process.env.VDJ_SERVICE_ACCOUNT,
     serviceAccountSecret: process.env.VDJ_SERVICE_ACCOUNT_SECRET,
-    serviceAccountToken: process.env.VDJ_SERVICE_ACCOUNT_TOKEN,
+
+    // VDJ Guest Account User
+    guestAccountKey: process.env.VDJ_GUEST_ACCOUNT,
+    guestAccountSecret: process.env.VDJ_GUEST_ACCOUNT_SECRET,
 
     // VDJ Backbone Location
     vdjBackbone: process.env.VDJ_BACKBONE_HOST,
