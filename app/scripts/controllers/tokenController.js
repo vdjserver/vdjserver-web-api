@@ -31,6 +31,7 @@ TokenController.getToken = function(request, response) {
         })
         .then(function(agaveToken) {
             console.log('VDJ-API INFO: TokenController.getToken - verification metadata successful for ' + request.user.username);
+	    webhookIO.postToSlack('VDJ-API INFO: TokenController.getToken - successful for ' + request.user.username);
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {

@@ -128,6 +128,15 @@ JobQueueManager.processJobs = function() {
 	    .then(function(jobOutput) {
 		if (jobOutput) metadata.jobSelected = jobOutput;
 
+		// secondary inputs provided?
+		if (jobData.config.secondaryInputs) {
+		    // put in study metadata
+		    metadata.secondaryInputs = jobData.config.secondaryInputs;
+		    // move so does not get passed to agave job submission
+		    jobData.secondaryInputs = jobData.config.secondaryInputs;
+		    jobData.config.secondaryInputs = null;
+		}
+
 		return agaveIO.getProcessMetadataForProject(jobData.projectUuid);
 	    })
 	    .then(function(processMetadata) {
@@ -137,7 +146,6 @@ JobQueueManager.processJobs = function() {
 		    metadata.processMetadata[uuid] = processMetadata[i];
 		}
 
-		//return agaveIO.getProjectFileMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
 		return agaveIO.getProjectFileMetadata(jobData.projectUuid);
 	    })
 	    .then(function(fileMetadata) {
@@ -247,7 +255,7 @@ JobQueueManager.processJobs = function() {
 		console.log('VDJ-API INFO: shareJobTask gave project users permissions for job ' + jobData.jobId);
 		
 		// create job metadata
-		return agaveIO.createJobMetadata(jobData.projectUuid, jobData.jobId);
+		return agaveIO.createJobMetadata(jobData.projectUuid, jobData.jobId, jobData.secondaryInputs);
             })
             .then(function(resultObject) {
 		if (resultObject) {
