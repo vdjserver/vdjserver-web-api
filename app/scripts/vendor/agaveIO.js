@@ -835,6 +835,72 @@ agaveIO.getFileListings = function(accessToken, projectUuid) {
     return deferred.promise;
 };
 
+agaveIO.enumerateFileListings = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    var pathList = [];
+    var dirStack = [];
+
+    var doFetch = function(offset, filePath) {
+	//console.log(dirStack);
+	return ServiceAccount.getToken()
+	    .then(function(token) {
+		var requestSettings = {
+		    host:     agaveSettings.hostname,
+		    method:   'GET',
+		    path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + projectUuid + filePath
+			+ '?limit=100&offset=' + offset,
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		    }
+		};
+		//console.log(requestSettings);
+
+		return agaveIO.sendRequest(requestSettings, null)
+	    })
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // parse results between directories and files
+		    for (var i = 0; i < result.length; ++i) {
+			var obj = result[i];
+			if (obj.name == '.') continue;
+			if (obj.type == 'dir') {
+			    var path = obj.path.replace('/projects/' + projectUuid, '');
+			    //console.log(path);
+			    dirStack.push(path);
+			    pathList.push(path);
+			} else if (obj.type == 'file') {
+			    var path = obj.path.replace('/projects/' + projectUuid, '');
+			    pathList.push(path);
+			} else {
+			    console.error('VDJ-API ERROR: Unknown file type: ' + obj);
+			}
+		    }
+		    // maybe more data
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset, filePath);
+		} else {
+		    // nothing left to enumerate
+		    if (dirStack.length == 0)
+			deferred.resolve(pathList);
+		    else
+			doFetch(0, dirStack.pop());
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    pathList.push('');
+    doFetch(0, '');
+
+    return deferred.promise;
+};
+
 agaveIO.getFileHistory = function(relativePath) {
 
     var deferred = Q.defer();
@@ -987,6 +1053,41 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
         }
     };
 
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.addUsernameToFilePermissions = function(username, accessToken, filePath) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        'username': username,
+        'permission': 'ALL',
+        'recursive': false,
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData),
+            'Authorization': 'Bearer ' + accessToken,
+        }
+    };
+    //console.log(requestSettings);
     agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);

@@ -231,12 +231,52 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             return agaveIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), projectUuid);
         })
+
+        /* HOTFIX: Agave bug AH-207 is preventing recursive file permissions from working, so manually recurse the tree
         // set project file directory + subdirectory permissions recursively
-        .then(function() {
+        .then(function(fileListings) {
             console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
 
             return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid);
+        }) */
+        // enumerate file list
+        .then(function() {
+            console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
+
+            return agaveIO.enumerateFileListings(projectUuid);
         })
+        // set permissions
+        .then(function(fileListings) {
+	    //console.log(fileListings);
+            console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - enumerateFileListings for project ' + projectUuid);
+
+            var promises = [];
+
+            function createAgaveCall(username, token, filePath) {
+
+                return function() {
+
+                    return agaveIO.addUsernameToFilePermissions(
+                        username,
+                        token,
+                        filePath
+                    );
+                };
+            }
+
+            for (var i = 0; i < fileListings.length; i++) {
+                promises[i] = createAgaveCall(
+                    username,
+                    ServiceAccount.accessToken(),
+		    projectUuid + fileListings[i]
+                );
+            }
+
+            return promises.reduce(Q.when, new Q());
+        })
+
+        // END HOTFIX
+
         // get file metadata pems
         .then(function() {
             console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToFullFilePermissions for project ' + projectUuid);
