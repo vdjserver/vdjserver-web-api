@@ -54,6 +54,24 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
     );
 };
 
+emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
+    var mailOptions = {
+        to: recipientEmail,
+        from: agaveSettings.fromAddress,
+        subject: 'VDJServer.org Feedback',
+        text: 'Thank you for your feedback! Someone will respond shortly. Your feedback text is shown below\n\n-----\n\n' + feedback,
+    };
+
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending feedback email.', error);
+            }
+        }
+    );
+};
+
 emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
 
     var vdjWebappUrl = agaveSettings.vdjBackbone
