@@ -4,6 +4,9 @@
 // Promises
 var Q = require('q');
 
+// App
+var agaveSettings = require('../config/agaveSettings');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
@@ -14,6 +17,7 @@ var ServiceAccount  = require('../models/serviceAccount');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
+var emailIO = require('../vendor/emailIO');
 
 var PermissionsController = {};
 module.exports = PermissionsController;
@@ -395,8 +399,40 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
             return promises.reduce(Q.when, new Q());
         })
+	.then(function() {
+	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(projectPermissions) {
+	    // send emails
+	    var metadataPermissions = new MetadataPermissions();
+	    var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+	    var promises = projectUsernames.map(function(user) {
+                return function() {
+		    return agaveIO.getUserProfile(user)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disableUserEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/project/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
+							 'VDJServer user added to project',
+							 'VDJServer user "' + username + '" has been added to project ' + projectUuid + '.'
+							 + '<br>'
+							 + 'You can view the project with the link below:'
+							 + '<br>'
+							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							);
+			    }
+			});
+                };
+	    });
+
+	    return promises.reduce(Q.when, new Q());
+	})
         .then(function() {
-            console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
             console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - complete for project ' + projectUuid);
 
             return apiResponseController.sendSuccess('success', response);
@@ -414,6 +450,8 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     var username    = request.body.username;
     var projectUuid = request.body.projectUuid;
     var accessToken = request.user.password;
+
+    var projectUsernames;
 
     if (!username) {
         console.error('VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - missing username parameter');
@@ -447,8 +485,12 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 	    return agaveIO.getMetadataPermissions(accessToken, projectUuid);
 	})
         // Remove username from project metadata pems
-        .then(function() {
+        .then(function(projectPermissions) {
             console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - getMetadataPermissions for project ' + projectUuid);
+
+	    // save usernames for sending emails later
+	    var metadataPermissions = new MetadataPermissions();
+	    projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             return agaveIO.removeUsernameFromMetadataPermissions(username, ServiceAccount.accessToken(), projectUuid);
         })
@@ -536,6 +578,33 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 
             return promises.reduce(Q.when, new Q());
         })
+        .then(function() {
+	    // send emails
+	    var promises = projectUsernames.map(function(user) {
+                return function() {
+		    return agaveIO.getUserProfile(user)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disableUserEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/project/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
+							 'VDJServer user removed from project',
+							 'VDJServer user "' + username + '" has been removed from project ' + projectUuid + '.'
+							 + '<br>'
+							 + 'You can view the project with the link below:'
+							 + '<br>'
+							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							);
+			    }
+			});
+                };
+	    });
+
+	    return promises.reduce(Q.when, new Q());
+	})
         .then(function() {
             console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromJobPermissions for project ' + projectUuid);
             console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - complete for project ' + projectUuid);

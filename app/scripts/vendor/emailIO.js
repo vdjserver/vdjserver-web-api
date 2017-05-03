@@ -103,3 +103,23 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
         }
     );
 };
+
+emailIO.sendGenericEmail = function(recipientEmail, subject, message) {
+
+    var mailOptions = {
+        to: recipientEmail,
+        from: agaveSettings.fromAddress,
+        subject: subject,
+        generateTextFromHTML: true,
+        html: message
+    };
+
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending email.', error);
+            }
+        }
+    );
+};

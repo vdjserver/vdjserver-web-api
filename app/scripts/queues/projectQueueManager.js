@@ -14,6 +14,7 @@ var ServiceAccount = require('../models/serviceAccount');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
+var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var jsonApprover = require('json-approver');
@@ -171,6 +172,7 @@ ProjectQueueManager.processProjects = function() {
 	// 4. Update project metadata to public
 
         var projectUuid = task.data;
+	var projectName = '';
 
 	var msg;
 	ServiceAccount.getToken()
@@ -178,6 +180,7 @@ ProjectQueueManager.processProjects = function() {
 		return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
             })
 	    .then(function(projectMetadata) {
+		projectName = projectMetadata.value.name;
 		if (projectMetadata.name == 'projectPublishInProcess') {
 		    projectMetadata.name = 'publicProject';
 		    projectMetadata.value.showArchivedJobs = false;
@@ -186,6 +189,39 @@ ProjectQueueManager.processProjects = function() {
 		    msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in state: projectPublishInProcess.';
 		    return Q.reject(new Error(msg));
 		}
+	    })
+	    .then(function() {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+	    })
+            .then(function(projectPermissions) {
+		// send emails
+		var metadataPermissions = new MetadataPermissions();
+		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+		var promises = projectUsernames.map(function(username) {
+                    return function() {
+			return agaveIO.getUserProfile(username)
+			    .then(function(userProfileList) {
+				if (userProfileList.length == 0) return;
+				if (username == agaveSettings.guestAccountKey) return;
+				var userProfile = userProfileList[0];
+				if (!userProfile.value.disablePublishEmail) {
+				    var vdjWebappUrl = agaveSettings.vdjBackbone
+					+ '/community/' + projectUuid;
+				    emailIO.sendGenericEmail(userProfile.value.email,
+							     'VDJServer project has been published',
+							     'The VDJServer project "' + projectName + '" has been published to community data.'
+							     + '<br>'
+							     + 'You can view the project in community data with the link below:'
+							     + '<br>'
+							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							     );
+				}
+			    });
+                    };
+		});
+
+		return promises.reduce(Q.when, new Q());
 	    })
             .then(function() {
 		console.log('VDJ-API INFO: ProjectController.publishProject - done, project ' + projectUuid + ' has been published.');
@@ -323,6 +359,7 @@ ProjectQueueManager.processProjects = function() {
 	// 4. Update project metadata to private
 
         var projectUuid = task.data;
+	var projectName = '';
 
 	var msg;
 	ServiceAccount.getToken()
@@ -330,6 +367,7 @@ ProjectQueueManager.processProjects = function() {
 		return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
             })
 	    .then(function(projectMetadata) {
+		projectName = projectMetadata.value.name;
 		if (projectMetadata.name == 'projectUnpublishInProcess') {
 		    projectMetadata.name = 'project';
 		    return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
@@ -337,6 +375,40 @@ ProjectQueueManager.processProjects = function() {
 		    msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in state: projectUnpublishInProcess.';
 		    return Q.reject(new Error(msg));
 		}
+	    })
+	    .then(function() {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+	    })
+            .then(function(projectPermissions) {
+		// send emails
+		var metadataPermissions = new MetadataPermissions();
+		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+		var promises = projectUsernames.map(function(username) {
+                    return function() {
+			return agaveIO.getUserProfile(username)
+			    .then(function(userProfileList) {
+				if (userProfileList.length == 0) return;
+				if (username == agaveSettings.guestAccountKey) return;
+				var userProfile = userProfileList[0];
+				if (!userProfile.value.disablePublishEmail) {
+				    var vdjWebappUrl = agaveSettings.vdjBackbone
+					+ '/project/' + projectUuid;
+				    emailIO.sendGenericEmail(userProfile.value.email,
+							     'VDJServer project has been unpublished',
+							     'The VDJServer project "' + projectName + '" has been unpublished from community data.'
+							     + ' The project now resides among your private projects and can be edited.'
+							     + '<br>'
+							     + 'You can view the project with the link below:'
+							     + '<br>'
+							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							     );
+				}
+			    });
+                    };
+		});
+
+		return promises.reduce(Q.when, new Q());
 	    })
             .then(function() {
 		console.log('VDJ-API INFO: ProjectController.unpublishProject - done, project ' + projectUuid + ' has been unpublished.');
