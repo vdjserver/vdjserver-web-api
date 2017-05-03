@@ -2709,8 +2709,8 @@ agaveIO.setCommunityFilePermissions = function(filePath) {
             return promises.reduce(Q.when, new Q());
 	})
         .then(function(responseObject) {
-	    // world READ only
-	    var postData = 'username=world&permission=READ&recursive=false';
+	    // guest account READ only
+	    var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ&recursive=false';
 
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3045,8 +3045,8 @@ agaveIO.setMetadataPermissionsForCommunity = function(uuid) {
 	    return agaveIO.clearCommunityMetadataPermissions(uuid);
 	})
         .then(function() {
-	    // world READ only
-	    var postData = 'username=world&permission=READ';
+	    // guest account READ only
+	    var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ';
 
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3109,13 +3109,13 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 	})
         .then(function() {
 	    if (toCommunity) {
-		// world READ only
+		// guest account READ only
 		var postData = 'permission=READ';
 
 		var requestSettings = {
 		    host:     agaveSettings.hostname,
 		    method:   'POST',
-		    path:     '/meta/v2/data/' + projectUuid + '/pems/world',
+		    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
 		    rejectUnauthorized: false,
 		    headers: {
 			'Content-Length': Buffer.byteLength(postData),
@@ -3125,13 +3125,13 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 
 		return agaveIO.sendRequest(requestSettings, postData);
 	    } else {
-		// remove world access
+		// remove guest account access
 		var postData = 'permission=NONE';
 
 		var requestSettings = {
 		    host:     agaveSettings.hostname,
 		    method:   'POST',
-		    path:     '/meta/v2/data/' + projectUuid + '/pems/world',
+		    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
 		    rejectUnauthorized: false,
 		    headers: {
 			'Content-Length': Buffer.byteLength(postData),
@@ -3165,7 +3165,7 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 		var promises = permissionsList.map(function(entry) {
                     return function() {
 			if (entry.username == agaveSettings.serviceAccountKey) return;
-			else if (entry.username == 'world') return;
+			else if (entry.username == agaveSettings.guestAccountKey) return;
 			else {
 			    var postData = 'permission=READ';
 
