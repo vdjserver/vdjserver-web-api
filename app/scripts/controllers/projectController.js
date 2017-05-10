@@ -501,6 +501,9 @@ ProjectController.publishProject = function(request, response) {
 		projectMetadata.name = 'projectPublishInProcess';
 		//console.log(projectMetadata);
 		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+	    } else if (projectMetadata.name == 'projectPublishInProcess') {
+		console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
+		return null;
 	    } else {
 		msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
 		return Q.reject(new Error(msg));
