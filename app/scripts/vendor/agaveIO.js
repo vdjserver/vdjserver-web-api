@@ -1097,6 +1097,40 @@ agaveIO.removeUsernameFromJobPermissions = function(username, accessToken, jobId
     return deferred.promise;
 };
 
+agaveIO.setJobPermissions = function(username, permission, accessToken, jobId) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+        'username': username,
+        'permission': permission,
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     agaveSettings.hostname,
+        method:   'POST',
+        path:     '/jobs/v2/' + jobId + '/pems',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData),
+            'Authorization': 'Bearer ' + accessToken,
+        },
+    };
+
+    agaveIO.sendRequest(requestSettings, postData)
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, filePath, recursive) {
 
     var deferred = Q.defer();
@@ -2964,6 +2998,44 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
     return deferred.promise;
 };
 
+agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getJobPermissions(jobId);
+	})
+	.then(function(permissionsList) {
+	    // remove permissions
+            var promises = permissionsList.map(function(entry) {
+                return function() {
+		    if (entry.username == agaveSettings.serviceAccountKey) return;
+		    else return agaveIO.removeUsernameFromJobPermissions(entry.username, ServiceAccount.accessToken(), jobId);
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+	    if (toCommunity) {
+		// guest account READ only
+		return agaveIO.setJobPermissions(agaveSettings.guestAccountKey, 'READ', ServiceAccount.accessToken(), jobId);
+	    } else {
+		// add permisions for project users
+		return agaveIO.addJobPermissionsForProjectUsers(projectUuid, jobId);
+	    }
+	})
+        .then(function() {
+            deferred.resolve();
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 
     var deferred = Q.defer();
@@ -2983,6 +3055,10 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
             });
 
             return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+	    // set permission on the job
+	    return agaveIO.setCommunityJobPermissions(projectUuid, jobId, toCommunity);
 	})
         .then(function() {
             deferred.resolve();
@@ -3612,6 +3688,42 @@ agaveIO.getSampleGroupsMetadata = function(accessToken, projectUuid) {
 //
 // Higher level composite functions
 //
+
+agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(projectPermissions) {
+            var metadataPermissions = new MetadataPermissions();
+
+            var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+            var promises = projectUsernames.map(function(username) {
+
+                return function() {
+                    return agaveIO.addUsernameToJobPermissions(
+                        username,
+                        ServiceAccount.accessToken(),
+                        jobId
+                    );
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+            deferred.resolve();
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
 
 // 
 agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUuid) {
