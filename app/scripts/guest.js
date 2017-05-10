@@ -7,6 +7,9 @@ var https = require('https');
 var agaveSettings = require('./config/agaveSettings');
 var webhookIO = require('./vendor/webhookIO');
 
+// node libraries
+var requestLib = require('request');
+
 // Verify we can login with guest account
 var GuestAccount = require('./models/guestAccount');
 GuestAccount.getToken()
@@ -29,6 +32,25 @@ http.createServer(function(request, response) {
     } else {
 	GuestAccount.getToken()
 	    .then(function(guestToken) {
+		// splice out the leading guest path
+		var newUrl = request.url;
+		var pathList = newUrl.split("/");
+		if (pathList.length > 1) pathList.splice(1,1);
+		newUrl = pathList.join('/');
+
+		var requestSettings = {
+		    url: 'https://' + agaveSettings.hostname + newUrl,
+		    method:   'GET',
+		    rejectUnauthorized: false,
+		    headers: {
+			'Authorization': 'Bearer ' + GuestAccount.accessToken(),
+		    }
+		};
+		//console.log(request);
+		//console.log(requestSettings);
+
+		requestLib(requestSettings).pipe(response);
+/*
 		var requestSettings = {
 		    host:     agaveSettings.hostname,
 		    method:   request.method,
@@ -55,9 +77,10 @@ http.createServer(function(request, response) {
 		request.addListener('end', function() {
 		    proxy_request.end();
 		});
+*/
 	    })
 	    .fail(function(error) {
-		console.error('VDJ-GUEST ERROR: Unable to acquire guest account token.');
+		console.error('VDJ-GUEST ERROR: Unable to acquire guest account token.\n' + error);
 		webhookIO.postToSlack('VDJ-GUEST ERROR: Unable to login with guest account.\n' + error);
 		response.end();
 	    });
