@@ -98,3 +98,6 @@ accountQueueManager.processNewAccounts();
 
 var jobQueueManager = require('./queues/jobQueueManager');
 jobQueueManager.processJobs();
+
+var projectQueueManager = require('./queues/projectQueueManager');
+projectQueueManager.processProjects();

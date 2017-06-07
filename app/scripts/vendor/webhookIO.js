@@ -10,6 +10,8 @@ module.exports = webhookIO;
 
 webhookIO.postToSlack = function(eventMessage, eventUsername) {
 
+    if (process.env.DISABLE_SLACK) return;
+
     request({
         url: process.env.SLACK_WEBHOOK_URL,
         json: {

@@ -14,6 +14,7 @@ var ServiceAccount = require('../models/serviceAccount');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
+var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var jsonApprover = require('json-approver');
@@ -357,7 +358,8 @@ JobQueueManager.processJobs = function() {
                                 return agaveIO.addUsernameToFullFilePermissions(
                                     username,
                                     ServiceAccount.accessToken(),
-                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath
+                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
+				    true
                                 );
                             };
                         });
@@ -612,9 +614,54 @@ JobQueueManager.processJobs = function() {
 	    }
 	);
 
-	console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
-		
-	done();
+	// send emails
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
+            .then(function(projectPermissions) {
+		// send emails
+		var metadataPermissions = new MetadataPermissions();
+		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+		var promises = projectUsernames.map(function(username) {
+                    return function() {
+			return agaveIO.getUserProfile(username)
+			    .then(function(userProfileList) {
+				if (userProfileList.length == 0) return;
+				if (username == agaveSettings.guestAccountKey) return;
+				var userProfile = userProfileList[0];
+				if (!userProfile.value.disableJobEmail) {
+				    var vdjWebappUrl = agaveSettings.vdjBackbone
+					+ '/project/'
+				        + jobData.projectUuid
+					+ '/jobs/'
+					+ jobData.jobId
+				    ;
+				    emailIO.sendGenericEmail(userProfile.value.email,
+							     'VDJServer job is finished',
+							     'Your VDJServer job "' + decodeURIComponent(jobData.jobName) + '" is finished.'
+							     + '<br>'
+							     + 'You can view analyses and results with the link below:'
+							     + '<br>'
+							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							     );
+				}
+			    });
+                    };
+		});
+
+		return promises.reduce(Q.when, new Q());
+	    })
+            .then(function() {
+		console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+		done();
+            })
+            .fail(function(error) {
+                console.error('VDJ-API ERROR: jobCompleteTask error is: "' + error + '" for ' + jobData.jobId);
+                done(new Error('jobCompleteTask error is: "' + error + '" for ' + jobData.jobId));
+            })
+            ;
     });
 
     taskQueue.process('removeJobGuardTask', function(task, done) {

@@ -25,6 +25,13 @@ passport.use(new BasicStrategy(
     }
 ));
 
+var authForProject = function(request, response, next) {
+    console.log('authForProject');
+
+    //return apiResponseController.send401(request, response);
+    return next();
+};
+
 module.exports = function(app) {
 
     app.get(
@@ -184,6 +191,22 @@ module.exports = function(app) {
 	authController.authUser,
 	authController.authForProjectFromParams,
         projectController.importSampleMetadata
+    );
+
+    // Publish project to community data
+    app.put(
+        '/projects/:projectUuid/publish',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+        projectController.publishProject
+    );
+
+    // Unpublish project from community data
+    app.put(
+        '/projects/:projectUuid/unpublish',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+        projectController.unpublishProject
     );
 
     // Record Telemetry Data
