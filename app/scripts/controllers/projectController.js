@@ -359,28 +359,54 @@ ProjectController.importSampleMetadata = function(request, response) {
 		});
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - create metadata entries');
-	    return agaveIO.getProjectFiles(projectUuid)
-		.then(function(projectFiles) {
-		    var promises = data.map(function(dataRow) {
-			// link to appropriate file
-			if (dataRow.project_file) {
-			    for (var i = 0; i < projectFiles.length; ++i) {
-				if (dataRow.project_file == projectFiles[i].value.name) {
-				    dataRow.project_file = projectFiles[i].uuid;
-				    break;
-				}
+	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - link project files');
+	    return agaveIO.getProjectFiles(projectUuid);
+	})
+	.then(function(projectFiles) {
+	    // link to appropriate file
+	    for (var j = 0; j < data.length; ++j) {
+		var dataRow = data[j];
+		if (dataRow.project_file) {
+		    for (var i = 0; i < projectFiles.length; ++i) {
+			if (dataRow.project_file == projectFiles[i].value.name) {
+			    dataRow.project_file = projectFiles[i].uuid;
+			    break;
+			}
+		    }
+		}
+	    }
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - link subjects');
+	    return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), projectUuid);
+	})
+	.then(function(subjectMetadata) {
+	    for (var j = 0; j < data.length; ++j) {
+		var dataRow = data[j];
+		if (!dataRow.subject_uuid || dataRow.subject_uuid.length == 0) {
+		    if (dataRow.subject_name) {
+			for (var i = 0; i < subjectMetadata.length; ++i) {
+			    if (dataRow.subject_name == subjectMetadata[i].value.name) {
+				dataRow.subject_uuid = subjectMetadata[i].uuid;
+				break;
+			    } else if (dataRow.subject_name == subjectMetadata[i].value.Name) {
+				dataRow.subject_uuid = subjectMetadata[i].uuid;
+				break;
 			    }
 			}
-			//console.log(dataRow);
+		    }
+		}
+	    }
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - create metadata entries');
+	    var promises = data.map(function(dataRow) {
+		return function() {
+		    return agaveIO.createSampleMetadata(ServiceAccount.accessToken(), projectUuid, dataRow);
+		}
+	    });
 
-			return function() {
-			    return agaveIO.createSampleMetadata(ServiceAccount.accessToken(), projectUuid, dataRow);
-			}
-		    });
-
-		    return promises.reduce(Q.when, new Q());
-		})
+	    return promises.reduce(Q.when, new Q());
 	})
 	.then(function() {
 	    return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), projectUuid);
