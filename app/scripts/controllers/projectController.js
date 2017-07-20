@@ -268,6 +268,9 @@ ProjectController.exportSubjectMetadata = function(request, response) {
 	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "subject_metadata.tsv", buffer);
 	})
         .then(function() {
+	    return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/subject_metadata.tsv', false);
+        })
+        .then(function() {
             console.log('VDJ-API INFO: ProjectController.exportSubjectMetadata - done project ', projectUuid);
 	    apiResponseController.sendSuccess('ok', response);
         })
@@ -485,6 +488,9 @@ ProjectController.exportSampleMetadata = function(request, response) {
 	    var buffer = new Buffer(tsvData);
 	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "sample_metadata.tsv", buffer);
 	})
+        .then(function() {
+	    return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/sample_metadata.tsv', false);
+        })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.exportSampleMetadata - done project ', projectUuid);
 	    apiResponseController.sendSuccess('ok', response);
