@@ -640,7 +640,8 @@ JobQueueManager.processJobs = function() {
 				    ;
 				    emailIO.sendGenericEmail(userProfile.value.email,
 							     'VDJServer job is finished',
-							     'Your VDJServer job "' + decodeURIComponent(jobData.jobName) + '" is finished.'
+							     'Your VDJServer job "' + decodeURIComponent(jobData.jobName)
+							     + ' for application ' + jobData.jobOutput.appId + '" is finished.'
 							     + '<br>'
 							     + 'You can view analyses and results with the link below:'
 							     + '<br>'
