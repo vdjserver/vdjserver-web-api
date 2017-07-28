@@ -350,6 +350,19 @@ JobQueueManager.processJobs = function() {
 
                 var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
+                var promises = projectUsernames.map(function(username) {
+                    return function() {
+                        return agaveIO.addUsernameToFullFilePermissions(
+                            username,
+                            ServiceAccount.accessToken(),
+                            jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
+			    false
+                        );
+                    };
+                });
+
+                return promises.reduce(Q.when, new Q()); // 3.
+/*
                 return agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath)
                     .then(function(jobFileListings) {
 
@@ -366,7 +379,7 @@ JobQueueManager.processJobs = function() {
 
                         return promises.reduce(Q.when, new Q()); // 3.
                     })
-                    ;
+                    ; */
             })
             .then(function() {
                 taskQueue
