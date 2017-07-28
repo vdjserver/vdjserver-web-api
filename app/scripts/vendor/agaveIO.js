@@ -938,7 +938,8 @@ agaveIO.enumerateFileListings = function(projectUuid) {
 			if (obj.type == 'dir') {
 			    var path = obj.path.replace('/projects/' + projectUuid, '');
 			    //console.log(path);
-			    dirStack.push(path);
+			    // don't recurse down into the job files
+			    if (filePath != 'analyses') dirStack.push(path);
 			    pathList.push(path);
 			} else if (obj.type == 'file') {
 			    var path = obj.path.replace('/projects/' + projectUuid, '');
