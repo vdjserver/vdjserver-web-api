@@ -3476,6 +3476,168 @@ agaveIO.createSubjectColumns = function(projectUuid, value, metadataUuid) {
 //
 /////////////////////////////////////////////////////////////////////
 //
+// Biomaterial processing metadata
+//
+
+agaveIO.getBiomaterialProcessingMetadata = function(accessToken, projectUuid) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(offset) {
+	var requestSettings = {
+	    host:     agaveSettings.hostname,
+	    method:   'GET',
+	    path:   '/meta/v2/data?q='
+		+ encodeURIComponent('{'
+				     + '"name": "bioProcessing",'
+				     + '"associationIds": "' + projectUuid + '"'
+				     + '}')
+		+ '&limit=50&offset=' + offset,
+	    rejectUnauthorized: false,
+	    headers: {
+		'Authorization': 'Bearer ' + accessToken
+	    }
+	};
+
+	return agaveIO.sendRequest(requestSettings, null)
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+agaveIO.createBiomaterialProcessingMetadata = function(projectUuid, value) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid ],
+        name: 'bioProcessing',
+        value: value,
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.getBiomaterialProcessingColumns = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'GET',
+		path:   '/meta/v2/data?q='
+		    + encodeURIComponent('{'
+		    + '"name": "bioProcessingColumns",'
+		    + '"associationIds": "' + projectUuid + '"'
+		    + '}')
+		    + '&limit=1',
+		rejectUnauthorized: false,
+		headers: {
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, null)
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+agaveIO.createBiomaterialProcessingColumns = function(projectUuid, value, metadataUuid) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid ],
+        name: 'bioProcessingColumns',
+        value: value,
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var path = '/meta/v2/data'
+	    if (metadataUuid) path = path + '/' + metadataUuid;
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     path,
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+//
+/////////////////////////////////////////////////////////////////////
+//
 // Sample metadata
 //
 
@@ -3775,6 +3937,37 @@ agaveIO.deleteAllSubjectMetadata = function(projectUuid) {
 
 	    console.log('VDJ-API INFO: agaveIO.deleteAllSubjectMetadata - deleting ' + subjectMetadata.length + ' metadata entries');
             var promises = subjectMetadata.map(function(metadata) {
+
+                return function() {
+                    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+            deferred.resolve();
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+// delete all biomaterial processing metadata for a project
+agaveIO.deleteAllBiomaterialProcessingMetadata = function(projectUuid) {
+
+    var deferred = Q.defer();
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    return agaveIO.getBiomaterialProcessingMetadata(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(bioProcessingMetadata) {
+
+	    console.log('VDJ-API INFO: agaveIO.deleteAllBiomaterialProcessingMetadata - deleting ' + bioProcessingMetadata.length + ' metadata entries');
+            var promises = bioProcessingMetadata.map(function(metadata) {
 
                 return function() {
                     return agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);

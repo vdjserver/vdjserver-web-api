@@ -4,6 +4,9 @@
 // App
 var app = require('../app');
 
+// Settings
+var agaveSettings = require('../config/agaveSettings');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
@@ -104,7 +107,11 @@ ProjectController.createProject = function(request, response) {
         ;
 };
 
+//
 // Import/export metadata
+//
+
+// subject metadata
 
 ProjectController.importSubjectMetadata = function(request, response) {
     var projectUuid = request.params.projectUuid;
@@ -235,8 +242,8 @@ ProjectController.exportSubjectMetadata = function(request, response) {
 	    var tsvData = '';
 
 	    // default
-	    if (subjectMetadata.length == 0) {		
-		tsvData = 'Name\tCategory\tSpecies\tStrain\tGender\tAge\n';
+	    if (subjectMetadata.length == 0) {
+		tsvData = agaveSettings.subjectColumns.join('\t') + '\n';
 	    }
 
 	    // convert to TSV format
@@ -246,7 +253,14 @@ ProjectController.exportSubjectMetadata = function(request, response) {
 		// header
 		if (i == 0) {
 		    var first = true;
+		    for (var j = 0; j < agaveSettings.subjectColumns.length; ++j) {
+			var prop = agaveSettings.subjectColumns[j];
+			if (!first) tsvData += '\t';
+			tsvData += prop;
+			first = false;
+		    }
 		    for (var prop in value) {
+			if (agaveSettings.subjectColumns.indexOf(prop) >= 0) continue;
 			if (!first) tsvData += '\t';
 			tsvData += prop;
 			first = false;
@@ -256,7 +270,14 @@ ProjectController.exportSubjectMetadata = function(request, response) {
 
 		// values
 		var first = true;
+		for (var j = 0; j < agaveSettings.subjectColumns.length; ++j) {
+		    var prop = agaveSettings.subjectColumns[j];
+		    if (!first) tsvData += '\t';
+		    if (prop in value) tsvData += value[prop];
+		    first = false;		    
+		}
 		for (var prop in value) {
+		    if (agaveSettings.subjectColumns.indexOf(prop) >= 0) continue;
 		    if (!first) tsvData += '\t';
 		    tsvData += value[prop];
 		    first = false;		    
@@ -277,6 +298,196 @@ ProjectController.exportSubjectMetadata = function(request, response) {
         })
         ;
 };
+
+// biomaterial processing metadata
+
+ProjectController.importBiomaterialProcessingMetadata = function(request, response) {
+    var projectUuid = request.params.projectUuid;
+    var fileUuid = request.body.fileUuid;
+    var fileName = request.body.fileName;
+    var op = request.body.operation;
+
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: ProjectController.importBiomaterialProcessingMetadata - missing Project id parameter');
+        apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + op);
+
+    var data;
+
+    // get metadata to import
+    agaveIO.getProjectFileContents(projectUuid, fileName)
+	.then(function(fileData) {
+	    // create metadata items
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - get import file contents');
+	    if (fileData) {
+		//console.log(fileData);
+		fileData = fileData.trim();
+
+		data = d3.tsvParse(fileData);
+		//console.log(data);
+
+		return data;
+	    }
+	})
+	.then(function() {
+	    if (op == 'replace') {
+		// delete existing metadata if requested
+		console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - delete existing metadata entries');
+		return agaveIO.deleteAllBiomaterialProcessingMetadata(projectUuid);
+	    }
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - get columns');
+	    return agaveIO.getBiomaterialProcessingColumns(projectUuid)
+		.then(function(responseObject) {
+		    //console.log(responseObject);
+		    if (responseObject.length == 0) {
+			// no existing columns defined
+			var value = { columns: data.columns };
+			return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, null);
+		    } else {
+			if (op == 'replace') {
+			    // replace existing columns
+			    value = responseObject[0].value;
+			    value.columns = data.columns;
+			    return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, responseObject[0].uuid);
+			} else {
+			    // merge with existing colums
+			    value = responseObject[0].value;
+			    for (var i = 0; i < data.columns.length; ++i) {
+				if (value.columns.indexOf(data.columns[i]) < 0) value.columns.push(data.columns[i]);
+			    }
+			    return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, responseObject[0].uuid);
+			}
+		    }
+		});
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - set permissions on columns');
+	    return agaveIO.getBiomaterialProcessingColumns(projectUuid)
+		.then(function(responseObject) {
+		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
+		});
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - create metadata entries');
+            var promises = data.map(function(dataRow) {
+		//console.log(dataRow);
+                return function() {
+		    return agaveIO.createBiomaterialProcessingMetadata(projectUuid, dataRow);
+		}
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+	    return agaveIO.getBiomaterialProcessingMetadata(ServiceAccount.accessToken(), projectUuid);
+	})
+        .then(function(biomaterialProcessingMetadata) {
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - set permissions on metadata entries');
+            var promises = biomaterialProcessingMetadata.map(function(entry) {
+		//console.log(entry);
+                return function() {
+		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
+		}
+	    });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - done');
+	    apiResponseController.sendSuccess('ok', response);
+        })
+        .fail(function(error) {
+            console.error('VDJ-API ERROR: ProjectController.importBiomaterialProcessingMetadata - project ', projectUuid, ' error ' + error);
+            apiResponseController.sendError(error.message, 500, response);
+        })
+        ;
+};
+
+ProjectController.exportBiomaterialProcessingMetadata = function(request, response) {
+    var projectUuid = request.params.projectUuid;
+    var format = request.query.format;
+
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: ProjectController.exportBiomaterialProcessingMetadata - missing Project id parameter');
+        apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    if (!format) format = 'TSV';
+
+    ServiceAccount.getToken()
+        .then(function(token) {
+            console.log('VDJ-API INFO: ProjectController.exportBiomaterialProcessingMetadata - start project ', projectUuid);
+	    return agaveIO.getBiomaterialProcessingMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+	.then(function(biomaterialProcessingMetadata) {
+	    //console.log(biomaterialProcessingMetadata);
+	    var tsvData = '';
+
+	    // default
+	    if (biomaterialProcessingMetadata.length == 0) {
+		tsvData = agaveSettings.bioProcessingColumns.join('\t') + '\n';
+	    }
+
+	    // convert to TSV format
+	    for (var i = 0; i < biomaterialProcessingMetadata.length; ++i) {
+		var value = biomaterialProcessingMetadata[i].value;
+
+		// header
+		if (i == 0) {
+		    var first = true;
+		    for (var j = 0; j < agaveSettings.bioProcessingColumns.length; ++j) {
+			var prop = agaveSettings.bioProcessingColumns[j];
+			if (!first) tsvData += '\t';
+			tsvData += prop;
+			first = false;
+		    }
+		    for (var prop in value) {
+			if (agaveSettings.bioProcessingColumns.indexOf(prop) >= 0) continue;
+			if (!first) tsvData += '\t';
+			tsvData += prop;
+			first = false;
+		    }
+		    tsvData += '\n';
+		}
+
+		// values
+		var first = true;
+		for (var j = 0; j < agaveSettings.bioProcessingColumns.length; ++j) {
+		    var prop = agaveSettings.bioProcessingColumns[j];
+		    if (!first) tsvData += '\t';
+		    if (prop in value) tsvData += value[prop];
+		    first = false;		    
+		}
+		for (var prop in value) {
+		    if (agaveSettings.bioProcessingColumns.indexOf(prop) >= 0) continue;
+		    if (!first) tsvData += '\t';
+		    tsvData += value[prop];
+		    first = false;		    
+		}
+		tsvData += '\n';
+	    }
+
+	    var buffer = new Buffer(tsvData);
+	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "bio_processing_metadata.tsv", buffer);
+	})
+        .then(function() {
+            console.log('VDJ-API INFO: ProjectController.exportBiomaterialProcessingMetadata - done project ', projectUuid);
+	    apiResponseController.sendSuccess('ok', response);
+        })
+        .fail(function(error) {
+            console.error('VDJ-API ERROR: ProjectController.exportBiomaterialProcessingMetadata - project ', projectUuid, ' error ' + error);
+            apiResponseController.sendError(error.message, 500, response);
+        })
+        ;
+};
+
+// sample metadata
 
 ProjectController.importSampleMetadata = function(request, response) {
     var projectUuid = request.params.projectUuid;
@@ -427,8 +638,8 @@ ProjectController.exportSampleMetadata = function(request, response) {
 
 	    // default
 	    var tsvData = '';
-	    if (sampleMetadata.length == 0) {		
-		tsvData = 'Name\tDescription\tSampleID\tBarcode\tsubject_uuid\tproject_file\n';
+	    if (sampleMetadata.length == 0) {
+		tsvData = agaveSettings.sampleColumns.join('\t') + '\n';
 	    }
 
 	    // convert to TSV format
@@ -438,7 +649,14 @@ ProjectController.exportSampleMetadata = function(request, response) {
 		// header
 		if (i == 0) {
 		    var first = true;
+		    for (var j = 0; j < agaveSettings.sampleColumns.length; ++j) {
+			var prop = agaveSettings.sampleColumns[j];
+			if (!first) tsvData += '\t';
+			tsvData += prop;
+			first = false;
+		    }
 		    for (var prop in value) {
+			if (agaveSettings.sampleColumns.indexOf(prop) >= 0) continue;
 			if (!first) tsvData += '\t';
 			tsvData += prop;
 			first = false;
@@ -448,7 +666,14 @@ ProjectController.exportSampleMetadata = function(request, response) {
 
 		// values
 		var first = true;
+		for (var j = 0; j < agaveSettings.sampleColumns.length; ++j) {
+		    var prop = agaveSettings.sampleColumns[j];
+		    if (!first) tsvData += '\t';
+		    if (prop in value) tsvData += value[prop];
+		    first = false;		    
+		}
 		for (var prop in value) {
+		    if (agaveSettings.sampleColumns.indexOf(prop) >= 0) continue;
 		    if (!first) tsvData += '\t';
 		    tsvData += value[prop];
 		    first = false;		    

@@ -177,6 +177,22 @@ module.exports = function(app) {
         projectController.importSubjectMetadata
     );
 
+    // Import/export biomaterial processing metadata
+    app.get(
+        '/projects/:projectUuid/metadata/bio_processing/export',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
+        projectController.exportBiomaterialProcessingMetadata
+    );
+    app.post(
+        '/projects/:projectUuid/metadata/bio_processing/import',
+        passport.authenticate('basic', {session: false}),
+	authController.authUser,
+	authController.authForProjectFromParams,
+        projectController.importBiomaterialProcessingMetadata
+    );
+
     // Import/export sample metadata
     app.get(
         '/projects/:projectUuid/metadata/sample/export',
