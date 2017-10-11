@@ -145,6 +145,7 @@ NotificationsController.processJobNotifications = function(request, response) {
 		    jobMessage: jobMessage,
 		    projectUuid: projectUuid,
 		    jobName: jobName,
+		    jobOutput: jobOutput,
 		};
 
 		// guard against multiple FINISHED notifications coming at same time

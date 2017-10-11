@@ -772,6 +772,16 @@ ProjectQueueManager.processProjects = function() {
 		return promises.reduce(Q.when, new Q());
 	    })
             .then(function() {
+		// send notification
+                app.emit(
+                    'userProjectNotification',
+                    {
+			projectUuid: projectUuid,
+			username: username 
+                    }
+                );
+	    })
+            .then(function() {
 		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectSendEmailTask: ' + username);
 		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - complete for project ' + projectUuid);
 		done();
