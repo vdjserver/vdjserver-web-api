@@ -111,21 +111,32 @@ ProjectController.createProject = function(request, response) {
 // Import/export metadata
 //
 
-// subject metadata
-
-ProjectController.importSubjectMetadata = function(request, response) {
+ProjectController.importMetadata = function(request, response) {
     var projectUuid = request.params.projectUuid;
     var fileUuid = request.body.fileUuid;
     var fileName = request.body.fileName;
     var op = request.body.operation;
+    var type = request.body.type;
 
     if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.importSubjectMetadata - missing Project id parameter');
+        console.error('VDJ-API ERROR: ProjectController.importMetadata - missing Project id parameter');
         apiResponseController.sendError('Project id required.', 400, response);
         return;
     }
 
-    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + op);
+    if (!type) {
+        console.error('VDJ-API ERROR: ProjectController.importMetadata - missing metadata type parameter');
+        apiResponseController.sendError('Metadata type required.', 400, response);
+        return;
+    }
+
+    if (agaveSettings.metadataTypes.indexOf(type) < 0) {
+        console.error('VDJ-API ERROR: ProjectController.importMetadata - invalid metadata type parameter');
+        apiResponseController.sendError('Invalid metadata type.', 400, response);
+        return;
+    }
+
+    console.log('VDJ-API INFO: ProjectController.importMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' type: ' + type + ' operation: ' + op);
 
     var data;
 
@@ -133,7 +144,7 @@ ProjectController.importSubjectMetadata = function(request, response) {
     agaveIO.getProjectFileContents(projectUuid, fileName)
 	.then(function(fileData) {
 	    // create metadata items
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - get import file contents');
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - get import file contents');
 	    if (fileData) {
 		//console.log(fileData);
 		fileData = fileData.trim();
@@ -147,443 +158,59 @@ ProjectController.importSubjectMetadata = function(request, response) {
 	.then(function() {
 	    if (op == 'replace') {
 		// delete existing metadata if requested
-		console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - delete existing metadata entries');
-		return agaveIO.deleteAllSubjectMetadata(projectUuid);
+		console.log('VDJ-API INFO: ProjectController.importMetadata - delete existing metadata entries');
+		return agaveIO.deleteAllMetadataForType(projectUuid, type);
 	    }
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - get subject columns');
-	    return agaveIO.getSubjectColumns(projectUuid)
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - get columns');
+	    return agaveIO.getMetadataColumnsForType(projectUuid, type)
 		.then(function(responseObject) {
 		    //console.log(responseObject);
 		    if (responseObject.length == 0) {
 			// no existing columns defined
 			var value = { columns: data.columns };
-			return agaveIO.createSubjectColumns(projectUuid, value, null);
+			return agaveIO.createMetadataColumnsForType(projectUuid, type, value, null);
 		    } else {
 			if (op == 'replace') {
 			    // replace existing columns
 			    value = responseObject[0].value;
 			    value.columns = data.columns;
-			    return agaveIO.createSubjectColumns(projectUuid, value, responseObject[0].uuid);
+			    return agaveIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
 			} else {
 			    // merge with existing colums
 			    value = responseObject[0].value;
 			    for (var i = 0; i < data.columns.length; ++i) {
 				if (value.columns.indexOf(data.columns[i]) < 0) value.columns.push(data.columns[i]);
 			    }
-			    return agaveIO.createSubjectColumns(projectUuid, value, responseObject[0].uuid);
+			    return agaveIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
 			}
 		    }
 		});
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - set permissions on subject columns');
-	    return agaveIO.getSubjectColumns(projectUuid)
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - set permissions on subject columns');
+	    return agaveIO.getMetadataColumnsForType(projectUuid, type)
 		.then(function(responseObject) {
 		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
 		});
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - create metadata entries');
-            var promises = data.map(function(dataRow) {
-		//console.log(dataRow);
-                return function() {
-		    return agaveIO.createSubjectMetadata(projectUuid, dataRow);
-		}
-            });
-
-            return promises.reduce(Q.when, new Q());
-	})
-        .then(function() {
-	    return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), projectUuid);
-	})
-        .then(function(subjectMetadata) {
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - set permissions on metadata entries');
-            var promises = subjectMetadata.map(function(entry) {
-		//console.log(entry);
-                return function() {
-		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
-		}
-	    });
-
-            return promises.reduce(Q.when, new Q());
-	})
-        .then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSubjectMetadata - done');
-	    apiResponseController.sendSuccess('ok', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.importSubjectMetadata - project ', projectUuid, ' error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
-};
-
-ProjectController.exportSubjectMetadata = function(request, response) {
-    var projectUuid = request.params.projectUuid;
-    var format = request.query.format;
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.exportSubjectMetadata - missing Project id parameter');
-        apiResponseController.sendError('Project id required.', 400, response);
-        return;
-    }
-
-    if (!format) format = 'TSV';
-
-    ServiceAccount.getToken()
-        .then(function(token) {
-            console.log('VDJ-API INFO: ProjectController.exportSubjectMetadata - start project ', projectUuid);
-	    return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-	.then(function(subjectMetadata) {
-	    //console.log(subjectMetadata);
-	    var tsvData = '';
-
-	    // default
-	    if (subjectMetadata.length == 0) {
-		tsvData = agaveSettings.subjectColumns.join('\t') + '\n';
-	    }
-
-	    // convert to TSV format
-	    for (var i = 0; i < subjectMetadata.length; ++i) {
-		var value = subjectMetadata[i].value;
-
-		// header
-		if (i == 0) {
-		    var first = true;
-		    for (var j = 0; j < agaveSettings.subjectColumns.length; ++j) {
-			var prop = agaveSettings.subjectColumns[j];
-			if (!first) tsvData += '\t';
-			tsvData += prop;
-			first = false;
-		    }
-		    for (var prop in value) {
-			if (agaveSettings.subjectColumns.indexOf(prop) >= 0) continue;
-			if (!first) tsvData += '\t';
-			tsvData += prop;
-			first = false;
-		    }
-		    tsvData += '\n';
-		}
-
-		// values
-		var first = true;
-		for (var j = 0; j < agaveSettings.subjectColumns.length; ++j) {
-		    var prop = agaveSettings.subjectColumns[j];
-		    if (!first) tsvData += '\t';
-		    if (prop in value) tsvData += value[prop];
-		    first = false;		    
-		}
-		for (var prop in value) {
-		    if (agaveSettings.subjectColumns.indexOf(prop) >= 0) continue;
-		    if (!first) tsvData += '\t';
-		    tsvData += value[prop];
-		    first = false;		    
-		}
-		tsvData += '\n';
-	    }
-
-	    var buffer = new Buffer(tsvData);
-	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "subject_metadata.tsv", buffer);
-	})
-        .then(function() {
-	    return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/subject_metadata.tsv', false);
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: ProjectController.exportSubjectMetadata - done project ', projectUuid);
-	    apiResponseController.sendSuccess('ok', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.exportSubjectMetadata - project ', projectUuid, ' error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
-};
-
-// biomaterial processing metadata
-
-ProjectController.importBiomaterialProcessingMetadata = function(request, response) {
-    var projectUuid = request.params.projectUuid;
-    var fileUuid = request.body.fileUuid;
-    var fileName = request.body.fileName;
-    var op = request.body.operation;
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.importBiomaterialProcessingMetadata - missing Project id parameter');
-        apiResponseController.sendError('Project id required.', 400, response);
-        return;
-    }
-
-    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + op);
-
-    var data;
-
-    // get metadata to import
-    agaveIO.getProjectFileContents(projectUuid, fileName)
-	.then(function(fileData) {
-	    // create metadata items
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - get import file contents');
-	    if (fileData) {
-		//console.log(fileData);
-		fileData = fileData.trim();
-
-		data = d3.tsvParse(fileData);
-		//console.log(data);
-
-		return data;
-	    }
-	})
-	.then(function() {
-	    if (op == 'replace') {
-		// delete existing metadata if requested
-		console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - delete existing metadata entries');
-		return agaveIO.deleteAllBiomaterialProcessingMetadata(projectUuid);
-	    }
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - get columns');
-	    return agaveIO.getBiomaterialProcessingColumns(projectUuid)
-		.then(function(responseObject) {
-		    //console.log(responseObject);
-		    if (responseObject.length == 0) {
-			// no existing columns defined
-			var value = { columns: data.columns };
-			return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, null);
-		    } else {
-			if (op == 'replace') {
-			    // replace existing columns
-			    value = responseObject[0].value;
-			    value.columns = data.columns;
-			    return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, responseObject[0].uuid);
-			} else {
-			    // merge with existing colums
-			    value = responseObject[0].value;
-			    for (var i = 0; i < data.columns.length; ++i) {
-				if (value.columns.indexOf(data.columns[i]) < 0) value.columns.push(data.columns[i]);
-			    }
-			    return agaveIO.createBiomaterialProcessingColumns(projectUuid, value, responseObject[0].uuid);
-			}
-		    }
-		});
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - set permissions on columns');
-	    return agaveIO.getBiomaterialProcessingColumns(projectUuid)
-		.then(function(responseObject) {
-		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
-		});
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - create metadata entries');
-            var promises = data.map(function(dataRow) {
-		//console.log(dataRow);
-                return function() {
-		    return agaveIO.createBiomaterialProcessingMetadata(projectUuid, dataRow);
-		}
-            });
-
-            return promises.reduce(Q.when, new Q());
-	})
-        .then(function() {
-	    return agaveIO.getBiomaterialProcessingMetadata(ServiceAccount.accessToken(), projectUuid);
-	})
-        .then(function(biomaterialProcessingMetadata) {
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - set permissions on metadata entries');
-            var promises = biomaterialProcessingMetadata.map(function(entry) {
-		//console.log(entry);
-                return function() {
-		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
-		}
-	    });
-
-            return promises.reduce(Q.when, new Q());
-	})
-        .then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importBiomaterialProcessingMetadata - done');
-	    apiResponseController.sendSuccess('ok', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.importBiomaterialProcessingMetadata - project ', projectUuid, ' error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
-};
-
-ProjectController.exportBiomaterialProcessingMetadata = function(request, response) {
-    var projectUuid = request.params.projectUuid;
-    var format = request.query.format;
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.exportBiomaterialProcessingMetadata - missing Project id parameter');
-        apiResponseController.sendError('Project id required.', 400, response);
-        return;
-    }
-
-    if (!format) format = 'TSV';
-
-    ServiceAccount.getToken()
-        .then(function(token) {
-            console.log('VDJ-API INFO: ProjectController.exportBiomaterialProcessingMetadata - start project ', projectUuid);
-	    return agaveIO.getBiomaterialProcessingMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-	.then(function(biomaterialProcessingMetadata) {
-	    //console.log(biomaterialProcessingMetadata);
-	    var tsvData = '';
-
-	    // default
-	    if (biomaterialProcessingMetadata.length == 0) {
-		tsvData = agaveSettings.bioProcessingColumns.join('\t') + '\n';
-	    }
-
-	    // convert to TSV format
-	    for (var i = 0; i < biomaterialProcessingMetadata.length; ++i) {
-		var value = biomaterialProcessingMetadata[i].value;
-
-		// header
-		if (i == 0) {
-		    var first = true;
-		    for (var j = 0; j < agaveSettings.bioProcessingColumns.length; ++j) {
-			var prop = agaveSettings.bioProcessingColumns[j];
-			if (!first) tsvData += '\t';
-			tsvData += prop;
-			first = false;
-		    }
-		    for (var prop in value) {
-			if (agaveSettings.bioProcessingColumns.indexOf(prop) >= 0) continue;
-			if (!first) tsvData += '\t';
-			tsvData += prop;
-			first = false;
-		    }
-		    tsvData += '\n';
-		}
-
-		// values
-		var first = true;
-		for (var j = 0; j < agaveSettings.bioProcessingColumns.length; ++j) {
-		    var prop = agaveSettings.bioProcessingColumns[j];
-		    if (!first) tsvData += '\t';
-		    if (prop in value) tsvData += value[prop];
-		    first = false;		    
-		}
-		for (var prop in value) {
-		    if (agaveSettings.bioProcessingColumns.indexOf(prop) >= 0) continue;
-		    if (!first) tsvData += '\t';
-		    tsvData += value[prop];
-		    first = false;		    
-		}
-		tsvData += '\n';
-	    }
-
-	    var buffer = new Buffer(tsvData);
-	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "bio_processing_metadata.tsv", buffer);
-	})
-        .then(function() {
-            console.log('VDJ-API INFO: ProjectController.exportBiomaterialProcessingMetadata - done project ', projectUuid);
-	    apiResponseController.sendSuccess('ok', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.exportBiomaterialProcessingMetadata - project ', projectUuid, ' error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
-};
-
-// sample metadata
-
-ProjectController.importSampleMetadata = function(request, response) {
-    var projectUuid = request.params.projectUuid;
-    var fileUuid = request.body.fileUuid;
-    var fileName = request.body.fileName;
-    var op = request.body.operation;
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.importSampleMetadata - missing Project id parameter');
-        apiResponseController.sendError('Project id required.', 400, response);
-        return;
-    }
-
-    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + op);
-
-    var data;
-
-    // get metadata to import
-    agaveIO.getProjectFileContents(projectUuid, fileName)
-	.then(function(fileData) {
-	    // create metadata items
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - get import file contents');
-	    if (fileData) {
-		//console.log(fileData);
-		fileData = fileData.trim();
-
-		data = d3.tsvParse(fileData);
-		//console.log(data);
-
-		return data;
-	    }
-	})
-	.then(function() {
-	    if (op == 'replace') {
-		// delete existing metadata if requested
-		console.log('VDJ-API INFO: ProjectController.importSampleMetadata - delete existing metadata entries');
-		return agaveIO.deleteAllSampleMetadata(projectUuid);
-	    } else {
-		return;
-	    }
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - get sample columns');
-	    return agaveIO.getSampleColumns(projectUuid)
-		.then(function(responseObject) {
-		    // remove special columns
-		    var columns = data.columns;
-		    var idx = columns.indexOf('project_file');
-		    if (idx >= 0) columns.splice(idx, 1);
-		    idx = columns.indexOf('subject_uuid');
-		    if (idx >= 0) columns.splice(idx, 1);
-		    //console.log(columns);
-
-		    if (responseObject.length == 0) {
-			// no existing columns defined
-			var value = { columns: columns };
-			return agaveIO.createSampleColumns(projectUuid, value, null);
-		    } else {
-			if (op == 'replace') {
-			    // replace existing columns
-			    value = responseObject[0].value;
-			    value.columns = columns;
-			    return agaveIO.createSampleColumns(projectUuid, value, responseObject[0].uuid);
-			} else {
-			    // merge with existing columns
-			    value = responseObject[0].value;
-			    for (var i = 0; i < columns.length; ++i) {
-				if (value.columns.indexOf(columns[i]) < 0) value.columns.push(columns[i]);
-			    }
-			    return agaveIO.createSampleColumns(projectUuid, value, responseObject[0].uuid);
-			}
-		    }
-		});
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - set permissions on sample columns');
-	    return agaveIO.getSampleColumns(projectUuid)
-		.then(function(responseObject) {
-		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
-		});
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - link project files');
-	    return agaveIO.getProjectFiles(projectUuid);
+	    // special fields - filename_uuid
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - special field: filename_uuid');
+	    if (data.columns.indexOf('filename_uuid') < 0) return null;
+	    else return agaveIO.getProjectFiles(projectUuid);
 	})
 	.then(function(projectFiles) {
+	    if (!projectFiles) return;
+
 	    // link to appropriate file
 	    for (var j = 0; j < data.length; ++j) {
 		var dataRow = data[j];
-		if (dataRow.project_file) {
+		if (dataRow.filename_uuid) {
 		    for (var i = 0; i < projectFiles.length; ++i) {
-			if (dataRow.project_file == projectFiles[i].value.name) {
-			    dataRow.project_file = projectFiles[i].uuid;
+			if (dataRow.filename_uuid == projectFiles[i].value.name) {
+			    dataRow.filename_uuid = projectFiles[i].uuid;
 			    break;
 			}
 		    }
@@ -591,67 +218,124 @@ ProjectController.importSampleMetadata = function(request, response) {
 	    }
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - link subjects');
-	    return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), projectUuid);
+	    // special fields - subject_uuid
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - special field: subject_uuid');
+	    if (data.columns.indexOf('subject_uuid') < 0) return null;
+	    else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
 	})
 	.then(function(subjectMetadata) {
+	    if (!subjectMetadata) return;
+
 	    for (var j = 0; j < data.length; ++j) {
 		var dataRow = data[j];
-		if (!dataRow.subject_uuid || dataRow.subject_uuid.length == 0) {
-		    if (dataRow.subject_name) {
-			for (var i = 0; i < subjectMetadata.length; ++i) {
-			    if (dataRow.subject_name == subjectMetadata[i].value.name) {
-				dataRow.subject_uuid = subjectMetadata[i].uuid;
-				break;
-			    } else if (dataRow.subject_name == subjectMetadata[i].value.Name) {
-				dataRow.subject_uuid = subjectMetadata[i].uuid;
-				break;
-			    }
+		if (dataRow.subject_uuid) {
+		    for (var i = 0; i < subjectMetadata.length; ++i) {
+			if (dataRow.subject_uuid == subjectMetadata[i].value['subject_id']) {
+			    dataRow.subject_uuid = subjectMetadata[i].uuid;
+			    break;
 			}
 		    }
 		}
 	    }
 	})
 	.then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - create metadata entries');
-	    var promises = data.map(function(dataRow) {
-		return function() {
-		    return agaveIO.createSampleMetadata(ServiceAccount.accessToken(), projectUuid, dataRow);
+	    // special fields - sample_uuid
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - special field: sample_uuid');
+	    if (data.columns.indexOf('sample_uuid') < 0) return null;
+	    else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+	})
+	.then(function(metadataList) {
+	    if (!metadataList) return;
+
+	    for (var j = 0; j < data.length; ++j) {
+		var dataRow = data[j];
+		if (dataRow.sample_uuid) {
+		    for (var i = 0; i < metadataList.length; ++i) {
+			if (dataRow.sample_uuid == metadataList[i].value['sample_id']) {
+			    dataRow.sample_uuid = metadataList[i].uuid;
+			    break;
+			}
+		    }
+		}
+	    }
+	})
+	.then(function() {
+	    // special fields - cell_processing_uuid
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - special field: cell_processing_uuid');
+	    if (data.columns.indexOf('cell_processing_uuid') < 0) return null;
+	    else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'cellProcessing');
+	})
+	.then(function(metadataList) {
+	    if (!metadataList) return;
+
+	    for (var j = 0; j < data.length; ++j) {
+		var dataRow = data[j];
+		if (dataRow.cell_processing_uuid) {
+		    for (var i = 0; i < metadataList.length; ++i) {
+			if (dataRow.cell_processing_uuid == metadataList[i].value['cell_processing_id']) {
+			    dataRow.cell_processing_uuid = metadataList[i].uuid;
+			    break;
+			}
+		    }
+		}
+	    }
+	})
+	.then(function() {
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - create metadata entries');
+            var promises = data.reverse().map(function(dataRow) {
+		//console.log(dataRow);
+                return function() {
+		    return agaveIO.createMetadataForType(projectUuid, type, dataRow);
+		}
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+        .then(function() {
+	    return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
+	})
+        .then(function(metadataList) {
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - set permissions on metadata entries');
+            var promises = metadataList.map(function(entry) {
+		//console.log(entry);
+                return function() {
+		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
 		}
 	    });
 
-	    return promises.reduce(Q.when, new Q());
-	})
-	.then(function() {
-	    return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-	.then(function(sampleMetadata) {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - set permission on metadata entries');
-	    var promises = sampleMetadata.map(function(anEntry) {
-		return function() {
-		    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, anEntry.uuid);
-		};
-	    })
-	    return promises.reduce(Q.when, new Q());
+            return promises.reduce(Q.when, new Q());
 	})
         .then(function() {
-	    console.log('VDJ-API INFO: ProjectController.importSampleMetadata - done');
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - done');
 	    apiResponseController.sendSuccess('ok', response);
         })
         .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.importSampleMetadata - project ', projectUuid, ' error ' + error);
+            console.error('VDJ-API ERROR: ProjectController.importMetadata - project ', projectUuid, ' error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
 };
 
-ProjectController.exportSampleMetadata = function(request, response) {
+ProjectController.exportMetadata = function(request, response) {
     var projectUuid = request.params.projectUuid;
     var format = request.query.format;
+    var type = request.query.type;
 
     if (!projectUuid) {
-        console.error('VDJ-API ERROR: ProjectController.exportSampleMetadata - missing Project id parameter');
+        console.error('VDJ-API ERROR: ProjectController.exportMetadata - missing Project id parameter');
         apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    if (!type) {
+        console.error('VDJ-API ERROR: ProjectController.exportMetadata - missing metadata type parameter');
+        apiResponseController.sendError('Metadata type required.', 400, response);
+        return;
+    }
+
+    if (agaveSettings.metadataTypes.indexOf(type) < 0) {
+        console.error('VDJ-API ERROR: ProjectController.exportMetadata - invalid metadata type parameter');
+        apiResponseController.sendError('Invalid metadata type.', 400, response);
         return;
     }
 
@@ -659,33 +343,33 @@ ProjectController.exportSampleMetadata = function(request, response) {
 
     ServiceAccount.getToken()
         .then(function(token) {
-            console.log('VDJ-API INFO: ProjectController.exportSampleMetadata - start project ', projectUuid);
-	    return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), projectUuid);
+            console.log('VDJ-API INFO: ProjectController.exportMetadata - start project: ' + projectUuid + ' type: ' + type);
+	    return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
         })
-	.then(function(sampleMetadata) {
-	    //console.log(sampleMetadata);
+	.then(function(metadataList) {
+	    //console.log(subjectMetadata);
+	    var tsvData = '';
 
 	    // default
-	    var tsvData = '';
-	    if (sampleMetadata.length == 0) {
-		tsvData = agaveSettings.sampleColumns.join('\t') + '\n';
+	    if (metadataList.length == 0) {
+		tsvData = agaveSettings.defaultColumns[type].join('\t') + '\n';
 	    }
 
 	    // convert to TSV format
-	    for (var i = 0; i < sampleMetadata.length; ++i) {
-		var value = sampleMetadata[i].value;
+	    for (var i = 0; i < metadataList.length; ++i) {
+		var value = metadataList[i].value;
 
 		// header
 		if (i == 0) {
 		    var first = true;
-		    for (var j = 0; j < agaveSettings.sampleColumns.length; ++j) {
-			var prop = agaveSettings.sampleColumns[j];
+		    for (var j = 0; j < agaveSettings.defaultColumns[type].length; ++j) {
+			var prop = agaveSettings.defaultColumns[type][j];
 			if (!first) tsvData += '\t';
 			tsvData += prop;
 			first = false;
 		    }
 		    for (var prop in value) {
-			if (agaveSettings.sampleColumns.indexOf(prop) >= 0) continue;
+			if (agaveSettings.defaultColumns[type].indexOf(prop) >= 0) continue;
 			if (!first) tsvData += '\t';
 			tsvData += prop;
 			first = false;
@@ -695,33 +379,33 @@ ProjectController.exportSampleMetadata = function(request, response) {
 
 		// values
 		var first = true;
-		for (var j = 0; j < agaveSettings.sampleColumns.length; ++j) {
-		    var prop = agaveSettings.sampleColumns[j];
+		for (var j = 0; j < agaveSettings.defaultColumns[type].length; ++j) {
+		    var prop = agaveSettings.defaultColumns[type][j];
 		    if (!first) tsvData += '\t';
 		    if (prop in value) tsvData += value[prop];
 		    first = false;		    
 		}
 		for (var prop in value) {
-		    if (agaveSettings.sampleColumns.indexOf(prop) >= 0) continue;
+		    if (agaveSettings.defaultColumns[type].indexOf(prop) >= 0) continue;
 		    if (!first) tsvData += '\t';
 		    tsvData += value[prop];
-		    first = false;		    
+		    first = false;
 		}
 		tsvData += '\n';
 	    }
 
 	    var buffer = new Buffer(tsvData);
-	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, "sample_metadata.tsv", buffer);
+	    return agaveIO.uploadFileToProjectTempDirectory(projectUuid, type + '_metadata.tsv', buffer);
 	})
         .then(function() {
-	    return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/sample_metadata.tsv', false);
+	    return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/' + type + '_metadata.tsv', false);
         })
         .then(function() {
-            console.log('VDJ-API INFO: ProjectController.exportSampleMetadata - done project ', projectUuid);
+            console.log('VDJ-API INFO: ProjectController.exportMetadata - done project ', projectUuid);
 	    apiResponseController.sendSuccess('ok', response);
         })
         .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.exportSampleMetadata - project ', projectUuid, ' error ' + error);
+            console.error('VDJ-API ERROR: ProjectController.exportMetadata - project ', projectUuid, ' error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
         ;

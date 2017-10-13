@@ -93,22 +93,49 @@ JobQueueManager.processJobs = function() {
 	    .then(function(projectMetadata) {
 		metadata.project = projectMetadata;
 
-		return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'subject');
 	    })
-	    .then(function(subjectMetadata) {
-		metadata.subjects = {};
-		for (var i = 0; i < subjectMetadata.length; ++i) {
-		    var uuid = subjectMetadata[i].uuid;
-		    metadata.subjects[uuid] = subjectMetadata[i];
+	    .then(function(metadataList) {
+		metadata.subjectMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.subjectMetadata[uuid] = metadataList[i];
 		}
 
-		return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'diagnosis');
 	    })
-	    .then(function(sampleMetadata) {
-		metadata.samples = {};
-		for (var i = 0; i < sampleMetadata.length; ++i) {
-		    var uuid = sampleMetadata[i].uuid;
-		    metadata.samples[uuid] = sampleMetadata[i];
+	    .then(function(metadataList) {
+		metadata.diagnosisMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.diagnosisMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'sample');
+	    })
+	    .then(function(metadataList) {
+		metadata.sampleMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.sampleMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'cellProcessing');
+	    })
+	    .then(function(metadataList) {
+		metadata.cellProcessingMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.cellProcessingMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'nucleicAcidProcessing');
+	    })
+	    .then(function(metadataList) {
+		metadata.nucleicAcidProcessingMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.nucleicAcidProcessingMetadata[uuid] = metadataList[i];
 		}
 
 		return agaveIO.getSampleGroupsMetadata(ServiceAccount.accessToken(), jobData.projectUuid);

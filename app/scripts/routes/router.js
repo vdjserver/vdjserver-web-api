@@ -161,52 +161,21 @@ module.exports = function(app) {
         projectController.createProject
     );
 
-    // Import/export subject metadata
+    // Import/export metadata
+    // single entrypoint for all metadata types
     app.get(
-        '/projects/:projectUuid/metadata/subject/export',
+        '/projects/:projectUuid/metadata/export',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
 	authController.authForProjectFromParams,
-        projectController.exportSubjectMetadata
+        projectController.exportMetadata
     );
     app.post(
-        '/projects/:projectUuid/metadata/subject/import',
+        '/projects/:projectUuid/metadata/import',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
 	authController.authForProjectFromParams,
-        projectController.importSubjectMetadata
-    );
-
-    // Import/export biomaterial processing metadata
-    app.get(
-        '/projects/:projectUuid/metadata/bio_processing/export',
-        passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
-        projectController.exportBiomaterialProcessingMetadata
-    );
-    app.post(
-        '/projects/:projectUuid/metadata/bio_processing/import',
-        passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
-        projectController.importBiomaterialProcessingMetadata
-    );
-
-    // Import/export sample metadata
-    app.get(
-        '/projects/:projectUuid/metadata/sample/export',
-        passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
-        projectController.exportSampleMetadata
-    );
-    app.post(
-        '/projects/:projectUuid/metadata/sample/import',
-        passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
-        projectController.importSampleMetadata
+        projectController.importMetadata
     );
 
     // Publish project to community data

@@ -26,25 +26,40 @@ module.exports = {
     debugConsole: process.env.DEBUG_CONSOLE,
 
     // AIRR minimal standards and other defaults for metadata
-    subjectColumns: ['subject_id', 'subject_name', 'organism', 'sex', 'age', 'age_event',
-                     'ancestry_population', 'ethnicity', 'race', 'species_name', 'strain_name',
-                     'linked_subjects', 'link_type', 'study_group_description', 'diagnosis',
-                     'disease_length', 'disease_stage', 'prior_therapies', 'immunogen',
-                     'intervention', 'medical_history'],
+    metadataTypes: [ 'subject', 'diagnosis', 'sample', 'cellProcessing', 'nucleicAcidProcessing'],
 
-    bioProcessingColumns: ['name', 'tissue_processing', 'cell_subset', 'cell_subset_phenotype',
-                           'single_or_bulk', 'cell_number', 'cells_per_reaction', 'cell_storage',
-                           'cell_quality', 'cell_isolation', 'processing_protocol', 'library_source',
-                           'target_substrate_quality', 'library_strategy', 'library_construction_protocol',
-                           'target_locus_PCR', 'forward_PCR_primer_target_location',
-                           'reverse_PCR_primer_target_location', 'whole_vs_partial_sequences',
-                           'heavy_light_paired', 'ng_template', 'total_reads_passing_qc_filter',
-                           'protocol', 'platform', 'read_length', 'sequencing_facility',
-                           'batch_number', 'sequencing_run_date', 'sequencing_kit'],
+    metadataColumns: {
+	subject: 'subjectColumns',
+	diagnosis: 'diagnosisColumns',
+	sample: 'sampleColumns',
+	cellProcessing: 'cellProcessingColumns',
+	nucleicAcidProcessing: 'nucleicAcidProcessingColumns'
+    },
 
-    sampleColumns: ['sample_id', 'name', 'sample_description',
-                    'sample_type', 'tissue', 'disease_state_sample',
-                    'collection_date', 'collection_time_event', 'source_commercial',
-                    'subject_uuid', 'project_file', 'barcode'],
+    defaultColumns: {
+	subject: ['subject_id', 'synthetic', 'organism', 'sex', 'age', 'age_event',
+		  'ancestry_population', 'ethnicity', 'race', 'strain_name',
+		  'linked_subjects', 'link_type'],
+
+	diagnosis: ['subject_uuid', 'study_group_description', 'disease_diagnosis',
+		    'disease_length', 'disease_stage', 'prior_therapies', 'immunogen',
+		    'intervention', 'medical_history'],
+
+	sample: ['sample_id', 'subject_uuid', 'filename_uuid',
+		 'sample_type', 'tissue', 'anatomic_site', 'disease_state_sample',
+		 'collection_date', 'collection_time_event', 'biomaterial_provider'],
+
+	cellProcessing: ['cell_processing_id', 'sample_uuid', 'tissue_processing', 'cell_subset', 'cell_phenotype',
+			 'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage',
+			 'cell_quality', 'cell_isolation', 'cell_processing_protocol'],
+
+	nucleicAcidProcessing: ['nucleic_acid_processing_id', 'cell_processing_uuid', 'filename_uuid',
+				'library_source', 'library_quality', 'library_construction_method',
+				'library_construction_protocol', 'target_locus_PCR', 'forward_PCR_primer_target_location',
+				'reverse_PCR_primer_target_location', 'complete_sequences',
+				'physical_linkage', 'template_amount', 'total_reads_passing_qc_filter',
+				'protocol_id', 'platform', 'read_length', 'sequencing_facility',
+				'batch_number', 'sequencing_run_date', 'sequencing_kit'],
+    }
 
 };
