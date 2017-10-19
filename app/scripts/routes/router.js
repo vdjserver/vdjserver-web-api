@@ -192,7 +192,7 @@ module.exports = function(app) {
         '/projects/:projectUuid/unpublish',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
-	authController.authForProjectFromParams,
+	authController.authForUnpublishProjectFromParams,
         projectController.unpublishProject
     );
 
