@@ -47,19 +47,20 @@ module.exports = {
 
 	sample: ['sample_id', 'subject_uuid', 'filename_uuid',
 		 'sample_type', 'tissue', 'anatomic_site', 'disease_state_sample',
-		 'collection_date', 'collection_time_event', 'biomaterial_provider'],
+		 'collection_time_point_relative', 'collection_time_point_reference', 'biomaterial_provider'],
 
 	cellProcessing: ['cell_processing_id', 'sample_uuid', 'tissue_processing', 'cell_subset', 'cell_phenotype',
 			 'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage',
 			 'cell_quality', 'cell_isolation', 'cell_processing_protocol'],
 
 	nucleicAcidProcessing: ['nucleic_acid_processing_id', 'cell_processing_uuid', 'filename_uuid',
-				'library_source', 'library_quality', 'library_construction_method',
-				'library_construction_protocol', 'target_locus_PCR', 'forward_PCR_primer_target_location',
-				'reverse_PCR_primer_target_location', 'complete_sequences',
-				'physical_linkage', 'template_amount', 'total_reads_passing_qc_filter',
-				'protocol_id', 'platform', 'read_length', 'sequencing_facility',
-				'batch_number', 'sequencing_run_date', 'sequencing_kit'],
+				'template_class', 'template_quality', 'template_amount', 'library_generation_method',
+				'library_generation_protocol', 'library_generation_kit_version',
+				'pcr_target_locus', 'forward_pcr_primer_target_location',
+				'reverse_pcr_primer_target_location', 'complete_sequences',
+				'physical_linkage', 'total_reads_passing_qc_filter',
+				'sequencing_platform', 'read_length', 'sequencing_facility',
+				'sequencing_run_id', 'sequencing_run_date', 'sequencing_kit'],
     }
 
 };
