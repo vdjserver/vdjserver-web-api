@@ -529,3 +529,70 @@ ProjectController.unpublishProject = function(request, response) {
         })
         ;
 };
+
+// Create download postit for public project file
+
+ProjectController.createPublicPostit = function(request, response) {
+    var projectUuid = request.params.projectUuid;
+    var fileUuid = request.params.fileUuid;
+
+    if (!projectUuid) {
+        console.error('VDJ-API ERROR: ProjectController.createPublicPostit - missing Project id parameter');
+        apiResponseController.sendError('Project id required.', 400, response);
+        return;
+    }
+
+    if (!fileUuid) {
+        console.error('VDJ-API ERROR: ProjectController.createPublicPostit - missing Metadata id parameter');
+        apiResponseController.sendError('Metadata id required.', 400, response);
+        return;
+    }
+
+    console.log('VDJ-API INFO: ProjectController.createPublicPostit - start, project: ' + projectUuid + ' file: ' + fileUuid);
+
+    // Creating a postit requires a POST which cannot be done by
+    // the guest account, so we create it here. The postit is used
+    // for downloading public project data and job files.
+
+    var msg = null;
+    ServiceAccount.getToken()
+        .then(function(token) {
+	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+	.then(function(projectMetadata) {
+	    // Verify it is a public project
+	    if (projectMetadata.name == 'publicProject') {
+		return agaveIO.getMetadata(fileUuid);
+	    } else {
+		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' is not a public project.';
+		return Q.reject(new Error(msg));
+	    }
+	})
+        .then(function(fileMetadata) {
+	    if (fileMetadata.value.projectUuid != projectUuid) {
+		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
+		return Q.reject(new Error(msg));
+	    } else if (fileMetadata.name == 'projectFile') {
+		// if project data file
+		return agaveIO.createCommunityFilePostit(projectUuid, 'files/' + fileMetadata.value.name);
+	    } else if (fileMetadata.name == 'projectJobFile') {
+		// if project job file
+		return agaveIO.createCommunityFilePostit(projectUuid, 'analyses/' + fileMetadata.value.relativeArchivePath + '/' + fileMetadata.value.name);
+	    } else {
+		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
+		return Q.reject(new Error(msg));
+	    }
+	})
+        .then(function(targetUrl) {
+	    console.log('VDJ-API INFO: ProjectController.createPublicPostit - done, project: ' + projectUuid + ' file: ' + fileUuid);
+
+	    return apiResponseController.sendSuccess(targetUrl, response);
+        })
+        .fail(function(error) {
+	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.sendError(msg, 500, response);
+        })
+        ;
+};

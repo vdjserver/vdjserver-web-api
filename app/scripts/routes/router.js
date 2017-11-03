@@ -196,6 +196,12 @@ module.exports = function(app) {
         projectController.unpublishProject
     );
 
+    // Create download postit for public project file
+    app.get(
+        '/projects/:projectUuid/postit/:fileUuid',
+        projectController.createPublicPostit
+    );
+
     // Record Telemetry Data
     app.post(
         '/telemetry',

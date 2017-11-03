@@ -3312,6 +3312,53 @@ agaveIO.getCommunityDataMetadata = function() {
     return deferred.promise;
 };
 
+agaveIO.createCommunityFilePostit = function(projectUuid, path) {
+
+    var deferred = Q.defer();
+
+    var url = 'https://' + agaveSettings.hostname
+	+ '/files/v2/media/system/'
+	+ agaveSettings.storageSystem
+	+ '//community/' + projectUuid
+	+ '/' + path
+	+ '?force=true';
+
+    var postData = {
+	url: url,
+	method: 'GET',
+	maxUses: 1,
+	lifetime: 3600,
+	noauth: false
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/postits/v2/',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
 //
 /////////////////////////////////////////////////////////////////////
 //
