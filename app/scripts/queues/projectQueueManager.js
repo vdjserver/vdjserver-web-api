@@ -489,6 +489,14 @@ ProjectQueueManager.processProjects = function() {
 		// END HOTFIX
             })
             .then(function() {
+		// HOTFIX: Agave bug AH-245 is preventing users from uploading files into a project. This happens when you 
+		// add the user to the project. For some reason, with the recursive=true flag set on the files/ directory,
+		// the user gets a write permission denied error. We stopped setting recursive=true due to the bug AH-207
+		// which has a hotfix above, but now we need to set it for the files/ directory. This should be okay as
+		// that directory only holds uploaded files and has not subdirectories, unlike analyses/ which can be quite big.
+		return agaveIO.setFilePermissions(ServiceAccount.accessToken(), username, 'ALL', true, '/projects/' + projectUuid + '/files');
+            })
+            .then(function() {
                 taskQueue
                     .create('addUsernameToProjectFileMetadataTask', projectData)
                     .removeOnComplete(true)
