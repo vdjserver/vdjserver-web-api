@@ -45,7 +45,7 @@ module.exports = {
 		    'disease_length', 'disease_stage', 'prior_therapies', 'immunogen',
 		    'intervention', 'medical_history'],
 
-	sample: ['sample_id', 'subject_uuid', 'filename_uuid',
+	sample: ['sample_id', 'subject_uuid',
 		 'sample_type', 'tissue', 'anatomic_site', 'disease_state_sample',
 		 'collection_time_point_relative', 'collection_time_point_reference', 'biomaterial_provider'],
 
