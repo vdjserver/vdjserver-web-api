@@ -252,7 +252,7 @@ FileUploadJob.prototype.checkFileAvailability = function() {
 		//console.log(history.status);
 
                 //if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED' && historyDatetime.isAfter(availabilityTime)) {
-                if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED') {
+                if (history.hasOwnProperty('status') && history.status === 'STAGING_COMPLETED') {
                     isAvailable = true;
 		    return agaveIO.getFileDetail(path);
                 }
