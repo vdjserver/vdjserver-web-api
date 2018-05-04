@@ -55,6 +55,9 @@ FeedbackController.createFeedback = function(request, response) {
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
 
+	    // send acknowledgement
+	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);
         })
         .fail(function(error) {
@@ -102,6 +105,9 @@ FeedbackController.createPublicFeedback = function(request, response) {
             var emailFeedbackMessage = feedback.getEmailMessage();
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+
+	    // send acknowledgement
+	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
 
             //send the response
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);

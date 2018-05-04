@@ -34,3 +34,10 @@ app.on('fileImportNotification', function(fileImportNotification) {
 
     nsp.in(fileImportNotification.fileInformation.projectUuid).emit('fileImportUpdate', fileImportNotification);
 });
+
+app.on('userProjectNotification', function(userProjectNotification) {
+    //console.log("userProjectNotification received ok: " + JSON.stringify(userProjectNotification));
+    //console.log("userProjectNotification recieved. Rooms are: " + JSON.stringify(io.sockets.adapter.rooms));
+
+    nsp.in(userProjectNotification.projectUuid).emit('userProjectUpdate', userProjectNotification);
+});

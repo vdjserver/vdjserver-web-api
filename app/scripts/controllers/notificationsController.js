@@ -116,7 +116,11 @@ NotificationsController.processJobNotifications = function(request, response) {
 
     var msg = null;
     var message = 'Invalid job id.';
-    
+
+    // ignore permission events
+    if (jobEvent == 'PERMISSION_GRANT') return apiResponseController.sendSuccess('ok', response);
+    if (jobEvent == 'PERMISSION_REVOKE') return apiResponseController.sendSuccess('ok', response);
+
     // valid job?
     agaveIO.getJobOutput(jobId)
 	.then(function(jobOutput) {
@@ -141,6 +145,7 @@ NotificationsController.processJobNotifications = function(request, response) {
 		    jobMessage: jobMessage,
 		    projectUuid: projectUuid,
 		    jobName: jobName,
+		    jobOutput: jobOutput,
 		};
 
 		// guard against multiple FINISHED notifications coming at same time

@@ -14,6 +14,7 @@ var ServiceAccount = require('../models/serviceAccount');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
+var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var jsonApprover = require('json-approver');
@@ -92,22 +93,49 @@ JobQueueManager.processJobs = function() {
 	    .then(function(projectMetadata) {
 		metadata.project = projectMetadata;
 
-		return agaveIO.getSubjectMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'subject');
 	    })
-	    .then(function(subjectMetadata) {
-		metadata.subjects = {};
-		for (var i = 0; i < subjectMetadata.length; ++i) {
-		    var uuid = subjectMetadata[i].uuid;
-		    metadata.subjects[uuid] = subjectMetadata[i];
+	    .then(function(metadataList) {
+		metadata.subjectMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.subjectMetadata[uuid] = metadataList[i];
 		}
 
-		return agaveIO.getSampleMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'diagnosis');
 	    })
-	    .then(function(sampleMetadata) {
-		metadata.samples = {};
-		for (var i = 0; i < sampleMetadata.length; ++i) {
-		    var uuid = sampleMetadata[i].uuid;
-		    metadata.samples[uuid] = sampleMetadata[i];
+	    .then(function(metadataList) {
+		metadata.diagnosisMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.diagnosisMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'sample');
+	    })
+	    .then(function(metadataList) {
+		metadata.sampleMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.sampleMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'cellProcessing');
+	    })
+	    .then(function(metadataList) {
+		metadata.cellProcessingMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.cellProcessingMetadata[uuid] = metadataList[i];
+		}
+
+		return agaveIO.getMetadataForType(ServiceAccount.accessToken(), jobData.projectUuid, 'nucleicAcidProcessing');
+	    })
+	    .then(function(metadataList) {
+		metadata.nucleicAcidProcessingMetadata = {};
+		for (var i = 0; i < metadataList.length; ++i) {
+		    var uuid = metadataList[i].uuid;
+		    metadata.nucleicAcidProcessingMetadata[uuid] = metadataList[i];
 		}
 
 		return agaveIO.getSampleGroupsMetadata(ServiceAccount.accessToken(), jobData.projectUuid);
@@ -349,6 +377,19 @@ JobQueueManager.processJobs = function() {
 
                 var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
+                var promises = projectUsernames.map(function(username) {
+                    return function() {
+                        return agaveIO.addUsernameToFullFilePermissions(
+                            username,
+                            ServiceAccount.accessToken(),
+                            jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
+			    false
+                        );
+                    };
+                });
+
+                return promises.reduce(Q.when, new Q()); // 3.
+/*
                 return agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath)
                     .then(function(jobFileListings) {
 
@@ -357,14 +398,15 @@ JobQueueManager.processJobs = function() {
                                 return agaveIO.addUsernameToFullFilePermissions(
                                     username,
                                     ServiceAccount.accessToken(),
-                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath
+                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
+				    true
                                 );
                             };
                         });
 
                         return promises.reduce(Q.when, new Q()); // 3.
                     })
-                    ;
+                    ; */
             })
             .then(function() {
                 taskQueue
@@ -612,9 +654,55 @@ JobQueueManager.processJobs = function() {
 	    }
 	);
 
-	console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
-		
-	done();
+	// send emails
+	ServiceAccount.getToken()
+	    .then(function(token) {
+		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), jobData.projectUuid);
+	    })
+            .then(function(projectPermissions) {
+		// send emails
+		var metadataPermissions = new MetadataPermissions();
+		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+
+		var promises = projectUsernames.map(function(username) {
+                    return function() {
+			return agaveIO.getUserProfile(username)
+			    .then(function(userProfileList) {
+				if (userProfileList.length == 0) return;
+				if (username == agaveSettings.guestAccountKey) return;
+				var userProfile = userProfileList[0];
+				if (!userProfile.value.disableJobEmail) {
+				    var vdjWebappUrl = agaveSettings.vdjBackbone
+					+ '/project/'
+				        + jobData.projectUuid
+					+ '/jobs/'
+					+ jobData.jobId
+				    ;
+				    emailIO.sendGenericEmail(userProfile.value.email,
+							     'VDJServer job is finished',
+							     'Your VDJServer job "' + decodeURIComponent(jobData.jobName)
+							     + ' for application ' + jobData.jobOutput.appId + '" is finished.'
+							     + '<br>'
+							     + 'You can view analyses and results with the link below:'
+							     + '<br>'
+							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							     );
+				}
+			    });
+                    };
+		});
+
+		return promises.reduce(Q.when, new Q());
+	    })
+            .then(function() {
+		console.log('VDJ-API INFO: jobCompleteTask for ' + jobData.jobId);
+		done();
+            })
+            .fail(function(error) {
+                console.error('VDJ-API ERROR: jobCompleteTask error is: "' + error + '" for ' + jobData.jobId);
+                done(new Error('jobCompleteTask error is: "' + error + '" for ' + jobData.jobId));
+            })
+            ;
     });
 
     taskQueue.process('removeJobGuardTask', function(task, done) {

@@ -136,6 +136,47 @@ AuthController.authForProjectFromQuery = function(request, response, next) {
 }
 
 //
+// Unpublishing a project is special as no user has write access on a public project
+// However, we leave original users on project with read access
+//
+AuthController.authForUnpublishProject = function(request, response, next, projectUuid) {
+
+    if (!projectUuid) {
+        return apiResponseController.sendError('Project uuid required.', 400, response);
+    }
+
+    agaveIO.getProjectMetadata(request.user.password, projectUuid)
+        .then(function(projectMetadata) {
+	    // make sure its project metadata and not some random uuid
+            if (projectMetadata && projectMetadata.name == 'publicProject') {
+		return agaveIO.getMetadataPermissionsForUser(request.user.password, projectUuid, request.user.username);
+            }
+            else {
+		return apiResponseController.send401(request, response);
+            }
+        })
+        .then(function(projectPermissions) {
+	    // verify read permission for specific user
+	    if (projectPermissions && projectPermissions.permission.read)
+		return next();
+	    else {
+		return apiResponseController.send401(request, response);
+	    }
+        })
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: AuthController.authForUnpublishProject - project: ' + projectUuid + ', route '
+		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return apiResponseController.send401(request, response);
+        });
+}
+
+AuthController.authForUnpublishProjectFromParams = function(request, response, next) {
+    return AuthController.authForUnpublishProject(request, response, next, request.params.projectUuid);
+}
+
+//
 // verify user has access to metadata entry
 //
 AuthController.authForMetadata = function(request, response, next, uuid) {

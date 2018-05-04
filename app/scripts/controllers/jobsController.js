@@ -342,7 +342,7 @@ JobsController.archiveJob = function(request, response) {
 
     // Check that job is valid for archiving
     // 1. Must be valid user with permissions on job
-    // 2. Job must be FINISHED or FAILED state
+    // 2. Job must be FINISHED, FAILED or STOPPED state
     // 3. Job must not already by archived
     var msg = null;
     agaveIO.getJobPermissions(jobId)
@@ -363,6 +363,7 @@ JobsController.archiveJob = function(request, response) {
 
 	    if (jobData.status == 'FINISHED') validState = true;
 	    if (jobData.status == 'FAILED') validState = true;
+	    if (jobData.status == 'STOPPED') validState = true;
 
 	    if (validState) return agaveIO.getJobMetadataForJob(jobId);
 	    else {

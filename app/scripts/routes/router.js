@@ -25,6 +25,13 @@ passport.use(new BasicStrategy(
     }
 ));
 
+var authForProject = function(request, response, next) {
+    console.log('authForProject');
+
+    //return apiResponseController.send401(request, response);
+    return next();
+};
+
 module.exports = function(app) {
 
     app.get(
@@ -154,36 +161,45 @@ module.exports = function(app) {
         projectController.createProject
     );
 
-    // Import/export subject metadata
+    // Import/export metadata
+    // single entrypoint for all metadata types
     app.get(
-        '/projects/:projectUuid/metadata/subject/export',
+        '/projects/:projectUuid/metadata/export',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
 	authController.authForProjectFromParams,
-        projectController.exportSubjectMetadata
+        projectController.exportMetadata
     );
     app.post(
-        '/projects/:projectUuid/metadata/subject/import',
+        '/projects/:projectUuid/metadata/import',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
 	authController.authForProjectFromParams,
-        projectController.importSubjectMetadata
+        projectController.importMetadata
     );
 
-    // Import/export sample metadata
-    app.get(
-        '/projects/:projectUuid/metadata/sample/export',
+    // Publish project to community data
+    app.put(
+        '/projects/:projectUuid/publish',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
 	authController.authForProjectFromParams,
-        projectController.exportSampleMetadata
+        projectController.publishProject
     );
-    app.post(
-        '/projects/:projectUuid/metadata/sample/import',
+
+    // Unpublish project from community data
+    app.put(
+        '/projects/:projectUuid/unpublish',
         passport.authenticate('basic', {session: false}),
 	authController.authUser,
-	authController.authForProjectFromParams,
-        projectController.importSampleMetadata
+	authController.authForUnpublishProjectFromParams,
+        projectController.unpublishProject
+    );
+
+    // Create download postit for public project file
+    app.get(
+        '/projects/:projectUuid/postit/:fileUuid',
+        projectController.createPublicPostit
     );
 
     // Record Telemetry Data
