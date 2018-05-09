@@ -92,7 +92,7 @@ agaveIO.sendFormRequest = function(requestSettings, formData) {
 
     var deferred = Q.defer();
 
-    var request = require('https').request(requestSettings, function(response) {
+    var request = formData.submit(requestSettings, function(error, response) {
 
         var output = '';
 
@@ -137,14 +137,8 @@ agaveIO.sendFormRequest = function(requestSettings, formData) {
             console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
         }
 
-        deferred.reject(new Error('Agave connection error'));
+        deferred.reject(new Error('Agave connection error. ' + JSON.stringify(error)));
     });
-
-    if (formData) {
-	formData.pipe(request);
-    }
-
-    request.end();
 
     return deferred.promise;
 };
@@ -2587,6 +2581,7 @@ agaveIO.uploadFileToJobArchiveDirectory = function(archivePath, filename, fileda
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
+		protocol: 'https:',
 		method:   'POST',
 		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '/' + archivePath,
@@ -2621,6 +2616,7 @@ agaveIO.uploadFileToProjectDirectory = function(projectUuid, filename, filedata)
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
+		protocol: 'https:',
 		method:   'POST',
 		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid + '/files',
@@ -2655,6 +2651,7 @@ agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filed
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
+		protocol: 'https:',
 		method:   'POST',
 		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid + '/deleted',
