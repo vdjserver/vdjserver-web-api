@@ -21,6 +21,7 @@ module.exports = {
 
     // Email
     fromAddress: process.env.EMAIL_ADDRESS,
+    replyToAddress: process.env.REPLYTO_EMAIL_ADDRESS,
 
     // Debug
     debugConsole: process.env.DEBUG_CONSOLE,
