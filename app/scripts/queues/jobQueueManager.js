@@ -162,7 +162,7 @@ JobQueueManager.processJobs = function() {
 		    metadata.secondaryInputs = jobData.config.secondaryInputs;
 		    // move so does not get passed to agave job submission
 		    jobData.secondaryInputs = jobData.config.secondaryInputs;
-		    jobData.config.secondaryInputs = null;
+		    delete jobData.config.secondaryInputs;
 		}
 
 		return agaveIO.getProcessMetadataForProject(jobData.projectUuid);
