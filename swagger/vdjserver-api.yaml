@@ -1,7 +1,7 @@
-swagger: '2.0'
+swagger: '3.0'
 info:
   title: VDJServer API
-  version: 1.0.0
+  version: 2.0.0
   contact:
     name: VDJServer
     url: 'https://vdjserver.org/'
@@ -26,6 +26,8 @@ tags:
     description: API for feedback
   - name: users
     description: API for user account maintenance
+  - name: authentication
+    description: API for user authentication
 
 paths:
   /:
@@ -70,6 +72,29 @@ paths:
 
   /swagger:
     x-swagger-pipe: swagger_raw
+
+  /token:
+    x-swagger-router-controller: token
+    post:
+      description: create token
+      tags:
+        - authentication
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+              password:
+                type: string
+      operationId: createToken
+    put:
+      description: refresh token
+      tags:
+        - authentication
+      operationId: refreshToken
 
   /project:
     x-swagger-router-controller: project

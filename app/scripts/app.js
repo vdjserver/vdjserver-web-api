@@ -6,8 +6,12 @@ var express      = require('express');
 var morgan       = require('morgan');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
+var openapi      = require('express-openapi');
 var passport     = require('passport');
 var _            = require('underscore');
+var path = require('path');
+var cors = require('cors');
+var fs = require('fs');
 var app          = module.exports = express();
 
 var webhookIO = require('./vendor/webhookIO');
@@ -16,12 +20,12 @@ var webhookIO = require('./vendor/webhookIO');
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-	console.log('VDJ-API INFO: Successfully acquired service token.');
+        console.log('VDJ-API INFO: Successfully acquired service token.');
     })
     .fail(function(error) {
-	console.error('VDJ-API ERROR: Service may need to be restarted.');
-	webhookIO.postToSlack('VDJ-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
-	//process.exit(1);
+        console.error('VDJ-API ERROR: Service may need to be restarted.');
+        webhookIO.postToSlack('VDJ-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
+        //process.exit(1);
     });
 
 // Server Options
@@ -59,6 +63,7 @@ app.redisConfig = {
 };
 
 // Server
+/*
 var env = process.env.NODE_ENV || 'production';
 if (env === 'test') {
     app.server = require('http').createServer(app).listen(8442, function() {
@@ -82,9 +87,30 @@ else if (env === 'production') {
         console.log('VDJ-API INFO: Express Prod HTTP server listening on port ' + app.get('port'));
     });
 }
+*/
+
+app.use(errorHandler({
+    dumpExceptions: true,
+    showStack: true,
+}));
+
+openapi.initialize({
+  apiDoc: fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'),
+  app: app,
+  promiseMode: true,
+  paths: path.resolve(__dirname, 'api-routes')
+});
+
+app.use(function(err, req, res, next) {
+  res.status(err.status).json(err.message);
+});
+
+app.listen(app.get('port'), function() {
+    console.log('VDJ-API INFO: VDJServer API service listening on port ' + app.get('port'));
+});
 
 // Router
-require('./routes/router')(app);
+//require('./routes/router')(app);
 
 // WebsocketIO
 require('./utilities/websocketManager');
