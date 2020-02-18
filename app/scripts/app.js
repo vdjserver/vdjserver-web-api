@@ -27,6 +27,10 @@ ServiceAccount.getToken()
         //process.exit(1);
     });
 
+// Controllers
+var apiResponseController = require('./controllers/apiResponseController');
+var tokenController       = require('./controllers/tokenController');
+
 // Server Options
 var config = require('./config/config');
 app.set('port', config.port);
@@ -49,8 +53,7 @@ var allowCrossDomain = function(request, response, next) {
 
 // Server Settings
 app.use(morgan('combined'));
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
+//app.use(bodyParser.urlencoded({extended: true}));
 app.use(allowCrossDomain);
 app.use(passport.initialize());
 //app.use(express.methodOverride());
@@ -61,33 +64,6 @@ app.redisConfig = {
     host: 'localhost',
 };
 
-// Server
-/*
-var env = process.env.NODE_ENV || 'production';
-if (env === 'test') {
-    app.server = require('http').createServer(app).listen(8442, function() {
-        console.log('VDJ-API INFO: Express Test HTTP server listening on port ' + app.get('port'));
-    });
-}
-else if (env === 'development') {
-    app.use(errorHandler({
-        dumpExceptions: true,
-        showStack: true,
-    }));
-
-    app.server = require('http').createServer(app).listen(app.get('port'), function() {
-        console.log('VDJ-API INFO: Express Dev HTTP server listening on port ' + app.get('port'));
-    });
-}
-else if (env === 'production') {
-    app.use(errorHandler());
-
-    app.server = require('http').createServer(app).listen(app.get('port'), function() {
-        console.log('VDJ-API INFO: Express Prod HTTP server listening on port ' + app.get('port'));
-    });
-}
-*/
-
 app.use(errorHandler({
     dumpExceptions: true,
     showStack: true,
@@ -97,14 +73,21 @@ openapi.initialize({
   apiDoc: fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'),
   app: app,
   promiseMode: true,
+  consumesMiddleware: {
+    'application/json': bodyParser.json(),
+    'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
+  },
   operations: {
-      getStatus: function(req, res) { res.send('{"result":"success"}'); }
+      //getStatus: function(req, res) { res.send('{"result":"success"}'); }
+      getStatus: apiResponseController.confirmUpStatus,
+      createToken: tokenController.getToken,
+      refreshToken: tokenController.refreshToken
   }
 });
 
-app.use(function(err, req, res, next) {
-  res.status(err.status).json(err.message);
-});
+//app.use(function(err, req, res, next) {
+//  res.status(err.status).json(err.message);
+//});
 
 app.listen(app.get('port'), function() {
     console.log('VDJ-API INFO: VDJServer API service listening on port ' + app.get('port'));

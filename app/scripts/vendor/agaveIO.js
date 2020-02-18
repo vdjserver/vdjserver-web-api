@@ -354,7 +354,7 @@ agaveIO.refreshToken = function(auth) {
 
     var deferred = Q.defer();
 
-    var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.password;
+    var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.refresh_token;
 
     var requestSettings = {
         host:     agaveSettings.hostname,

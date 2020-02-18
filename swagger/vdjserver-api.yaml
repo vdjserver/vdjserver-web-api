@@ -11,7 +11,12 @@ info:
 
 servers:
   - url: https://vdjserver.org/api/v2
-    description: Development server
+    description: Production server
+    variables:
+      basePath:
+        default: /api/v2
+  - url: https://vdj-staging.tacc.utexas.edu/api/v2
+    description: Staging server
     variables:
       basePath:
         default: /api/v2
@@ -34,3 +39,67 @@ paths:
                   result:
                     type: string
 
+  /token:
+    post:
+      description: create token
+      operationId: createToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                username: 
+                  type: string
+                password: 
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content: 
+            'application/json': {}
+
+    put:
+      description: refresh token
+      operationId: refreshToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                username:
+                  type: string
+                refresh_token:
+                  type: string
+              required:
+                - username
+                - refresh_token
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content: 
+            'application/json': {}
