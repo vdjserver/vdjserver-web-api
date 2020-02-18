@@ -10,7 +10,6 @@ var openapi      = require('express-openapi');
 var passport     = require('passport');
 var _            = require('underscore');
 var path = require('path');
-var cors = require('cors');
 var fs = require('fs');
 var app          = module.exports = express();
 
@@ -98,7 +97,9 @@ openapi.initialize({
   apiDoc: fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'),
   app: app,
   promiseMode: true,
-  paths: path.resolve(__dirname, 'api-routes')
+  operations: {
+      getStatus: function(req, res) { res.send('{"result":"success"}'); }
+  }
 });
 
 app.use(function(err, req, res, next) {

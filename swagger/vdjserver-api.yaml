@@ -1,346 +1,36 @@
-swagger: '3.0'
+openapi: '3.0'
 info:
   title: VDJServer API
-  version: 2.0.0
+  version: '2.0.0'
   contact:
     name: VDJServer
     url: 'https://vdjserver.org/'
     email: vdjserver@utsouthwestern.edu
   description: >
     API service for the VDJServer analysis portal.
-basePath: /api/v2
 
-schemes:
-  - https
-produces:
-  - application/json
-consumes:
-  - application/x-www-form-urlencoded
-  - application/json
-tags:
-  - name: info
-    description: Service information
-  - name: projects
-    description: API for projects
-  - name: feedback
-    description: API for feedback
-  - name: users
-    description: API for user account maintenance
-  - name: authentication
-    description: API for user authentication
+servers:
+  - url: https://vdjserver.org/api/v2
+    description: Development server
+    variables:
+      basePath:
+        default: /api/v2
 
 paths:
   /:
-    x-swagger-router-controller: status
     get:
       description: |
         Service heartbeat.
-      consumes:
-        - application/octet-stream
       operationId: getStatus
       responses:
         '200':
           description: |
             Success.
-          schema:
-            type: object
-            properties:
-              result:
-                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
 
-  /info:
-    x-swagger-router-controller: status
-    get:
-      description: |
-        Service information.
-      tags:
-        - info
-      consumes:
-        - application/octet-stream
-      operationId: getInfo
-      responses:
-        '200':
-          description: |
-            Success.
-          schema:
-            type: object
-            properties:
-              name:
-                type: string
-              version:
-                type: string
-
-  /swagger:
-    x-swagger-pipe: swagger_raw
-
-  /token:
-    x-swagger-router-controller: token
-    post:
-      description: create token
-      tags:
-        - authentication
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-              password:
-                type: string
-      operationId: createToken
-    put:
-      description: refresh token
-      tags:
-        - authentication
-      operationId: refreshToken
-
-  /project:
-    x-swagger-router-controller: project
-    get:
-      description: query projects
-      tags:
-        - projects
-      operationId: queryProjects
-    put:
-      description: update project
-      tags:
-        - projects
-      operationId: updateProject
-    post:
-      description: create project
-      tags:
-        - projects
-      operationId: createProject
-    delete:
-      description: archive project
-      tags:
-        - projects
-      operationId: archiveProject
-
-  
-  /feedback:
-    x-swagger-router-controller: feedback
-    post:
-      description: >
-        Post feedback.
-      tags:
-        - feedback
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              feedback:
-                type: string
-              username:
-                type: string
-              email:
-                type: string
-              token:
-                type: string
-              remoteip:
-                type: string
-              g-recaptcha-response:
-                type: string
-      operationId: createFeedback
-      responses:
-        '200':
-          description: >
-            The feedback was successfully sent.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Create user account.
-      tags:
-        - users
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-              password:
-                type: string
-              email:
-                type: string
-              first_name:
-                type: string
-              last_name:
-                type: string
-              city:
-                type: string
-              state:
-                type: string
-              country:
-                type: string
-              affiliation:
-                type: string
-              remoteip:
-                type: string
-              g-recaptcha-response:
-                type: string
-      operationId: createUser
-      responses:
-        '200':
-          description: >
-            The account creation was successfully initiated.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user/verify/{verification_id}:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Verify user account.
-      tags:
-        - users
-      parameters:
-        - name: verification_id
-          in: path
-          description: ID of user verification
-          required: true
-          type: string
-      operationId: verifyUser
-      responses:
-        '200':
-          description: >
-            The account creation was successfully verified.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user/resend-verify:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Resend verification email for user account.
-      tags:
-        - users
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-                required: true
-      operationId: resendVerifyUser
-      responses:
-        '200':
-          description: >
-            The account verification email was successfully sent.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user/change-password:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Change password for user account.
-      tags:
-        - users
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-                required: true
-              password:
-                type: string
-                required: true
-              new_password:
-                type: string
-                required: true
-              token:
-                type: string
-                required: true
-      operationId: changePassword
-      responses:
-        '200':
-          description: >
-            The account password was successfully changed.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user/reset-password:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Reset password for user account.
-      tags:
-        - users
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-                required: true
-              g-recaptcha-response:
-                type: string
-                required: true
-      operationId: resetPassword
-      responses:
-        '200':
-          description: >
-            Reset of account password was successfully initiated.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
-
-  /user/reset-password/verify:
-    x-swagger-router-controller: user
-    post:
-      description: >
-        Verify reset password for user account.
-      tags:
-        - users
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-                required: true
-              new_password:
-                type: string
-                required: true
-              verification_id:
-                type: string
-                required: true
-      operationId: resetPassword
-      responses:
-        '200':
-          description: >
-            The account password was successfully reset.
-        '400':
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/error_response'
