@@ -1,6 +1,9 @@
 
 'use strict';
 
+var agaveIO  = {};
+module.exports = agaveIO;
+
 // Settings
 var agaveSettings = require('../config/agaveSettings');
 
@@ -16,9 +19,6 @@ var Q = require('q');
 var _ = require('underscore');
 var jsonApprover = require('json-approver');
 var FormData = require('form-data');
-
-var agaveIO  = {};
-module.exports = agaveIO;
 
 //
 // Generic send request

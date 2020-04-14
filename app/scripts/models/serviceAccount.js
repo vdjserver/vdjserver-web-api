@@ -7,6 +7,9 @@ var Q = require('q');
 var agaveSettings = require('../config/agaveSettings');
 var AgaveToken = require('./agaveToken');
 
+// Processing
+var agaveIO = require('../vendor/agaveIO');
+
 var ServiceAccount = {
     username: agaveSettings.serviceAccountKey,
     password: agaveSettings.serviceAccountSecret,
@@ -14,9 +17,6 @@ var ServiceAccount = {
 };
 
 module.exports = ServiceAccount;
-
-// Processing
-var agaveIO = require('../vendor/agaveIO');
 
 /*
 var ServiceAccount = function() {
