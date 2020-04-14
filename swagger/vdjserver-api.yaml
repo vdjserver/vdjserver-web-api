@@ -21,6 +21,24 @@ servers:
       basePath:
         default: /api/v2
 
+security:
+  - user_authorization: []
+  - project_authorization: []
+  - metadata_authorization: []
+  - publish_authorization: []
+
+components:
+  schemas:
+    Project:
+      discriminator:
+        propertyName: VDJServer
+      allOf:
+        - $ref: '#/components/schemas/Study'
+        - type: object
+          properties:
+            uuid:
+              type: string
+
 paths:
   /:
     get:
@@ -103,3 +121,34 @@ paths:
           description: Not authorized.
           content: 
             'application/json': {}
+
+  /project:
+    post:
+      description: create project
+      operationId: createProject
+      tags:
+        - project
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - token
+                - project
+              properties:
+                token:
+                  type: string
+                project:
+                  $ref: '#/components/schemas/Project'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        default:
+          description: An error occurred.

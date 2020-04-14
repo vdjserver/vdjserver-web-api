@@ -17,6 +17,7 @@
   },
   "private": true,
   "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "8.0.0",
     "body-parser": "1.10.2",
     "chai": "3.5.0",
     "d3": "4.2.7",
@@ -25,6 +26,7 @@
     "express-openapi": "^6.0.0",
     "form-data": "2.3.2",
     "json-approver": "1.0.3",
+    "js-yaml": "3.13.1",
     "kue": "0.10.5",
     "mocha": "2.5.3",
     "moment": "2.10.6",
