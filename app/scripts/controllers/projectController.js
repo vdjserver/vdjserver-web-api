@@ -31,35 +31,21 @@ module.exports = ProjectController;
 // Creates a project and all initial directories
 ProjectController.createProject = function(request, response) {
 
-    var projectName = request.body.projectName;
-    var username    = request.body.username;
-
-    if (!projectName) {
-        console.error('VDJ-API ERROR: ProjectController.createProject - error - missing projectName parameter');
-        apiResponseController.sendError('Project name required.', 400, response);
-        return;
-    }
-
-    if (!username) {
-        console.error('VDJ-API ERROR: ProjectController.createProject - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
-    if (username != request.user.username) {
-        console.error('VDJ-API ERROR: ProjectController.createProject - error - cannot create project for different user');
-        apiResponseController.sendError('Cannot create project for another user.', 400, response);
-        return;
-    }
+    var project = request.body.project;
+    var projectName = project['study_title'];
+    var username    = request.user.username;
 
     var projectMetadata;
     var uuid;
+
+    // set the username as the project owner
+    project['owner'] = username;
 
     console.log('VDJ-API INFO: ProjectController.createProject - event - begin for username: ' + username + ', project name: ' + projectName);
 
     ServiceAccount.getToken()
 	.then(function(token) {
-	    return agaveIO.createProjectMetadata(projectName);
+	    return agaveIO.createProjectMetadata(project);
 	})
         .then(function(_projectMetadata) {
             console.log('VDJ-API INFO: ProjectController.createProject - event - metadata for username: ' + username + ', project name: ' + projectName);
@@ -101,10 +87,11 @@ ProjectController.createProject = function(request, response) {
             apiResponseController.sendSuccess(projectMetadata, response);
         })
         .fail(function(error) {
-            console.error('VDJ-API ERROR: ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
+            var msg = 'VDJ-API ERROR: ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);            
+            apiResponseController.sendError(msg, 500, response);
+        });
 };
 
 //

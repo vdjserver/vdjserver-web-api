@@ -1,6 +1,36 @@
 
 'use strict';
 
+//
+// authController.js
+// Handle security and authorization checks
+//
+// VDJServer Analysis Portal
+// VDJ Web API service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var AuthController = {};
+module.exports = AuthController;
+
+// API config
 var config = require('../config/config');
 
 // App
@@ -20,9 +50,79 @@ var webhookIO = require('../vendor/webhookIO');
 // Node Libraries
 var Q = require('q');
 
-var AuthController = {};
-module.exports = AuthController;
+//
+// Security handlers, these are called by the openapi
+// middleware. Return true if authentication is valid,
+// otherwise return false. The middleware will throw
+// a generic 401 error, which the errorMiddleware returns
+// to the client
+//
 
+// Verify a Tapis token
+// Sets the associated user profile for the token in req.user
+AuthController.userAuthorization = function(req, scopes, definition) {
+    if (config.debug) console.log('VDJ-API INFO: AuthController.userAuthorization');
+
+    // extract the token from the authorization header
+    if (! req['headers']['authorization']) {
+	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - missing authorization header';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return false;
+    }
+    var fields = req['headers']['authorization'].split(' ');
+    if (fields.length != 2) {
+	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return false;
+    }
+    if (fields[0].toLowerCase() != 'bearer') {
+	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return false;
+    }
+    var token = fields[1];
+
+    // get my profile and username from the token
+    // return a promise
+    return agaveIO.getAgaveUserProfile(token, 'me')
+    	.then(function(userProfile) {
+            // save the user profile
+            req['user'] = userProfile;
+
+            // now check that the user account has been verified
+            return agaveIO.getUserVerificationMetadata(req['user']['username']);
+        })
+        .then(function(userVerificationMetadata) {
+            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
+		// valid
+                return true;
+            }
+            else {
+	        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - access by unverified user: ' + req['user']['username'];
+                console.error(msg);
+	        webhookIO.postToSlack(msg);
+                return false;
+            }
+        })
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid token: ' + token + ', error: ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+            return false;
+        });
+}
+
+// Verify a user has access to project
+AuthController.projectAuthorization = function(req, scopes, definition) {
+    if (config.debug) console.log('VDJ-API INFO: AuthController.projectAuthorization');
+
+    return false;
+}
+
+/*
 //
 // verify a valid and active username account
 //
@@ -206,3 +306,4 @@ AuthController.authForMetadata = function(request, response, next, uuid) {
 AuthController.authForMetadataFromBody = function(request, response, next) {
     return AuthController.authForMetadata(request, response, next, request.body.uuid);
 }
+*/

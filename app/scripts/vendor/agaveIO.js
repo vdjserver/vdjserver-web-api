@@ -503,15 +503,14 @@ agaveIO.getUserProfile = function(username) {
     return deferred.promise;
 };
 
-agaveIO.createProjectMetadata = function(projectName) {
+// create metadata record for a private project
+agaveIO.createProjectMetadata = function(project) {
 
     var deferred = Q.defer();
 
     var postData = {
-        name: 'project',
-        value: {
-            'name': projectName
-        }
+        name: 'privateProject',
+        value: project
     };
 
     postData = JSON.stringify(postData);

@@ -21,23 +21,57 @@ servers:
       basePath:
         default: /api/v2
 
-security:
-  - user_authorization: []
-  - project_authorization: []
-  - metadata_authorization: []
-  - publish_authorization: []
-
 components:
   schemas:
     Project:
+      description: VDJServer project which is an extension of the AIRR Study object.
       discriminator:
         propertyName: VDJServer
       allOf:
         - $ref: '#/components/schemas/Study'
         - type: object
           properties:
-            uuid:
+            owner:
+              description: Username that owns the project.
               type: string
+
+    ProjectMetadata:
+      description: Tapis metadata object for a project.
+      discriminator:
+        propertyName: VDJServer
+      properties:
+        uuid:
+          type: string
+          description: metadata identifier
+        value:
+          $ref: '#/components/schemas/Project'
+
+    Test:
+      description: Test object
+      discriminator:
+        propertyName: VDJServer
+      type: object
+      properties:
+        owner:
+          description: Username that owns the project.
+          type: string
+          nullable: true
+
+  securitySchemes:
+    user_authorization:
+      type: http
+      scheme: bearer
+    project_authorization:
+      type: apiKey
+      name: project_id
+      in: query
+    metadata_authorization:
+      type: http
+      scheme: bearer
+    publish_authorization:
+      type: http
+      scheme: bearer
+
 
 paths:
   /:
@@ -128,16 +162,15 @@ paths:
       operationId: createProject
       tags:
         - project
+      security:
+        - user_authorization: []
       requestBody:
         content:
           'application/json':
             schema:
               required:
-                - token
                 - project
               properties:
-                token:
-                  type: string
                 project:
                   $ref: '#/components/schemas/Project'
       responses:
@@ -148,7 +181,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  result:
+                  status:
                     type: string
-        default:
-          description: An error occurred.
+                  result:
+                    $ref: '#/components/schemas/ProjectMetadata'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
