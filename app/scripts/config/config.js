@@ -19,3 +19,9 @@ config.testAccountUsername = process.env.TEST_ACCOUNT_USERNAME;
 
 // Feedback Email address
 config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
+
+// Error/debug reporting
+config.debug = process.env.DEBUG_CONSOLE;
+if (config.debug == 'true') config.debug = true;
+else if (config.debug == 1) config.debug = true;
+else config.debug = false;
