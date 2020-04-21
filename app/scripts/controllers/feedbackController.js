@@ -1,6 +1,32 @@
 
 'use strict';
 
+//
+// feedbackController.js
+// Handle feedback entry points
+//
+// VDJServer Analysis Portal
+// VDJ API Service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
 var config = require('../config/config');
 
 // Controllers
@@ -12,6 +38,7 @@ var Feedback = require('../models/feedback');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Recaptcha = require('recaptcha-v2').Recaptcha;
@@ -20,54 +47,52 @@ var _ = require('underscore');
 var FeedbackController = {};
 module.exports = FeedbackController;
 
+// This requires an authenticated user
 FeedbackController.createFeedback = function(request, response) {
 
     if (_.isString(request.body.feedback) === false || request.body.feedback.length <= 0) {
-        console.error('FeedbackController.createFeedback - error - missing feedback parameter');
-        apiResponseController.sendError('Feedback parameter required.', 400, response);
+	var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error - missing feedback parameter';
+        console.error(msg);
+	webhookIO.postToSlack(msg);
+        apiResponseController.sendError(msg, 400, response);
         return;
     }
 
-    if (_.isString(request.body.username) === false || request.body.username.length <= 0) {
-        console.error('FeedbackController.createFeedback - error - missing username parameter');
-        apiResponseController.sendError('Username parameter required.', 400, response);
-        return;
-    }
+    // the user profile is set from the authorization check
 
     var feedback = new Feedback({
         feedback: request.body.feedback,
-        username: request.body.username,
+        username: request.user.username,
+        email: request.user.email
     });
 
-    console.log('FeedbackController.createFeedback - event - received feedback: ' + JSON.stringify(feedback));
+    console.log('VDJ-API INFO: FeedbackController.createFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
-    agaveIO.getUserProfile(request.body.username)
-        .then(function(profile) {
-            profile = profile.pop();
-
-            feedback.email = profile.value.email;
-
-            // store in metadata
-            feedback.storeFeedbackInMetadata();
-
+    // store in metadata
+    var emailFeedbackMessage = feedback.getEmailMessage();
+    feedback.storeFeedbackInMetadata()
+        .then(function() {
             // send as email
-            var emailFeedbackMessage = feedback.getEmailMessage();
-
-            emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
-
+            return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+        })
+        .then(function() {
 	    // send acknowledgement
-	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
-
+	    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+        })
+        .then(function() {
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+	    return;
         })
         .fail(function(error) {
-            console.log('FeedbackController.createFeedback - event - failed to retrieve user profile. Feedback is: ' + JSON.stringify(feedback));
-
-            apiResponseController.sendError('Unable to find associated user profile with feedback.', 400, response);
+	    var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error occured while processing feedback. Feedback is: ' + JSON.stringify(feedback) + ' error: ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(msg, 400, response);
         })
         ;
 };
 
+// public feedback, this requires a valid recaptcha response
 FeedbackController.createPublicFeedback = function(request, response) {
     var feedback = new Feedback({
         feedback: request.body.feedback,
@@ -91,27 +116,37 @@ FeedbackController.createPublicFeedback = function(request, response) {
 
     recaptcha.verify(function(success, errorCode) {
         if (!success) {
-            console.error('FeedbackController.createPublicFeedback - error - error code is: ' + errorCode);
-            apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
+	    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - Recaptcha response invalid - error code is: ' + errorCode;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(msg, 400, response);
             return;
         }
         else {
-            console.log('FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
+            console.log('VDJ-API INFO: FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
-            // store in metadata
-            feedback.storeFeedbackInMetadata();
-
-            // send the email
-            var emailFeedbackMessage = feedback.getEmailMessage();
-
-            emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
-
-	    // send acknowledgement
-	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
-
-            //send the response
-            apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-            return;
+	    // store in metadata
+	    var emailFeedbackMessage = feedback.getEmailMessage();
+	    feedback.storeFeedbackInMetadata()
+		.then(function() {
+		    // send as email
+		    return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+		})
+		.then(function() {
+		    // send acknowledgement
+		    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+		})
+		.then(function() {
+		    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+		    return;
+		})
+		.fail(function(error) {
+		    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
+			+ JSON.stringify(feedback) + ' error: ' + error;
+		    console.error(msg);
+		    webhookIO.postToSlack(msg);
+		    apiResponseController.sendError(msg, 400, response);
+		});
         }
     });
 };

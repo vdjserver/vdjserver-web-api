@@ -23,6 +23,28 @@ servers:
 
 components:
   schemas:
+    BasicResponse:
+      description: Basic response object
+      discriminator:
+        propertyName: VDJServer
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+
+    Recaptcha:
+      description: Google recaptcha response.
+      discriminator:
+        propertyName: VDJServer
+      properties:
+        g-recaptcha-response:
+          type: string
+          description: The recaptcha response
+        remoteip:
+          type: string
+          description: IP address of client that generated the recaptcha response
+
     Project:
       description: VDJServer project which is an extension of the AIRR Study object.
       discriminator:
@@ -45,6 +67,28 @@ components:
           description: metadata identifier
         value:
           $ref: '#/components/schemas/Project'
+
+    Feedback:
+      description: Feedback message.
+      discriminator:
+        propertyName: VDJServer
+      properties:
+        feedback:
+          type: string
+          description: message content
+
+    PublicFeedback:
+      description: Public feedback message.
+      discriminator:
+        propertyName: VDJServer
+      allOf:
+        - $ref: '#/components/schemas/Feedback'
+        - $ref: '#/components/schemas/Recaptcha'
+        - type: object
+          properties:
+            email:
+              description: User email.
+              type: string
 
     Test:
       description: Test object
@@ -185,6 +229,58 @@ paths:
                     type: string
                   result:
                     $ref: '#/components/schemas/ProjectMetadata'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /feedback:
+    post:
+      description: send feedback message from authenticated user
+      operationId: createFeedback
+      tags:
+        - feedback
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Feedback'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /feedback/public:
+    post:
+      description: send feedback message from public
+      operationId: createPublicFeedback
+      tags:
+        - feedback
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PublicFeedback'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':
