@@ -27,6 +27,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+var FeedbackController = {};
+module.exports = FeedbackController;
+
 var config = require('../config/config');
 
 // Controllers
@@ -43,9 +46,6 @@ var webhookIO = require('../vendor/webhookIO');
 // Node Libraries
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 var _ = require('underscore');
-
-var FeedbackController = {};
-module.exports = FeedbackController;
 
 // This requires an authenticated user
 FeedbackController.createFeedback = function(request, response) {
