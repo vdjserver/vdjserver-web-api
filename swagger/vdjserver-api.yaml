@@ -45,6 +45,36 @@ components:
           type: string
           description: IP address of client that generated the recaptcha response
 
+    UserAccount:
+      description: User account.
+      discriminator:
+        propertyName: VDJServer
+      required:
+        - username
+        - password
+        - email
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          nullable: true
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        affiliation:
+          type: string
+
+
     Project:
       description: VDJServer project which is an extension of the AIRR Study object.
       discriminator:
@@ -274,6 +304,187 @@ paths:
           'application/json':
             schema:
               $ref: '#/components/schemas/PublicFeedback'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user:
+    post:
+      description: create new user account
+      operationId: createUser
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - user
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserAccount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAccount'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/verify/{verification_id}:
+    post:
+      description: verify new user account
+      operationId: verifyUser
+      tags:
+        - user
+      parameters:
+        - name: verification_id
+          in: path
+          description: verification identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/verify/email/{username}:
+    post:
+      description: resend user verification email
+      operationId: resendVerifyEmail
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/change-password:
+    post:
+      description: change password for user
+      operationId: changePassword
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - password
+                - new_password
+              properties:
+                password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/reset-password:
+    post:
+      description: reset password for user
+      operationId: resetPassword
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/reset-password/verify:
+    post:
+      description: reset password for user
+      operationId: verifyResetPassword
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - username
+                - reset_code
+                - new_password
+              properties:
+                username:
+                  type: string
+                reset_code:
+                  type: string
+                new_password:
+                  type: string
       responses:
         '200':
           description: Success.

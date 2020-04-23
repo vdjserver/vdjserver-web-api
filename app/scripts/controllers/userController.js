@@ -1,6 +1,35 @@
 
 'use strict';
 
+//
+// userController.js
+// Handle user entry points
+//
+// VDJServer Analysis Portal
+// VDJ API Service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var UserController = {};
+module.exports = UserController;
+
 var config = require('../config/config');
 
 // App
@@ -11,6 +40,7 @@ var apiResponseController = require('./apiResponseController');
 
 // Models
 var User = require('../models/user');
+var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
@@ -25,9 +55,7 @@ var taskQueue = kue.createQueue({
 });
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 
-var UserController = {};
-module.exports = UserController;
-
+// we use recaptcha to deter user creation bots
 var verifyRecaptcha = function(recaptchaData) {
 
     var deferred = Q.defer();
@@ -49,121 +77,25 @@ var verifyRecaptcha = function(recaptchaData) {
     return deferred.promise;
 };
 
+// create new user account
+// 1. verify recaptcha
+// 2. verify not duplicate username
+// 3. create the tapis/agave user account
+// 4. verify we can get token with username/password
+// 5. create user profile metadata record
+// 6. create user verification metadata record
+// 7. send user verification email
 UserController.createUser = function(request, response) {
 
-    var user = new User({
-        username:   request.body.username,
-        password:   request.body.password,
-        email:      request.body.email,
-        firstName:  request.body.firstName,
-        lastName:   request.body.lastName,
-        city:       request.body.city,
-        state:      request.body.state,
-        country:    request.body.country,
-        affiliation: request.body.affiliation,
-    });
+    // the API middleware will reject if missing required fields
+    var user = new User(request.body.user);
 
-    if (!user.username) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
+    // cannot be null
     if (!user.password) {
         console.error('VDJ-API ERROR: UserController.createUser - error - missing password parameter');
         apiResponseController.sendError('Password required.', 400, response);
         return;
     }
-
-    if (!user.email) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - missing email parameter');
-        apiResponseController.sendError('Email required.', 400, response);
-        return;
-    }
-
-    /*
-    if (!user.firstName) {
-        console.error('Error UserController.createUser: missing firstName parameter');
-        apiResponseController.sendError('First Name required.', 400, response);
-        return;
-    }
-
-    if (!user.lastName) {
-        console.error('Error UserController.createUser: missing lastName parameter');
-        apiResponseController.sendError('Last Name required.', 400, response);
-        return;
-    }
-
-    if (!user.city) {
-        console.error('Error UserController.createUser: missing city parameter');
-        apiResponseController.sendError('City required.', 400, response);
-        return;
-    }
-
-    if (!user.state) {
-        console.error('Error UserController.createUser: missing state parameter');
-        apiResponseController.sendError('State required.', 400, response);
-        return;
-    }
-
-    if (!user.country) {
-        console.error('Error UserController.createUser: missing country parameter');
-        apiResponseController.sendError('Country required.', 400, response);
-        return;
-    }
-
-    if (!user.affiliation) {
-        console.error('Error UserController.createUser: missing affiliation parameter');
-        apiResponseController.sendError('Affiliation required.', 400, response);
-        return;
-    }
-    */
-
-    //console.log(response);
-    // BEGIN RECAPTCHA CHECK
-    //console.log(config.allowRecaptchaSkip);
-    //console.log(request.body['g-recaptcha-response']);
-/*
-    if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
-        console.log('UserController.createUser - WARNING - Recaptcha check is being skipped.');
-    } else {
-        var recaptchaData = {
-            remoteip:  request.connection.remoteAddress,
-            response: request.body['g-recaptcha-response'],
-            secret: config.recaptchaSecret,
-        };
-
-	verifyRecaptcha(recaptchaData)
-	.then(function() {
-	    console.log('passed recaptcha');
-	})
-	.fail(function() {
-	    console.log('failed recaptcha');
-	})
-
-        var recaptcha = new Recaptcha(
-            config.recaptchaPublic,
-            config.recaptchaSecret,
-            recaptchaData
-        );
-
-	var that = response;
-        recaptcha.verify(function(success, errorCode) {
-            if (!success) {
-                console.log('UserController.createUser - recaptcha error for '
-                    + JSON.stringify(user.getSanitizedAttributes())
-                    + ' and error code is: ' + errorCode
-                );
-
-		console.log(response);
-		//console.log(JSON.stringify(that));
-                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-                return;
-            }
-        });
-    }
-*/
-    // END RECAPTCHA CHECK
 
     console.log('VDJ-API INFO: UserController.createUser - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
@@ -212,7 +144,7 @@ UserController.createUser = function(request, response) {
 		}
 
                 if (isDuplicate === true) {
-                    var error = new Error(1);
+                    var error = new Error('duplicate');
                     deferred.reject(error);
                 }
                 else {
@@ -226,7 +158,7 @@ UserController.createUser = function(request, response) {
             })
             .fail(function() {
                 console.error('VDJ-API ERROR: UserController.createUser - agave duplicate account check failed for ' + JSON.stringify(user.getSanitizedAttributes()));
-                var error = new Error(1);
+                var error = new Error('duplicate');
                 deferred.reject(error);
             })
             ;
@@ -251,7 +183,7 @@ UserController.createUser = function(request, response) {
 		var msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes());
 		console.error(msg);
 		webhookIO.postToSlack(msg);
-                var error = new Error(2);
+                var error = new Error('account');
                 deferred.reject(error);
             })
             ;
@@ -268,7 +200,7 @@ UserController.createUser = function(request, response) {
             })
             .fail(function() {
                 console.error('VDJ-API ERROR: UserController.createUser - token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes()));
-                var error = new Error(3);
+                var error = new Error('token');
                 deferred.reject(error);
             })
             ;
@@ -288,7 +220,7 @@ UserController.createUser = function(request, response) {
                 var msg = 'VDJ-API ERROR: UserController.createUser - vdj profile failed for ' + JSON.stringify(user.getSanitizedAttributes());
 		console.error(msg);
 		webhookIO.postToSlack(msg);
-                var error = new Error(4);
+                var error = new Error('profile');
                 deferred.reject(error);
             })
             ;
@@ -307,7 +239,7 @@ UserController.createUser = function(request, response) {
                 var msg = 'VDJ-API ERROR: UserController.createUser - verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes());
 		console.error(msg);
 		webhookIO.postToSlack(msg);
-                var error = new Error(5);
+                var error = new Error('verification');
                 deferred.reject(error);
             })
             ;
@@ -325,10 +257,11 @@ UserController.createUser = function(request, response) {
     .fail(function(error) {
         console.error('VDJ-API ERROR: UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
 
+	// If one of the last steps fails, try later by putting in queue
         // Insert into appropriate place in queue
         switch (error.message) {
 
-            case '4': {
+            case 'profile': {
                 Q.fcall(function() {
                     taskQueue
                         .create('createUserProfileMetadataTask', user.getSanitizedAttributes())
@@ -346,7 +279,7 @@ UserController.createUser = function(request, response) {
                 break;
             }
 
-            case '5': {
+            case 'verification': {
                 Q.fcall(function() {
                     taskQueue
                         .create('createUserVerificationMetadataTask', user.getSanitizedAttributes())
@@ -374,28 +307,12 @@ UserController.createUser = function(request, response) {
     ;
 };
 
+// Change user password
+// Only for authenticated user, plus have to send original password
 UserController.changePassword = function(request, response) {
     var username = request.user.username;
     var password = request.body.password;
-    var newPassword = request.body.newPassword;
-
-    if (!username) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
-    if (!password) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing password parameter');
-        apiResponseController.sendError('Password required.', 400, response);
-        return;
-    }
-
-    if (!newPassword) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing newPassword parameter');
-        apiResponseController.sendError('New Password required.', 400, response);
-        return;
-    }
+    var newPassword = request.body.new_password;
 
     console.log('VDJ-API INFO: UserController.changePassword - begin for ' + username);
 
@@ -444,8 +361,10 @@ UserController.changePassword = function(request, response) {
         ;
 };
 
+// verify the user given the verification code sent by email
 UserController.verifyUser = function(request, response) {
 
+    console.log(request);
     var verificationId = request.params.verificationId.trim();
 
     if (!verificationId || verificationId.length == 0) {
@@ -538,6 +457,122 @@ UserController.resendVerificationEmail = function(request, response) {
         .fail(function(error) {
             console.error('VDJ-API ERROR: UserController.resendVerificationEmail - error - username ' + username + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
+        })
+        ;
+};
+
+// TODO: this should be protected by a recaptcha
+UserController.createResetPasswordRequest = function(request, response) {
+
+    var username = request.body.username;
+
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
+
+    var userProfile;
+
+    // 1.  Get confirm username, email address from user profile
+    // 2.  Generate random key by posting to metadata
+    // 3.  Send email
+    // 4a. Send response success
+    // 4b. Send response error
+    agaveIO.getUserProfile(username) // 1.
+        .then(function(profile) {
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
+
+            if (profile[0]) {
+                userProfile = profile[0];
+                return agaveIO.createPasswordResetMetadata(username); // 2.
+            }
+            else {
+                return Q.reject(new Error('PasswordResetController.createResetPasswordRequest - error - username unknown for ' + username));
+            }
+        })
+        .then(function(passwordReset) {
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - createPasswordResetMetadata for user ' + username);
+
+            return emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid); // 3.
+        })
+        .then(function() {
+            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
+
+            apiResponseController.sendSuccess('Password reset email sent.', response); // 4a.
+        })
+        .fail(function(error) {
+            var msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - username ' + username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(error.message, 500, response); // 4b.
+        })
+        ;
+};
+
+UserController.processResetPasswordRequest = function(request, response) {
+
+    var username = request.body.username;
+    var uuid = request.body.reset_code;
+    var newPassword = request.body.new_password;
+
+    console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - begin for user ' + username);
+
+    var passwordReset;
+
+    // 1.  Get password reset metadata for given uuid
+    // 2.  Verify password reset uuid and matching username
+    // 3.  Get user profile
+    // 4.  Update user with new password
+    // 5.  Delete password reset metadata
+    // 5a. Report error if delete fails
+    // 6.  Response
+    // 6a. Success
+    // 6b. Error
+    agaveIO.getPasswordResetMetadata(uuid) // 1.
+        .then(function(passwordResetMetadata) {
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
+
+	    //console.log(passwordResetMetadata);
+	    //console.log(passwordResetMetadata[0]);
+	    if (passwordResetMetadata.length == 0)
+		return Q.reject(new Error('Invalid metadata id: ' + uuid));
+
+            if (username === passwordResetMetadata[0].value.username) { // 2.
+                passwordReset = passwordResetMetadata[0];
+                return agaveIO.getUserProfile(username); // 3.
+            }
+            else {
+                return Q.reject(new Error('PasswordResetController.processResetPasswordRequest - error - reset metadata uuid does not match.'));
+            }
+        })
+        .then(function(profile) {
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getUserProfile for user ' + username);
+
+            return agaveIO.updateUserPassword({
+                'username': username,
+                'email': profile[0].value.email,
+                'password': newPassword
+            }); // 4.
+        })
+        .then(function() {
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
+
+            /*
+                while metadata is deleted, service returns 500 error;
+                don't let this short-circuit the process
+            */
+            agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid) // 5.
+                .fail(function(error) { // 5a.
+                    console.error(error.message, error);
+                });
+        })
+        .then(function() {
+            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
+
+            apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
+        })
+        .fail(function(error) {
+            var msg = 'VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - username ' + username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(error.message, 500, response); // 6b.
         })
         ;
 };

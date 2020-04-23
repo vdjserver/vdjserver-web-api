@@ -51,6 +51,7 @@ var tokenController       = require('./controllers/tokenController');
 var authController       = require('./controllers/authController');
 var projectController = require('./controllers/projectController');
 var feedbackController = require('./controllers/feedbackController');
+var userController = require('./controllers/userController');
 
 // Server Options
 var config = require('./config/config');
@@ -159,6 +160,14 @@ ServiceAccount.getToken()
                 // authentication
                 createToken: tokenController.getToken,
                 refreshToken: tokenController.refreshToken,
+
+                // user
+                createUser: userController.createUser,
+                verifyUser: userController.verifyUser,
+                resendVerifyEmail: userController.resendVerificationEmail,
+                changePassword: userController.changePassword,
+                resetPassword: userController.createResetPasswordRequest,
+                verifyResetPassword: userController.processResetPasswordRequest,
 
                 // project
                 createProject: projectController.createProject,
