@@ -120,6 +120,28 @@ components:
               description: User email.
               type: string
 
+    ErrorTelemetry:
+      description: Error telemetry.
+      discriminator:
+        propertyName: VDJServer
+      properties:
+        project_id:
+          type: string
+        job_id:
+          type: string
+        filename:
+          type: string
+        method:
+          type: string
+        error:
+          type: string
+        view:
+          type: string
+        browser:
+          type: string
+        os:
+          type: string
+
     Test:
       description: Test object
       discriminator:
@@ -492,6 +514,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /telemetry:
+    post:
+      description: record error telemetry
+      operationId: recordErrorTelemetry
+      tags:
+        - telemetry
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - telemetry
+              properties:
+                telemetry:
+                  $ref: '#/components/schemas/ErrorTelemetry'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse' 
         '400':
           description: Bad request.
         '401':

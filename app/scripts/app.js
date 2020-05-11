@@ -52,6 +52,7 @@ var authController       = require('./controllers/authController');
 var projectController = require('./controllers/projectController');
 var feedbackController = require('./controllers/feedbackController');
 var userController = require('./controllers/userController');
+var telemetryController = require('./controllers/telemetryController');
 
 // Server Options
 var config = require('./config/config');
@@ -174,7 +175,10 @@ ServiceAccount.getToken()
 
 		// feedback
 		createFeedback: feedbackController.createFeedback,
-		createPublicFeedback: feedbackController.createPublicFeedback
+		createPublicFeedback: feedbackController.createPublicFeedback,
+
+                // telemetry
+                recordErrorTelemetry: telemetryController.recordErrorTelemetry
             }
         });
 
