@@ -1,0 +1,7 @@
+{ "telemetry":
+{
+    "error": "test error telemetry",
+    "browser": "unknown",
+    "os": "unknown"
+}
+}
