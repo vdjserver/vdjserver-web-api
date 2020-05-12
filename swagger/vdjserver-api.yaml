@@ -27,6 +27,7 @@ components:
       description: Basic response object
       discriminator:
         propertyName: VDJServer
+      type: object
       properties:
         status:
           type: boolean
@@ -37,6 +38,7 @@ components:
       description: Google recaptcha response.
       discriminator:
         propertyName: VDJServer
+      type: object
       properties:
         g-recaptcha-response:
           type: string
@@ -49,6 +51,7 @@ components:
       description: User account.
       discriminator:
         propertyName: VDJServer
+      type: object
       required:
         - username
         - password
@@ -91,6 +94,7 @@ components:
       description: Tapis metadata object for a project.
       discriminator:
         propertyName: VDJServer
+      type: object
       properties:
         uuid:
           type: string
@@ -98,10 +102,51 @@ components:
         value:
           $ref: '#/components/schemas/Project'
 
+    ProjectPermission:
+      description: Permissions request for project
+      discriminator:
+        propertyName: VDJServer
+      type: object
+      required:
+        - project_uuid
+      properties:
+        project_uuid:
+          description: project related to the permissions.
+          type: string
+
+    UserPermission:
+      description: Permissions request for user
+      discriminator:
+        propertyName: VDJServer
+      required:
+        - username
+      allOf:
+        - $ref: '#/components/schemas/ProjectPermission'
+        - type: object
+          properties:
+            username:
+              description: user to apply permissions
+              type: string
+
+    MetadataPermission:
+      description: Permissions request for project metadata object
+      discriminator:
+        propertyName: VDJServer
+      required:
+        - metadata_uuid
+      allOf:
+        - $ref: '#/components/schemas/ProjectPermission'
+        - type: object
+          properties:
+            metadata_uuid:
+              description: metadata object to apply permissions
+              type: string
+
     Feedback:
       description: Feedback message.
       discriminator:
         propertyName: VDJServer
+      type: object
       properties:
         feedback:
           type: string
@@ -124,10 +169,11 @@ components:
       description: Error telemetry.
       discriminator:
         propertyName: VDJServer
+      type: object
       properties:
-        project_id:
+        project_uuid:
           type: string
-        job_id:
+        job_uuid:
           type: string
         filename:
           type: string
@@ -153,13 +199,14 @@ components:
           type: string
           nullable: true
 
+
   securitySchemes:
     user_authorization:
       type: http
       scheme: bearer
     project_authorization:
       type: apiKey
-      name: project_id
+      name: project_uuid
       in: query
     metadata_authorization:
       type: http
@@ -281,6 +328,85 @@ paths:
                     type: string
                   result:
                     $ref: '#/components/schemas/ProjectMetadata'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /permission/user:
+    post:
+      description: add project permissions for user
+      operationId: addPermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserPermission'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: remove project permissions for user
+      operationId: removePermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserPermission'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /permission/metadata:
+    post:
+      description: synchronize permissions on metadata object for all project users
+      operationId: syncMetadataPermissionsWithProject
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/MetadataPermission'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':

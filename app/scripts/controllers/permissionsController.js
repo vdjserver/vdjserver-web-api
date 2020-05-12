@@ -1,6 +1,35 @@
 
 'use strict';
 
+//
+// authController.js
+// Handle security and authorization checks
+//
+// VDJServer Analysis Portal
+// VDJ Web API service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var PermissionsController = {};
+module.exports = PermissionsController;
+
 // Promises
 var Q = require('q');
 
@@ -10,6 +39,7 @@ var agaveSettings = require('../config/agaveSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
+var authController = require('./authController');
 
 // Models
 var FilePermissions = require('../models/filePermissions');
@@ -19,6 +49,7 @@ var ServiceAccount  = require('../models/serviceAccount');
 // Processing
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Q = require('q');
@@ -28,115 +59,34 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
-var PermissionsController = {};
-module.exports = PermissionsController;
-
-// Updates file permissions to match the given metadata permissions
-// Intended to be used to make file pems match project metadata pems
-PermissionsController.syncFilePermissionsWithProject = function(request, response) {
-
-    var projectUuid = request.body.projectUuid;
-
-    // TODO: change fileName to filename on backbone clients
-    var filename = request.body.fileName;
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: PermissionsController.syncFilePermissionsWithProject - error - missing projectUuid parameter');
-        apiResponseController.sendError('Project Uuid required.', 400, response);
-        return;
-    }
-
-    if (!filename) {
-        console.error('VDJ-API ERROR: PermissionsController.syncFilePermissionsWithProject - error - missing filename parameter');
-        apiResponseController.sendError('Filename required.', 400, response);
-        return;
-    }
-
-    console.log('VDJ-API INFO: PermissionsController.syncFilePermissionsWithProject - begin for ' + projectUuid);
-
-    /*
-      The service account should already have full pems
-      So, go ahead and fetch project metadata pems
-    */
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid)
-	})
-        .then(function(projectPermissions) {
-	    // Apply project pems to new file
-            console.log('VDJ-API INFO: PermissionsController.syncFilePermissionsWithProject - getMetadatapermissions for ' + projectUuid);
-
-            var filePermissions = new FilePermissions();
-
-            var projectUsernames = filePermissions.getUsernamesFromMetadataResponse(projectPermissions);
-
-            var promises = [];
-
-            function createAgaveCall(username) {
-
-                return function() {
-
-                    return agaveIO.addUsernameToFullFilePermissions(
-                        username,
-                        ServiceAccount.accessToken(),
-                        projectUuid
-                            + '/files'
-                            + '/' + encodeURIComponent(filename),
-			true
-                    );
-                };
-            }
-
-            for (var i = 0; i < projectUsernames.length; i++) {
-
-                var username = projectUsernames[i];
-
-                promises[i] = createAgaveCall(username);
-            }
-
-            return promises.reduce(Q.when, new Q());
-            })
-        // Get file pems listing to return to user
-        .then(function() {
-            console.log('VDJ-API INFO: PermissionsController.syncFilePermissionsWithProject - addUsernameToFullFilePermissions for ' + projectUuid);
-            return agaveIO.getFilePermissions(ServiceAccount.accessToken(), projectUuid);
-        })
-        // Finally send updated file pems back to user
-        .then(function(updatedFilePermissions) {
-            console.log('VDJ-API INFO: PermissionsController.syncFilePermissionsWithProject - getFilePermissions for ' + projectUuid);
-            return apiResponseController.sendSuccess(updatedFilePermissions, response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: PermissionsController.syncFilePermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
-};
-
+//
+// Synchronize permissions on metadata object for all project users.
+// When a new metadata object is created, the permissions need to be
+// synchronized so that all users on the project have access to it.
+//
 PermissionsController.syncMetadataPermissionsWithProject = function(request, response) {
 
-    var uuid        = request.body.uuid;
-    var projectUuid = request.body.projectUuid;
-    var accessToken = request.user.password;
-
-    if (!uuid) {
-        console.error('VDJ-API ERROR: PermissionsController.syncMetadataPermissionsWithProject - error - missing metadataUuid parameter');
-        apiResponseController.sendError('Metadata Uuid required.', 400, response);
-        return;
-    }
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: PermissionsController.syncMetadataPermissionsWithProject - error - missing projectUuid parameter');
-        apiResponseController.sendError('Project Uuid required.', 400, response);
-        return;
-    }
+    var uuid        = request.body.metadata_uuid;
+    var projectUuid = request.body.project_uuid;
+    var accessToken = authController.extractToken(request);
+    var username = request.user.username;
 
     console.log('VDJ-API INFO: PermissionsController.syncMetadataPermissionsWithProject - begin for project ' + projectUuid);
 
-    // First, make sure serviceAccount has full pems on the new metadata
-    // Use the user's accessToken to set this since serviceAccount may not have full pems yet
-    ServiceAccount.getToken()
+    // verify the user has write access to metadata object
+    return authController.verifyMetadataAccess(uuid, accessToken, username)
+	.then(function(result) {
+	    if (!result) {
+		var msg = 'VDJ-API ERROR: PermissionsController.syncMetadataPermissionsWithProject - invalid metadata access: ' + uuid + ', for user: ' + username;
+		return Promise.reject(new Error(msg));
+	    } else {
+		// Check that userToken is part of project (if it can fetch proj pems, then we're ok)
+		return ServiceAccount.getToken();
+	    }
+	})
 	.then(function(token) {
+	    // First, make sure serviceAccount has full pems on the new metadata
+	    // Use the user's accessToken to set this since serviceAccount may not have full pems yet
 	    return agaveIO.addUsernameToMetadataPermissions(ServiceAccount.username, accessToken, uuid);
 	})
         // Next, fetch project metadata pems
@@ -201,43 +151,35 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 
 //
 // Add user to a project by giving them permissions on all of the project objects
-// 1. project metadata
-// 2. project files and subdirectories
-// 3. project file metadata
-// 4. project jobs
+// Verify the user to be given permissions then kick off task to queue
+// The task processing code is in queues/projectQueueManager.js
 //
 PermissionsController.addPermissionsForUsername = function(request, response) {
 
     var username    = request.body.username;
-    var projectUuid = request.body.projectUuid;
-    var accessToken = request.user.password;
+    var projectUuid = request.body.project_uuid;
+    var accessToken = authController.extractToken(request);
 
-    if (!username) {
-        console.error('VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
+    console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - begin for project ' + projectUuid + ' for user ' + username);
 
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - missing projectUuid parameter');
-        apiResponseController.sendError('Project Uuid required.', 400, response);
-        return;
-    }
-
-    if (!accessToken) {
-        console.error('VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - missing accessToken parameter');
-        apiResponseController.sendError('Access Token required.', 400, response);
-        return;
-    }
-
-    console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - begin for project ' + projectUuid);
-
-    // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(accessToken, projectUuid);
+    // verify the user
+    return authController.verifyUser(username)
+	.then(function(result) {
+	    if (!result) {
+		var msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - attempt to add invalid user: ' + username;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		apiResponseController.sendError('Attempt to add invalid user account.', 400, response);
+		return null;
+	    } else {
+		// Check that userToken is part of project (if it can fetch proj pems, then we're ok)
+		return agaveIO.getMetadataPermissions(accessToken, projectUuid);
+	    }
 	})
-	.then(function() {
+	.then(function(projectPermissions) {
+	    console.log(projectPermissions);
+	    if (!projectPermissions) return;
+
 	    var projectData = { username: username, projectUuid: projectUuid };
 
 	    taskQueue
@@ -251,187 +193,68 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 	    return apiResponseController.sendSuccess('ok', response);
 	})
         .fail(function(error) {
-            console.error('VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
-	    //console.error(error.stack);
-            apiResponseController.sendError(error.message, 500, response);
+            var msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(msg, 500, response);
         })
         ;
 };
 
+//
+// Remove user frome a project by removing permissions on all of the project objects
+// Verify the user then kick off task to queue
+// The task processing code is in queues/projectQueueManager.js
+//
 PermissionsController.removePermissionsForUsername = function(request, response) {
 
     var username    = request.body.username;
-    var projectUuid = request.body.projectUuid;
-    var accessToken = request.user.password;
+    var projectUuid = request.body.project_uuid;
+    var accessToken = authController.extractToken(request);
 
     var projectUsernames;
 
-    if (!username) {
-        console.error('VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
-    if (!projectUuid) {
-        console.error('VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - missing projectUuid parameter');
-        apiResponseController.sendError('Project Uuid required.', 400, response);
-        return;
-    }
-
-    if (!accessToken) {
-        console.error('VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - missing accessToken parameter');
-        apiResponseController.sendError('Access Token required.', 400, response);
-        return;
-    }
-
     console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - begin for project ' + projectUuid);
 
-    // check that token is on project
-    // remove from project metadata pems
-    // remove from file pems recursively
-    // get file metadata pems
-    // (loop) remove from file metadata pems
+    // TODO: think about implementing a project owner
+    // Only the owner can add/remove user?
+    // The owner cannot remove themselves, must change owner?
+    // Not a complete solution because somebody can steal ownership
 
-    // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
+    // We do not verify if the user is even on the project.
+    // This is in case the user got partially removed, and we need
+    // to restart the removal process.
     ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.getMetadataPermissions(accessToken, projectUuid);
 	})
-        // Remove username from project metadata pems
         .then(function(projectPermissions) {
             console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - getMetadataPermissions for project ' + projectUuid);
 
 	    // save usernames for sending emails later
 	    var metadataPermissions = new MetadataPermissions();
 	    projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
+	    var projectData = { username: username, projectUuid: projectUuid, projectUsernames: projectUsernames };
 
-            return agaveIO.removeUsernameFromMetadataPermissions(username, ServiceAccount.accessToken(), projectUuid);
-        })
-        // Remove project directory + subdirectory permissions recursively
-        .then(function() {
-            console.log(
-                'VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromMetadataPermissions for project ' + projectUuid
-            );
+	    taskQueue
+		.create('removeUsernameFromProjectTask', projectData)
+		.removeOnComplete(true)
+		.attempts(5)
+		.backoff({delay: 60 * 1000, type: 'fixed'})
+		.save()
+	    ;
 
-            return agaveIO.removeUsernameFromFilePermissions(username, ServiceAccount.accessToken(), projectUuid);
-        })
-        // get all project associated metadata
-        // TODO: this technically should be sufficient for all metadata except for the sole project metadata entry
-        // but not currently as many old metadata entries are missing the associationId
-        .then(function() {
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameToFilePermissions for project ' + projectUuid);
-
-            return agaveIO.getAllProjectAssociatedMetadata(projectUuid);
-        })
-        // (loop) Remove from File Metadata pems
-        .then(function(projectMetadata) {
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - getAllProjectAssociatedMetadata for project ' + projectUuid);
-
-            var metadata = new MetadataPermissions();
-            var uuids = metadata.getUuidsFromMetadataResponse(projectMetadata);
-
-            var promises = [];
-
-            function createAgaveCall(username, token, uuid) {
-
-                return function() {
-
-                    return agaveIO.removeUsernameFromMetadataPermissions(
-                        username,
-                        token,
-                        uuid
-                    );
-                };
-            }
-
-            for (var i = 0; i < uuids.length; i++) {
-                promises[i] = createAgaveCall(
-                    username,
-                    ServiceAccount.accessToken(),
-                    uuids[i]
-                );
-            }
-
-            return promises.reduce(Q.when, new Q());
-        })
-        // get jobs for project
-        .then(function() {
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromMetadataPermissions for project ' + projectUuid);
-
-            return agaveIO.getJobsForProject(projectUuid);
-        })
-        // (loop) remove job permissions
-        .then(function(jobMetadatas) {
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - getJobsForProject for project ' + projectUuid);
-
-            var metadata = new MetadataPermissions();
-            var uuids = metadata.getJobUuidsFromProjectResponse(jobMetadatas);
-
-            var promises = [];
-
-            function createAgaveCall(username, token, uuid) {
-
-                return function() {
-
-                    return agaveIO.removeUsernameFromJobPermissions(
-                        username,
-                        token,
-                        uuid
-                    );
-                };
-            }
-
-            for (var i = 0; i < uuids.length; i++) {
-                promises[i] = createAgaveCall(
-                    username,
-                    ServiceAccount.accessToken(),
-                    uuids[i]
-                );
-            }
-
-            return promises.reduce(Q.when, new Q());
-        })
-        .then(function() {
-	    // send emails
-	    var promises = projectUsernames.map(function(user) {
-                return function() {
-		    return agaveIO.getUserProfile(user)
-			.then(function(userProfileList) {
-			    if (userProfileList.length == 0) return;
-			    if (username == agaveSettings.guestAccountKey) return;
-			    var userProfile = userProfileList[0];
-			    if (!userProfile.value.disableUserEmail) {
-				var vdjWebappUrl = agaveSettings.vdjBackbone
-				    + '/project/' + projectUuid;
-				emailIO.sendGenericEmail(userProfile.value.email,
-							 'VDJServer user removed from project',
-							 'VDJServer user "' + username + '" has been removed from project ' + projectUuid + '.'
-							 + '<br>'
-							 + 'You can view the project with the link below:'
-							 + '<br>'
-							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
-							);
-			    }
-			});
-                };
-	    });
-
-	    return promises.reduce(Q.when, new Q());
+	    return apiResponseController.sendSuccess('ok', response);
 	})
-        .then(function() {
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromJobPermissions for project ' + projectUuid);
-            console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - complete for project ' + projectUuid);
-
-            return apiResponseController.sendSuccess('success', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error);
-	    //console.error(error.stack);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
+	.fail(function(error) {
+            var msg = 'VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
+            apiResponseController.sendError(msg, 500, response);
+        });
 };
 
+/*
 PermissionsController.addPermissionsForJob = function(request, response) {
 
     var jobUuid = request.body.jobUuid;
@@ -585,3 +408,4 @@ PermissionsController.addPermissionsForJob = function(request, response) {
         })
         ;
 };
+*/

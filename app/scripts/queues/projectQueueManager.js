@@ -1,6 +1,35 @@
 
 'use strict';
 
+//
+// projectQueueManager.js
+// Manage project tasks
+//
+// VDJServer Analysis Portal
+// VDJ Web API service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var ProjectQueueManager = {};
+module.exports = ProjectQueueManager;
+
 // App
 var app = require('../app');
 var agaveSettings = require('../config/agaveSettings');
@@ -24,11 +53,9 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
-var ProjectQueueManager = {};
-module.exports = ProjectQueueManager;
-
 ProjectQueueManager.processProjects = function() {
 
+/*
     // Publishing a project to community data
     //
     // 1. Move project files to community data
@@ -421,6 +448,7 @@ ProjectQueueManager.processProjects = function() {
 		done(new Error(msg));
             });
     });
+*/
 
     //
     // Add user to a project by giving them permissions on all of the project objects.
@@ -746,7 +774,7 @@ ProjectQueueManager.processProjects = function() {
             })
 	    .then(function(projectMetadata) {
 		projectData.projectName = projectMetadata.value.name;
-		console.log(projectData.projectName);
+		//console.log(projectData.projectName);
 		return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
 	    })
             .then(function(projectPermissions) {
@@ -802,4 +830,273 @@ ProjectQueueManager.processProjects = function() {
             });
     });
 
+    //
+    // Remove user from a project by removing permissions on all of the project objects.
+    // Set project metadata first so the project is removed from the user's project list.
+    //
+    // 1. project metadata record
+    // 2. project files and subdirectories
+    // 3. project associated metadata records
+    // 4. project jobs
+    // 5. send emails
+    //
+
+    taskQueue.process('removeUsernameFromProjectTask', function(task, done) {
+	// 1. project metadata
+
+        var projectData = task.data;
+	var projectUuid = projectData.projectUuid;
+	var username = projectData.username;
+	var msg;
+
+	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectTask: ' + username);
+
+	ServiceAccount.getToken()
+            .then(function(token) {
+		// Remove username from project metadata pems
+		return agaveIO.removeUsernameFromMetadataPermissions(username, ServiceAccount.accessToken(), projectUuid);
+            })
+            .then(function() {
+		// next task
+                taskQueue
+                    .create('removeUsernameFromProjectFilesTask', projectData)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectTask: ' + username);
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    taskQueue.process('removeUsernameFromProjectFilesTask', function(task, done) {
+	// 2. project files and subdirectories
+
+        var projectData = task.data;
+	var projectUuid = projectData.projectUuid;
+	var username = projectData.username;
+	var msg;
+
+	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectFilesTask: ' + username);
+
+	ServiceAccount.getToken()
+            .then(function(token) {
+		// Remove username from project files pems
+		return agaveIO.removeUsernameFromFilePermissions(username, ServiceAccount.accessToken(), projectUuid);
+            })
+            .then(function() {
+		// next task
+                taskQueue
+                    .create('removeUsernameFromProjectMetadataTask', projectData)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectFilesTask: ' + username);
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    taskQueue.process('removeUsernameFromProjectMetadataTask', function(task, done) {
+	// 3. project associated metadata records
+
+        var projectData = task.data;
+	var projectUuid = projectData.projectUuid;
+	var username = projectData.username;
+	var msg;
+
+	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectMetadataTask: ' + username);
+
+	ServiceAccount.getToken()
+            .then(function(token) {
+		// get all project associated metadata
+		return agaveIO.getAllProjectAssociatedMetadata(projectUuid);
+            })
+            .then(function(projectMetadata) {
+		// (loop) Remove from File Metadata pems
+		var metadata = new MetadataPermissions();
+		var uuids = metadata.getUuidsFromMetadataResponse(projectMetadata);
+
+		var promises = [];
+
+		function createAgaveCall(username, token, uuid) {
+
+                    return function() {
+
+			return agaveIO.removeUsernameFromMetadataPermissions(
+                            username,
+                            token,
+                            uuid
+			);
+                    };
+		}
+
+		for (var i = 0; i < uuids.length; i++) {
+                    promises[i] = createAgaveCall(
+			username,
+			ServiceAccount.accessToken(),
+			uuids[i]
+                    );
+		}
+
+		return promises.reduce(Q.when, new Q());
+            })
+            .then(function() {
+		// next task
+                taskQueue
+                    .create('removeUsernameFromProjectJobsTask', projectData)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectMetadataTask: ' + username);
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    taskQueue.process('removeUsernameFromProjectJobsTask', function(task, done) {
+	// 4. project jobs
+
+        var projectData = task.data;
+	var projectUuid = projectData.projectUuid;
+	var username = projectData.username;
+	var msg;
+
+	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectJobsTask: ' + username);
+
+	ServiceAccount.getToken()
+            .then(function() {
+		// get jobs for project
+		return agaveIO.getJobsForProject(projectUuid);
+            })
+            .then(function(jobMetadatas) {
+		// (loop) remove job permissions
+		var metadata = new MetadataPermissions();
+		var uuids = metadata.getJobUuidsFromProjectResponse(jobMetadatas);
+
+		var promises = [];
+
+		function createAgaveCall(username, token, uuid) {
+
+                    return function() {
+
+			return agaveIO.removeUsernameFromJobPermissions(
+                            username,
+                            token,
+                            uuid
+			);
+                    };
+		}
+
+		for (var i = 0; i < uuids.length; i++) {
+                    promises[i] = createAgaveCall(
+			username,
+			ServiceAccount.accessToken(),
+			uuids[i]
+                    );
+		}
+
+		return promises.reduce(Q.when, new Q());
+            })
+            .then(function() {
+		// next task
+                taskQueue
+                    .create('removeUsernameFromProjectEmailTask', projectData)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save()
+                    ;
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectJobsTask: ' + username);
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    taskQueue.process('removeUsernameFromProjectEmailTask', function(task, done) {
+	// 5. send emails
+
+        var projectData = task.data;
+	var projectUuid = projectData.projectUuid;
+	var username = projectData.username;
+	var projectUsernames = projectData.projectUsernames;
+	var msg;
+
+	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectEmailTask: ' + username);
+
+	ServiceAccount.getToken()
+            .then(function() {
+		// send emails
+		var promises = projectUsernames.map(function(user) {
+                    return function() {
+			return agaveIO.getUserProfile(user)
+			    .then(function(userProfileList) {
+				if (userProfileList.length == 0) return;
+				if (username == agaveSettings.guestAccountKey) return;
+				var userProfile = userProfileList[0];
+				if (!userProfile.value.disableUserEmail) {
+				    var vdjWebappUrl = agaveSettings.vdjBackbone
+					+ '/project/' + projectUuid;
+				    emailIO.sendGenericEmail(userProfile.value.email,
+							     'VDJServer user removed from project',
+							     'VDJServer user "' + username + '" has been removed from project ' + projectUuid + '.'
+							     + '<br>'
+							     + 'You can view the project with the link below:'
+							     + '<br>'
+							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							    );
+				}
+			    });
+                    };
+		});
+
+		return promises.reduce(Q.when, new Q());
+            })
+            .then(function() {
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectEmailTask: ' + username);
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromJobPermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - complete for project ' + projectUuid);
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
 };
