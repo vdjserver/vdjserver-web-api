@@ -71,10 +71,10 @@ agaveIO.sendRequest = function(requestSettings, postData) {
             else {
 
                 if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave response is not json.');
+                    console.error('VDJ-API ERROR: Agave response is not json. Raw output: ' + output);
                 }
 
-                deferred.reject(new Error('Agave response is not json'));
+                deferred.reject(new Error('Agave response is not json. Raw output: ' + output));
             }
 
             if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
@@ -824,6 +824,11 @@ agaveIO.getProjectFiles = function(projectUuid) {
     return deferred.promise;
 };
 
+//
+// Retrieve all project associated metadata
+// This relies upon associationIds having the project uuid
+// This performs multiple requests to get all of the records
+//
 agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
 
     var deferred = Q.defer();

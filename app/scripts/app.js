@@ -53,6 +53,7 @@ var projectController = require('./controllers/projectController');
 var feedbackController = require('./controllers/feedbackController');
 var userController = require('./controllers/userController');
 var telemetryController = require('./controllers/telemetryController');
+var permissionsController = require('./controllers/permissionsController');
 
 // Server Options
 var config = require('./config/config');
@@ -118,7 +119,7 @@ ServiceAccount.getToken()
         // Put the AIRR objects into the API
         api_spec['components']['schemas']['Study'] = schema['Study'];
         api_spec['components']['schemas']['Repertoire'] = schema['Repertoire'];
-        //console.log(JSON.stringify(api_spec));
+        //console.log(JSON.stringify(api_spec, null, 2));
 
         // dereference the API spec
         //
@@ -146,13 +147,7 @@ ServiceAccount.getToken()
             },
             securityHandlers: {
                 user_authorization: authController.userAuthorization,
-                project_authorization: function(req, scopes, definition) {
-                    console.log('project_authorization');
-                    console.log(scopes);
-                    console.log(definition);
-                    console.log(req.body);
-                    return false;
-                }
+                project_authorization: authController.projectAuthorization
             },
             operations: {
                 //getStatus: function(req, res) { res.send('{"result":"success"}'); }
@@ -172,6 +167,11 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: projectController.createProject,
+
+                // permissions
+                addPermissionsForUsername: permissionsController.addPermissionsForUsername,
+		removePermissionsForUsername: permissionsController.removePermissionsForUsername,
+		syncMetadataPermissionsWithProject: permissionsController.syncMetadataPermissionsWithProject,
 
 		// feedback
 		createFeedback: feedbackController.createFeedback,
