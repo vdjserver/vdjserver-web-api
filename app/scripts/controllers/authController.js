@@ -50,19 +50,8 @@ var webhookIO = require('../vendor/webhookIO');
 // Node Libraries
 var Q = require('q');
 
-//
-// Security handlers, these are called by the openapi
-// middleware. Return true if authentication is valid,
-// otherwise return false. The middleware will throw
-// a generic 401 error, which the errorMiddleware returns
-// to the client
-//
-
-// Verify a Tapis token
-// Sets the associated user profile for the token in req.user
-AuthController.userAuthorization = function(req, scopes, definition) {
-    if (config.debug) console.log('VDJ-API INFO: AuthController.userAuthorization');
-
+// Extract token from header
+AuthController.extractToken = function(req) {
     // extract the token from the authorization header
     if (! req['headers']['authorization']) {
 	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - missing authorization header';
@@ -83,7 +72,24 @@ AuthController.userAuthorization = function(req, scopes, definition) {
         webhookIO.postToSlack(msg);
         return false;
     }
-    var token = fields[1];
+    return fields[1];
+}
+
+//
+// Security handlers, these are called by the openapi
+// middleware. Return true if authentication is valid,
+// otherwise return false. The middleware will throw
+// a generic 401 error, which the errorMiddleware returns
+// to the client
+//
+
+// Verify a Tapis token
+// Sets the associated user profile for the token in req.user
+AuthController.userAuthorization = function(req, scopes, definition) {
+    if (config.debug) console.log('VDJ-API INFO: AuthController.userAuthorization');
+
+    var token = AuthController.extractToken(req);
+    if (!token) return false;
 
     // get my profile and username from the token
     // return a promise
@@ -119,38 +125,107 @@ AuthController.userAuthorization = function(req, scopes, definition) {
 AuthController.projectAuthorization = function(req, scopes, definition) {
     if (config.debug) console.log('VDJ-API INFO: AuthController.projectAuthorization');
 
-    return false;
+    var token = AuthController.extractToken(req);
+    if (!token) return false;
+
+    var project_uuid = req.body.project_uuid;
+    if (project_uuid == undefined) {
+	var msg = 'VDJ-API ERROR: AuthController.authForProject - missing project uuid, route ' + JSON.stringify(req.route.path);
+        console.error(msg);
+	webhookIO.postToSlack(msg);
+	return false;
+    }
+
+    // verify the user token
+    // return a promise
+    return AuthController.userAuthorization(req, scopes, definition)
+	.then(function(result) {
+	    if (!result) return result;
+
+	    // verify the user has access to project
+	    return agaveIO.getProjectMetadata(token, project_uuid);
+	})
+        .then(function(projectMetadata) {
+	    // make sure its project metadata and not some random uuid
+            if (projectMetadata && projectMetadata.name == 'privateProject') {
+		return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
+            }
+            else {
+		return false;
+            }
+        })
+        .then(function(projectPermissions) {
+	    // we can read the project metadata, but do we have write permission?
+	    if (projectPermissions && projectPermissions.permission.write)
+		return true;
+	    else {
+		return false;
+	    }
+        })
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route '
+		+ JSON.stringify(req.route.path) + ', error ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return false;
+        });
 }
 
-/*
 //
 // verify a valid and active username account
 //
-AuthController.verifyUser = function(request, response, next, username) {
+AuthController.verifyUser = function(username) {
 
-    if (!username) {
-        return apiResponseController.sendError('Username required.', 400, response);
-    }
+    if (username == undefined) return false;
 
-    agaveIO.getUserVerificationMetadata(username)
+    // return a promise
+    return agaveIO.getUserVerificationMetadata(username)
         .then(function(userVerificationMetadata) {
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
 		// valid
-                return next();
+                return true;
             }
             else {
-		return apiResponseController.sendError('Invalid username.', 400, response);
+		return false;
             }
         })
         .fail(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
+            return false;
         })
         ;
 }
 
+//
+// verify user has access to metadata entry
+//
+AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
+
+    if (uuid == undefined) return false;
+    if (accessToken == undefined) return false;
+    if (username == undefined) return false;
+
+    return agaveIO.getMetadataPermissionsForUser(accessToken, uuid, username)
+        .then(function(metadataPermissions) {
+	    // we can read the metadata, but do we have write permission?
+	    if (metadataPermissions && metadataPermissions.permission.write)
+		return true;
+	    else {
+		return false;
+	    }
+        })
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: AuthController.verifyMetadataAccess - uuid: ' + uuid
+		+ ', error validating user: ' + username + ', error ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);
+	    return false;
+        });
+}
+
+/*
 AuthController.verifyUserFromParams = function(request, response, next) {
     return AuthController.verifyUser(request, response, next, request.params.username);
 }
