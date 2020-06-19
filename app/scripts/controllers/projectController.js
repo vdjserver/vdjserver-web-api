@@ -54,7 +54,9 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
+//
 // Creates a project and all initial directories
+//
 ProjectController.createProject = function(request, response) {
 
     var project = request.body.project;
@@ -120,6 +122,93 @@ ProjectController.createProject = function(request, response) {
         });
 };
 
+// Publish project to community data
+
+ProjectController.publishProject = function(request, response) {
+    var projectUuid = request.params.project_uuid;
+
+    var msg = "VDJ-API ERROR: Not implemented.";
+    apiResponseController.sendError(msg, 500, response);
+}
+
+// Unpublish project to community data
+
+ProjectController.unpublishProject = function(request, response) {
+    var projectUuid = request.params.project_uuid;
+
+    var msg = "VDJ-API ERROR: Not implemented.";
+    apiResponseController.sendError(msg, 500, response);
+}
+
+//
+// Load project data into VDJServer ADC data repository
+//
+// Instead of using the project metadata record, we setup
+// and additional metadata record (name:projectLoad) that
+// keeps track of the state of the load process.
+//
+
+// 1. set load flag on project
+// 2. load repertoire metadata
+// 3. set load flag on each repertoire for rearrangement load
+// 4. load rearrangements for each repertoire
+// 5. set verification flag
+
+ProjectController.loadProject = function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var msg;
+
+    // check for project load metadata
+    agaveIO.getProjectLoadMetadata(projectUuid)
+        .then(function(loadMetadata) {
+            if (loadMetadata && loadMetadata[0]) {
+                // TODO: check to re-load after being unloaded?
+                var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: project already flagged for repository load'
+                    + ', metadata: ' + loadMetadata[0].uuid;
+                console.error(msg);
+	        webhookIO.postToSlack(msg);            
+                apiResponseController.sendError(msg, 400, response);
+                return null;
+            } else {
+                // create the project load metadata
+                return agaveIO.createProjectLoadMetadata(projectUuid)
+                    .then(function(loadMetadata) {
+                        // trigger load queue if necessary
+                        var msg = 'VDJ-API INFO: ProjectController.loadProject, project: ' + projectUuid + ' flagged for repository load'
+                            + ', metadata: ' + loadMetadata.uuid;
+                        console.log(msg);
+
+	                taskQueue
+		            .create('checkProjectsToLoadTask', null)
+		            .removeOnComplete(true)
+		            .attempts(5)
+		            .backoff({delay: 60 * 1000, type: 'fixed'})
+		            .save();
+
+                        apiResponseController.sendSuccess(msg, response);
+                    });
+            }
+        })
+        .fail(function(error) {
+            var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: ' + error;
+            console.error(msg);
+	    webhookIO.postToSlack(msg);            
+            apiResponseController.sendError(msg, 500, response);
+        });
+}
+
+//
+// Unload project data from VDJServer ADC data repository
+
+ProjectController.unloadProject = function(request, response) {
+    var projectUuid = request.params.project_uuid;
+
+    var msg = "VDJ-API ERROR: Not implemented.";
+    apiResponseController.sendError(msg, 500, response);
+}
+
+
+/*
 //
 // Import/export metadata
 //
@@ -609,3 +698,4 @@ ProjectController.createPublicPostit = function(request, response) {
         })
         ;
 };
+*/

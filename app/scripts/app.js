@@ -104,6 +104,14 @@ for (var obj in airr_spec) {
     }
 }
 
+// Downgrade to host vdj user
+// This is also so that the /vdjZ Corral file volume can be accessed,
+// as it is restricted to the TACC vdj account.
+// Currently only read access is required.
+console.log('VDJ-API INFO: Downgrading to host user: ' + config.hostServiceAccount);
+process.setuid(config.hostServiceAccount);
+console.log('VDJ-API INFO: Current uid: ' + process.getuid());
+
 // Verify we can login with service account
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
@@ -167,6 +175,10 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: projectController.createProject,
+                publishProject: projectController.publishProject,
+                unpublishProject: projectController.unpublishProject,
+                loadProject: projectController.loadProject,
+                unloadProject: projectController.unloadProject,
 
                 // permissions
                 addPermissionsForUsername: permissionsController.addPermissionsForUsername,
@@ -184,6 +196,8 @@ ServiceAccount.getToken()
 
         app.listen(app.get('port'), function() {
             console.log('VDJ-API INFO: VDJServer API service listening on port ' + app.get('port'));
+            // TODO: decide how to restart
+            projectQueueManager.checkRearrangementLoad();
         });
     })
     .fail(function(error) {
