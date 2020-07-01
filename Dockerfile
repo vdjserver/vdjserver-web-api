@@ -43,6 +43,13 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q \
 ##################
 ##################
 
+# setup vdj user
+RUN echo "vdj:x:816290:803419:VDJServer,,,:/home/vdj:/bin/bash" >> /etc/passwd
+RUN echo "G-803419:x:803419:vdj" >> /etc/group
+RUN mkdir /home/vdj
+RUN chown vdj /home/vdj
+RUN chgrp G-803419 /home/vdj
+
 RUN mkdir /vdjserver-web-api
 
 # Setup redis

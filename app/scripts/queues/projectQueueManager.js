@@ -42,6 +42,7 @@ var ServiceAccount = require('../models/serviceAccount');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
+var mongoIO = require('../vendor/mongoIO');
 var webhookIO = require('../vendor/webhookIO');
 var emailIO = require('../vendor/emailIO');
 
@@ -52,6 +53,61 @@ var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
+
+//
+// Because loading rearrangement data is resource intensive, we
+// only want one load occurring at a time. Here we check the task
+// queues to see if a rearrangement load is running.
+//
+ProjectQueueManager.checkRearrangementLoad = function() {
+
+    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementLoad');
+
+    var isRunning = false;
+
+    Q()
+        .then(function() {
+            let deferred = Q.defer();
+
+            kue.Job.rangeByType('rearrangementLoadTask', 'active', 0, 1000, 'asc', function(error, jobs) {
+                console.log(jobs.length);
+                if (jobs.length > 0) isRunning = true;
+
+                deferred.resolve();
+            });
+
+            return deferred.promise;
+        })
+        .then(function() {
+            let deferred = Q.defer();
+
+            kue.Job.rangeByType('rearrangementLoadTask', 'inactive', 0, 1000, 'asc', function(error, jobs) {
+                console.log(jobs.length);
+                if (jobs.length > 0) isRunning = true;
+
+                deferred.resolve();
+            });
+
+            return deferred.promise;
+        })
+        .then(function() {
+            if (! isRunning) {
+                // no rearrangement load is running so kick off a task
+                console.log('VDJ-API INFO: projectQueueManager.checkRearrangementLoad, no rearrangement load task running, triggering task.');
+                taskQueue
+                    .create('rearrangementLoadTask', null)
+                    .removeOnComplete(true)
+                    .attempts(5)
+                    .backoff({delay: 60 * 1000, type: 'fixed'})
+                    .save();
+            } else {
+                console.log('VDJ-API INFO: projectQueueManager.checkRearrangementLoad, a rearrangement load task is running.');
+            }
+
+            return isRunning;
+        })
+        ;
+};
 
 ProjectQueueManager.processProjects = function() {
 
@@ -1098,5 +1154,422 @@ ProjectQueueManager.processProjects = function() {
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
             });
+    });
+
+    //
+    // Load project data into the VDJServer ADC data repository.
+    // Currently two main data to be loaded:
+    // 1) repertoire metadata
+    // 2) rearrangement data
+    //
+    // The repertoire metadata is relatively small and quick to load,
+    // while the rearrangement data is large and may takes days or
+    // weeks to competely load. We load the repertoire metadata for
+    // all projects as soon as possible. However, we currently load
+    // the rearrangement data for only one project at a time
+    // to avoid overloading any particular system.
+    //
+    // Because the rearrangement data is large, we do the loading process
+    // in small steps to allow easier recovery from errors. Most of the
+    // complexity of these tasks involves the rearrangement data.
+    //
+    // 1. check if projects to be loaded
+    // 2. load repertoire metadata
+    // 3. check if rearrangement data to be loaded
+    // 4. load rearrangement data for each repertoire
+    //
+
+    // 1. check if projects to be loaded
+    taskQueue.process('checkProjectsToLoadTask', function(task, done) {
+	var msg;
+
+	console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, task started.');
+
+        agaveIO.getProjectsToBeLoaded()
+	    .then(function(projectList) {
+	        console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
+                if (projectList.length > 0) {
+                    // there are projects to be loaded so trigger next task
+                    taskQueue
+                        .create('loadRepertoireMetadataTask', null)
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .backoff({delay: 60 * 1000, type: 'fixed'})
+                        .save();
+                }
+            })
+            .then(function() {
+	        console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, task done.');
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.checkProjectsToLoadTask - error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    // 2. load repertoire metadata
+    taskQueue.process('loadRepertoireMetadataTask', function(task, done) {
+	var msg;
+        var projectLoad = null;
+        var projectUuid = null;
+        var allRepertoiresLoaded = false;
+
+	console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, task started.');
+
+        agaveIO.getProjectsToBeLoaded()
+	    .then(function(projectList) {
+                // look for project that needs repertoire metadata to be loaded
+                for (var i = 0; i < projectList.length; ++i) {
+	            console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, checking load record: '
+                                + projectList[i]['uuid'] + ' for project: ' + projectList[i]['associationIds'][0]);
+                    if (! projectList[i]['value']['repertoireMetadataLoaded']) {
+                        projectLoad = projectList[i];
+                        projectUuid = projectLoad['associationIds'][0];
+                        break;
+                    }
+                }
+                return;
+            })
+            .then(function() {
+                // we did not find one, so all the repertoire metadata is loaded
+                // trigger the next task
+                if (! projectLoad) {
+	            console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, all repertoire metadata is loaded.');
+                    allRepertoiresLoaded = true;
+                    return null;
+                }
+
+	        console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, load repertoire metadata for project: ' + projectUuid);
+
+                // gather the repertoire objects
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                    .then(function(repertoireMetadata) {
+                        //console.log(JSON.stringify(repertoireMetadata));
+	                console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, gathered ' + repertoireMetadata.length
+                                    + ' repertoire metadata for project: ' + projectUuid);
+
+                        if (! repertoireMetadata || repertoireMetadata.length == 0) return;
+
+                        // insert repertoires into database
+                        // TODO: we should use RestHeart meta/v3 API but we are getting errors
+                        // TODO: using direct access to MongoDB for now
+                        return mongoIO.loadRepertoireMetadata(repertoireMetadata);
+                    })
+                    .then(function(result) {
+	                console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, repertoire metadata is loaded for project: ' + projectUuid);
+                        // update the load status
+                        projectLoad.value.repertoireMetadataLoaded = true;
+                        return agaveIO.updateMetadata(projectLoad.uuid, projectLoad.name, projectLoad.value, projectLoad.associationIds);
+                    });
+            })
+            .then(function() {
+                if (allRepertoiresLoaded) {
+                    // if all project repertoire data is loaded then trigger rearrangement load check
+                    taskQueue
+                        .create('checkRearrangementsToLoadTask', null)
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .backoff({delay: 60 * 1000, type: 'fixed'})
+                        .save();
+                } else {
+                    // otherwise re-check for more projects to load
+                    taskQueue
+                        .create('checkProjectsToLoadTask', null)
+                        .removeOnComplete(true)
+                        .attempts(5)
+                        .backoff({delay: 60 * 1000, type: 'fixed'})
+                        .save();
+                }
+	        console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, task done.');
+		done();
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.loadRepertoireMetadataTask - error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    // 3. check if rearrangement data to be loaded
+    taskQueue.process('checkRearrangementsToLoadTask', function(task, done) {
+	var msg = null;
+        var projectLoad = null;
+        var projectUuid = null;
+        var repertoireMetadata = null;
+
+	console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, task started.');
+
+        agaveIO.getProjectsToBeLoaded()
+	    .then(function(projectList) {
+	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
+
+                // look for project that needs rearrangement data to be loaded
+                for (var i = 0; i < projectList.length; ++i) {
+                    if (! projectList[i]['value']['rearrangementDataLoaded']) {
+                        projectLoad = projectList[i];
+                        projectUuid = projectLoad['associationIds'][0];
+                        break;
+                    }
+                }
+                return;
+            })
+            .then(function() {
+                // we did not find one, so all the rearrangement data is loaded
+                if (! projectLoad) {
+	            console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, all rearrangement data is loaded.');
+                    return null;
+                }
+
+	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, setup rearrangement data load for project: ' + projectUuid);
+
+                // gather the repertoire objects
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                    .then(function(_repertoireMetadata) {
+                        repertoireMetadata = _repertoireMetadata;
+                        //console.log(JSON.stringify(repertoireMetadata));
+	                console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, gathered ' + repertoireMetadata.length
+                                    + ' repertoire metadata for project: ' + projectUuid);
+
+                        if (! repertoireMetadata || repertoireMetadata.length == 0) {
+                            msg = 'VDJ-API ERROR: project has no repertoires: ' + projectUuid;
+                            return;
+                        }
+
+                        // check if there are existing rearrangement load records
+                        return agaveIO.getRearrangementsToBeLoaded(projectUuid);
+                    })
+                    .then(function(rearrangementLoad) {
+                        if (!rearrangementLoad) return;
+
+                        if (rearrangementLoad.length == 0) {
+                            // need to create the rearrangement load records
+	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, create rearrangement load records for project: ' + projectUuid);
+		            var promises = [];
+
+		            function createAgaveCall(projectUuid, repertoire_id) {
+                                return function() {
+			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id);
+                                };
+		            }
+
+		            for (var i = 0; i < repertoireMetadata.length; i++) {
+                                promises[i] = createAgaveCall(projectUuid, repertoireMetadata[i]['repertoire_id']);
+		            }
+
+		            return promises.reduce(Q.when, new Q());
+                        } else if (rearrangementLoad.length != repertoireMetadata.length) {
+                            msg = 'VDJ-API ERROR: projectQueueManager.checkRearrangementsToLoadTask, number of repertoires ('
+                                + repertoireMetadata.length + ') is not equal to number of rearrangement load records ('
+                                + rearrangementLoad.length + ') for project: ' + projectUuid;
+                            return;
+                        } else {
+	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, rearrangement load records already created for project: ' + projectUuid);
+                            return;
+                        }
+                    });
+            })
+            .then(function() {
+	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, task done.');
+                if (msg) {
+                    // an error occurred so stop the task
+		    console.error(msg);
+		    webhookIO.postToSlack(msg);
+		    done(new Error(msg));
+                } else {
+                    // otherwise trigger rearrangement load if necessary
+                    ProjectQueueManager.checkRearrangementLoad();
+		    done();
+                }
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.checkRearrangementsToLoadTask - error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+    });
+
+    // 4. load rearrangement data for each repertoire
+    taskQueue.process('rearrangementLoadTask', function(task, done) {
+	var msg = null;
+        var projectLoad = null;
+        var projectUuid = null;
+        var repertoireMetadata = null;
+        var repertoire = null;
+        var dataLoad = null;
+        var primaryDP = null;
+        var jobOutput = null;
+        var allRearrangementsLoaded = false;
+
+	console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, task started.');
+
+        agaveIO.getProjectsToBeLoaded()
+	    .then(function(projectList) {
+	        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, ' + projectList.length + ' project(s) to be loaded.');
+
+                // look for project that needs rearrangement data to be loaded
+                for (var i = 0; i < projectList.length; ++i) {
+                    if (! projectList[i]['value']['rearrangementDataLoaded']) {
+                        projectLoad = projectList[i];
+                        projectUuid = projectLoad['associationIds'][0];
+                        break;
+                    }
+                }
+                return;
+            })
+            .then(function() {
+                // we did not find one, so all the rearrangement data is loaded
+                if (! projectLoad) {
+	            console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, all rearrangement data is loaded.');
+                    allRearrangementsLoaded = true;
+                    return null;
+                }
+
+                // check if there are existing rearrangement load records
+                return agaveIO.getRearrangementsToBeLoaded(projectUuid)
+                    .then(function(rearrangementLoad) {
+                        if (! rearrangementLoad || rearrangementLoad.length == 0) {
+                            msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, project has no rearrangement load records: ' + projectUuid;
+                            return null;
+                        }
+
+                        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, gathered ' + rearrangementLoad.length
+                                    + ' rearrangement load records for project: ' + projectUuid);
+
+                        for (var i = 0; i < rearrangementLoad.length; ++i) {
+                            if (! rearrangementLoad[i]['value']['isLoaded']) {
+                                dataLoad = rearrangementLoad[i];
+                                break;
+                            }
+                        }
+
+                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid);
+                    })
+            })
+            .then(function(_repertoireMetadata) {
+                if (! projectLoad) return;
+                if (! dataLoad) {
+                    console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, all rearrangement loads done for project: ' + projectLoad.uuid);
+                    console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, project completely loaded: ' + projectLoad.uuid);
+                    // project to be loaded but no dataLoad means all rearrangement loads have been completed
+                    // update the load status
+                    projectLoad.value.rearrangementDataLoaded = true;
+                    projectLoad.value.isLoaded = true;
+                    return agaveIO.updateMetadata(projectLoad.uuid, projectLoad.name, projectLoad.value, projectLoad.associationIds);
+                }
+
+                //console.log(dataLoad);
+                repertoireMetadata = _repertoireMetadata;
+
+                console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, rearrangement data load: '
+                            + dataLoad['uuid'] + ' for repertoire: ' + dataLoad['value']['repertoire_id']
+                            + ' at load set: ' + dataLoad['value']['load_set']);
+
+                for (var i = 0; i < repertoireMetadata.length; ++i) {
+                    if (repertoireMetadata[i]['repertoire_id'] == dataLoad['value']['repertoire_id']) {
+                        repertoire = repertoireMetadata[i];
+                        break;
+                    }
+                }
+                //console.log(repertoire);
+
+                if (! repertoire) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, could not find repertoire record for repertoire_id: '
+                        + dataLoad['value']['repertoire_id'];
+                    return null;
+                }
+
+                for (var i = 0; i < repertoire['data_processing'].length; ++i) {
+                    if (repertoire['data_processing'][i]['primary_annotation']) {
+                        primaryDP = repertoire['data_processing'][i];
+                        break;
+                    }
+                }
+
+                if (! primaryDP) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, could not find primary data processing for repertoire_id: '
+                        + dataLoad['value']['repertoire_id'];
+                    return null;
+                }
+                
+                if (! primaryDP['data_processing_id']) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, no data_processing_id for primary data processing for repertoire_id: '
+                        + dataLoad['value']['repertoire_id'];
+                    return null;
+                }
+
+                if (! primaryDP['data_processing_files']) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, primary data processing: '
+                        + primaryDP['data_processing_id'] + " does not have data_processing_files.";
+                    return null;
+                }
+
+                if (primaryDP['data_processing_files'].length == 0) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, primary data processing: '
+                        + primaryDP['data_processing_id'] + " does not have data_processing_files.";
+                    return null;
+                }
+
+                // get the data processing record
+                // TODO: right now this is a job, but we should switch to using analysis_provenance_id
+                // which contains the appropriate information
+                return agaveIO.getJobOutput(primaryDP['data_processing_id'])
+                    .then(function(_job) {
+                        if (! _job) {
+                            msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, could not get job: '
+                                + primaryDP['data_processing_id'] + ' for primary data processing: ' + primaryDP['data_processing_id'];
+                            return null;
+                        }
+                        jobOutput = _job;
+                        //console.log(jobOutput);
+
+                        if (! jobOutput['archivePath']) {
+                            msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, job: ' + jobOutput.uuid + " is missing archivePath.";
+                            return null;
+                        }
+                        if (jobOutput['archivePath'].length == 0) {
+                            msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, job: ' + jobOutput.uuid + " is missing archivePath.";
+                            return null;
+                        }
+
+                        // finally, start the rearrangement load!
+                        return mongoIO.loadRearrangementData(dataLoad, repertoire, primaryDP, jobOutput);
+                    })
+            })
+            .then(function() {
+	        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, task done.');
+                if (msg) {
+                    // an error occurred so stop the task
+		    console.error(msg);
+		    webhookIO.postToSlack(msg);
+		    done(new Error(msg));
+                } else {
+                    // if not all loaded trigger start at beginning and check for more
+                    if (allRearrangementsLoaded) {
+                        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, all loads done, pausing queue.');
+                    }
+                    else {
+                        taskQueue
+                            .create('checkProjectsToLoadTask', null)
+                            .removeOnComplete(true)
+                            .attempts(5)
+                            .backoff({delay: 60 * 1000, type: 'fixed'})
+                            .save();
+                    }
+
+		    done();
+                }
+            })
+            .fail(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask - error ' + error;
+		console.error(msg);
+		webhookIO.postToSlack(msg);
+		done(new Error(msg));
+            });
+
     });
 };

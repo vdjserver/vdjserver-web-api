@@ -335,6 +335,142 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/publish:
+    post:
+      description: publish project to community data portal
+      operationId: publishProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/unpublish:
+    post:
+      description: unpublish project from community data portal
+      operationId: unpublishProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/load:
+    post:
+      description: load project data into VDJServer ADC data repository
+      operationId: loadProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/unload:
+    post:
+      description: unload project data from VDJServer ADC data repository
+      operationId: unloadProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /permission/user:
     post:
       description: add project permissions for user

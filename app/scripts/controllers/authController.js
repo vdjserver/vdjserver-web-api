@@ -128,7 +128,11 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
     var token = AuthController.extractToken(req);
     if (!token) return false;
 
-    var project_uuid = req.body.project_uuid;
+    // check body and params for project uuid
+    var project_uuid;
+    if (req.body) project_uuid = req.body.project_uuid;
+    if (project_uuid == undefined)
+        if (req.params) project_uuid = req.params.project_uuid;
     if (project_uuid == undefined) {
 	var msg = 'VDJ-API ERROR: AuthController.authForProject - missing project uuid, route ' + JSON.stringify(req.route.path);
         console.error(msg);
@@ -147,11 +151,12 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
 	})
         .then(function(projectMetadata) {
 	    // make sure its project metadata and not some random uuid
-            if (projectMetadata && projectMetadata.name == 'privateProject') {
+            // TODO: should disallow old VDJServer V1 projects at some point
+            if (projectMetadata && (projectMetadata.name == 'privateProject') || (projectMetadata.name == 'publicProject') || (projectMetadata.name == 'project')) {
 		return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
             }
             else {
-		return false;
+                return Promise.reject(new Error('invalid project metadata'));
             }
         })
         .then(function(projectPermissions) {
@@ -159,12 +164,12 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
 	    if (projectPermissions && projectPermissions.permission.write)
 		return true;
 	    else {
-		return false;
+                return Promise.reject(new Error('user does not have write permission for project'));
 	    }
         })
         .fail(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route '
-		+ JSON.stringify(req.route.path) + ', error ' + error;
+	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route: '
+		+ JSON.stringify(req.route.path) + ', error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
 	    return false;
