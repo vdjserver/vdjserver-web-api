@@ -270,68 +270,75 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
         .pipe(zlib.createGunzip())
         .pipe(csv({separator:'\t'}))
         .on('data', async function(row) {
-                rows.push(row);
-                if (rows.length == 10000) {
-                    // pause the stream while we insert the data
-                    readable.pause();
+            rows.push(row);
+            if (rows.length == 10000) {
+                // pause the stream while we insert the data
+                readable.pause();
 
-                    if (load_set >= load_set_start) {
-                        console.log('VDJ-API INFO: mongoIO.loadRearrangementData, inserting load set: ' + load_set);
-                        // process and cleanup records
-                        for (var r = 0; r < rows.length; ++r) {
-                            //if (r == 0) console.log(rows[r]);
-                            mongoIO.processRearrangementRow(rows[r], rep, dp_id, load_set);
-                            mongoIO.cleanObject(rows[r]);
-                            records.push(rows[r]);
-                        }
-
-                        // perform the database insert
-                        await mongoIO.insertRearrangement(records);
-
-                        // update rearrangement data load record
-                        dataLoad['value']['load_set'] = load_set + 1;
-                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds);
-                    } else {
-                        console.log('VDJ-API INFO: mongoIO.loadRearrangementData, skipping load set: ' + load_set);
+                if (load_set >= load_set_start) {
+                    console.log('VDJ-API INFO: mongoIO.loadRearrangementData, inserting load set: ' + load_set);
+                    // process and cleanup records
+                    for (var r = 0; r < rows.length; ++r) {
+                        //if (r == 0) console.log(rows[r]);
+                        mongoIO.processRearrangementRow(rows[r], rep, dp_id, load_set);
+                        mongoIO.cleanObject(rows[r]);
+                        records.push(rows[r]);
                     }
-                    total_cnt += records.length;
-                    ++load_set;
-                    records = [];
-                    rows = [];
-                    // resume the stream
-                    readable.resume();
+
+                    // perform the database insert
+                    await mongoIO.insertRearrangement(records);
+
+                    // update rearrangement data load record
+                    dataLoad['value']['load_set'] = load_set + 1;
+                    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                        .fail(function(error) {
+	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                            return deferred.reject(msg);
+                        });
+                } else {
+                    console.log('VDJ-API INFO: mongoIO.loadRearrangementData, skipping load set: ' + load_set);
                 }
-            })
-            .on('end', async function() {
-                if (rows.length > 0) {
-                    if (load_set >= load_set_start) {
-                        console.log('VDJ-API INFO: mongoIO.loadRearrangementData, end file, inserting load set: ' + load_set);
-                        // process and cleanup records
-                        for (var r = 0; r < rows.length; ++r) {
-                            //if (r == 0) console.log(rows[r]);
-                            mongoIO.processRearrangementRow(rows[r], rep, dp_id, load_set);
-                            mongoIO.cleanObject(rows[r]);
-                            records.push(rows[r]);
-                        }
-
-                        // perform the database insert
-                        await mongoIO.insertRearrangement(records);
-
-                        // update rearrangement data load record
-                        dataLoad['value']['load_set'] = load_set + 1;
-                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds);
-                    } else {
-                        console.log('VDJ-API INFO: mongoIO.loadRearrangementData, end file, skipping load set: ' + load_set);
+                total_cnt += records.length;
+                ++load_set;
+                records = [];
+                rows = [];
+                // resume the stream
+                readable.resume();
+            }
+        })
+        .on('end', async function() {
+            if (rows.length > 0) {
+                if (load_set >= load_set_start) {
+                    console.log('VDJ-API INFO: mongoIO.loadRearrangementData, end file, inserting load set: ' + load_set);
+                    // process and cleanup records
+                    for (var r = 0; r < rows.length; ++r) {
+                        //if (r == 0) console.log(rows[r]);
+                        mongoIO.processRearrangementRow(rows[r], rep, dp_id, load_set);
+                        mongoIO.cleanObject(rows[r]);
+                        records.push(rows[r]);
                     }
-                    total_cnt += records.length;
-                    ++load_set;
-                    records = [];
-                    rows = [];
-                }
-                console.log('VDJ-API INFO: mongoIO.loadRearrangementData, file successfully processed: ' + filename + ', rearrangement count: ' + total_cnt);
-                return deferred.resolve(load_set);
-            });
 
+                    // perform the database insert
+                    await mongoIO.insertRearrangement(records);
+
+                    // update rearrangement data load record
+                    dataLoad['value']['load_set'] = load_set + 1;
+                    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                        .fail(function(error) {
+	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                            return deferred.reject(msg);
+                        });
+                } else {
+                    console.log('VDJ-API INFO: mongoIO.loadRearrangementData, end file, skipping load set: ' + load_set);
+                }
+                total_cnt += records.length;
+                ++load_set;
+                records = [];
+                rows = [];
+            }
+            console.log('VDJ-API INFO: mongoIO.loadRearrangementData, file successfully processed: ' + filename + ', rearrangement count: ' + total_cnt);
+            return deferred.resolve(load_set);
+        });
     return deferred.promise;
 }
 
@@ -486,12 +493,20 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
         var filename = filePath + '/' + files[i];
 	console.log('VDJ-API INFO: mongoIO.loadRearrangementData, processing file: ' + filename + ' load set start: ' + load_set_start);
 
-        var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start);
+        var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start)
+            .catch(function(error) {
+                // pass reject to next level
+	        return Q.reject(error);
+            });
         load_set = result;
         //console.log(result);
     }
 
     // update rearrangement data load record
     dataLoad['value']['isLoaded'] = true;
-    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds);
+    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+        .fail(function(error) {
+	    var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
+	    return Q.reject(msg);
+        });
 }

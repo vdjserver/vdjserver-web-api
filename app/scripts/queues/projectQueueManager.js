@@ -1362,10 +1362,36 @@ ProjectQueueManager.processProjects = function() {
 
 		            return promises.reduce(Q.when, new Q());
                         } else if (rearrangementLoad.length != repertoireMetadata.length) {
-                            msg = 'VDJ-API ERROR: projectQueueManager.checkRearrangementsToLoadTask, number of repertoires ('
+                            msg = 'VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, number of repertoires ('
                                 + repertoireMetadata.length + ') is not equal to number of rearrangement load records ('
                                 + rearrangementLoad.length + ') for project: ' + projectUuid;
-                            return;
+                            console.log(msg);
+	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, create missing rearrangement load records for project: ' + projectUuid);
+
+		            var promises = [];
+
+		            function createAgaveCall(projectUuid, repertoire_id) {
+                                return function() {
+			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id);
+                                };
+		            }
+
+                            var idx = 0;
+		            for (var i = 0; i < repertoireMetadata.length; i++) {
+                                var found = false;
+                                for (var j = 0; j < rearrangementLoad.length; j++) {
+                                    if (rearrangementLoad[j]['value']['repertoire_id'] == repertoireMetadata[i]['repertoire_id']) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (! found) {
+                                    promises[idx] = createAgaveCall(projectUuid, repertoireMetadata[i]['repertoire_id']);
+                                    idx++;
+                                }
+		            }
+
+		            return promises.reduce(Q.when, new Q());
                         } else {
 	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, rearrangement load records already created for project: ' + projectUuid);
                             return;
@@ -1398,6 +1424,7 @@ ProjectQueueManager.processProjects = function() {
 	var msg = null;
         var projectLoad = null;
         var projectUuid = null;
+        var rearrangementLoad = null;
         var repertoireMetadata = null;
         var repertoire = null;
         var dataLoad = null;
@@ -1431,7 +1458,8 @@ ProjectQueueManager.processProjects = function() {
 
                 // check if there are existing rearrangement load records
                 return agaveIO.getRearrangementsToBeLoaded(projectUuid)
-                    .then(function(rearrangementLoad) {
+                    .then(function(_rearrangementLoad) {
+                        rearrangementLoad = _rearrangementLoad;
                         if (! rearrangementLoad || rearrangementLoad.length == 0) {
                             msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, project has no rearrangement load records: ' + projectUuid;
                             return null;
@@ -1440,12 +1468,21 @@ ProjectQueueManager.processProjects = function() {
                         console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, gathered ' + rearrangementLoad.length
                                     + ' rearrangement load records for project: ' + projectUuid);
 
+                        var loadedCount = 0;
+                        for (var i = 0; i < rearrangementLoad.length; ++i)
+                            if (rearrangementLoad[i]['value']['isLoaded'])
+                                ++loadedCount;
+                                
                         for (var i = 0; i < rearrangementLoad.length; ++i) {
                             if (! rearrangementLoad[i]['value']['isLoaded']) {
                                 dataLoad = rearrangementLoad[i];
                                 break;
                             }
                         }
+
+                        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, ' + loadedCount
+                                    + ' of the total ' + rearrangementLoad.length
+                                    + ' rearrangement load records have been loaded.');
 
                         return agaveIO.gatherRepertoireMetadataForProject(projectUuid);
                     })
@@ -1464,6 +1501,13 @@ ProjectQueueManager.processProjects = function() {
 
                 //console.log(dataLoad);
                 repertoireMetadata = _repertoireMetadata;
+
+                if (repertoireMetadata.length != rearrangementLoad.length) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, number (' + rearrangementLoad.length
+                        + ') of rearrangement load records is not equal to number (' + repertoireMetadata.length
+                        + ') of repertoires.';
+                    return null;
+                }
 
                 console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, rearrangement data load: '
                             + dataLoad['uuid'] + ' for repertoire: ' + dataLoad['value']['repertoire_id']

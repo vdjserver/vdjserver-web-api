@@ -1868,6 +1868,7 @@ agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
             deferred.resolve(responseObject.result);
         })
         .fail(function(errorObject) {
+            console.log('agaveIO.updateMetadata error: ' + errorObject);
             deferred.reject(errorObject);
         });
 
