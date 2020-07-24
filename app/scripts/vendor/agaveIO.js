@@ -39,6 +39,7 @@ var MetadataPermissions = require('../models/metadataPermissions');
 
 // Processing
 var webhookIO = require('../vendor/webhookIO');
+var airr = require('../vendor/airr');
 
 // Node Libraries
 var Q = require('q');
@@ -518,6 +519,95 @@ agaveIO.getUserProfile = function(username) {
 	    };
 
 	    return agaveIO.sendRequest(requestSettings, null);
+	})
+        .then(function(responseObject) {
+            deferred.resolve(responseObject.result);
+        })
+        .fail(function(errorObject) {
+            deferred.reject(errorObject);
+        });
+
+    return deferred.promise;
+};
+
+//
+// Metadata operations
+//
+
+// generic metadata query
+agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
+
+    var deferred = Q.defer();
+
+    var models = [];
+
+    var doFetch = function(offset) {
+	var requestSettings = {
+	    host:     agaveSettings.hostname,
+	    method:   'GET',
+	    path:   '/meta/v2/data?q='
+		+ encodeURIComponent('{'
+				     + '"name": "' + type + '",'
+				     + '"associationIds": "' + projectUuid + '"'
+				     + '}')
+		+ '&limit=50&offset=' + offset,
+	    rejectUnauthorized: false,
+	    headers: {
+		'Authorization': 'Bearer ' + accessToken
+	    }
+	};
+
+	return agaveIO.sendRequest(requestSettings, null)
+            .then(function(responseObject) {
+		var result = responseObject.result;
+		if (result.length > 0) {
+		    // maybe more data
+		    models = models.concat(result);
+		    var newOffset = offset + result.length;
+		    doFetch(newOffset);
+		} else {
+		    // no more data
+		    deferred.resolve(models);
+		}
+	    })
+            .fail(function(errorObject) {
+		deferred.reject(errorObject);
+            });
+    }
+
+    doFetch(0);
+
+    return deferred.promise;
+};
+
+// generic metadata creation
+agaveIO.createMetadataForType = function(projectUuid, type, value) {
+
+    var deferred = Q.defer();
+
+    var postData = {
+	associationIds: [ projectUuid ],
+        name: type,
+        value: value,
+    };
+
+    postData = JSON.stringify(postData);
+
+    ServiceAccount.getToken()
+	.then(function(token) {
+	    var requestSettings = {
+		host:     agaveSettings.hostname,
+		method:   'POST',
+		path:     '/meta/v2/data',
+		rejectUnauthorized: false,
+		headers: {
+		    'Content-Type':   'application/json',
+		    'Content-Length': Buffer.byteLength(postData),
+		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+		}
+	    };
+
+	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
             deferred.resolve(responseObject.result);
@@ -3393,7 +3483,12 @@ agaveIO.createCommunityFilePostit = function(projectUuid, path) {
 // Project load/unload from VDJServer ADC data repository
 //
 
-agaveIO.createProjectLoadMetadata = function(projectUuid) {
+//
+// Right now, all the project load/unload metadata is owned by the
+// vdj account, no permissions for project users are given.
+//
+
+agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 
     var deferred = Q.defer();
 
@@ -3401,6 +3496,7 @@ agaveIO.createProjectLoadMetadata = function(projectUuid) {
         name: 'projectLoad',
 	associationIds: [ projectUuid ],
         value: {
+            collection: collection,
             shouldLoad: true,
             isLoaded: false,
             repertoireMetadataLoaded: false,
@@ -3437,7 +3533,7 @@ agaveIO.createProjectLoadMetadata = function(projectUuid) {
 };
 
 // there should be only a single metadata record
-agaveIO.getProjectLoadMetadata = function(projectUuid) {
+agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
 
     var deferred = Q.defer();
 
@@ -3450,6 +3546,7 @@ agaveIO.getProjectLoadMetadata = function(projectUuid) {
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectLoad",'
+                            + '"value.collection":"' + collection + '",'
                             + '"associationIds":"' + projectUuid + '"'
                             + '}'
                     )
@@ -3473,7 +3570,7 @@ agaveIO.getProjectLoadMetadata = function(projectUuid) {
 };
 
 // get list of projects to be loaded
-agaveIO.getProjectsToBeLoaded = function() {
+agaveIO.getProjectsToBeLoaded = function(collection) {
 
     var deferred = Q.defer();
 
@@ -3486,7 +3583,7 @@ agaveIO.getProjectsToBeLoaded = function() {
 		    host:     agaveSettings.hostname,
 		    method:   'GET',
 		    path:     '/meta/v2/data?q='
-			+ encodeURIComponent('{"name":"projectLoad","value.shouldLoad":true,"value.isLoaded":false}')
+			+ encodeURIComponent('{"name":"projectLoad","value.collection":"' + collection +  '","value.shouldLoad":true,"value.isLoaded":false}')
 			+ '&limit=50&offset=' + offset,
 		    rejectUnauthorized: false,
 		    headers: {
@@ -3519,7 +3616,7 @@ agaveIO.getProjectsToBeLoaded = function() {
 };
 
 // status record for a rearrangement load
-agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id) {
+agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, collection) {
 
     var deferred = Q.defer();
 
@@ -3528,6 +3625,7 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id) {
 	associationIds: [ projectUuid ],
         value: {
             repertoire_id: repertoire_id,
+            collection: collection,
             isLoaded: false,
             load_set: 0
         }
@@ -3562,7 +3660,7 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id) {
 };
 
 // get list of repertoires that need their rearrangement data to be loaded
-agaveIO.getRearrangementsToBeLoaded = function(projectUuid) {
+agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
 
     var deferred = Q.defer();
 
@@ -3578,6 +3676,7 @@ agaveIO.getRearrangementsToBeLoaded = function(projectUuid) {
                         + encodeURIComponent(
                             '{'
                                 + '"name":"rearrangementLoad",'
+                                + '"value.collection":"' + collection + '",'
                                 + '"associationIds":"' + projectUuid + '"'
                                 + '}'
                         )
@@ -3639,217 +3738,110 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid) {
         });
 };
 
-//
-/////////////////////////////////////////////////////////////////////
-//
-// Study metadata
-//
+// Collect list of repertoire metadata for project.
+// This function transforms the normalized metadata
+// records into the denormalized AIRR metadata format.
+agaveIO.collectRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 
-agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
+    var msg = null;
+    var repertoireMetadata = [];
+    var subjectMetadata = {};
+    var sampleMetadata = {};
+    var dpMetadata = {};
+    var projectMetadata = null;
 
-    var deferred = Q.defer();
-
-    var models = [];
-
-    var doFetch = function(offset) {
-	var requestSettings = {
-	    host:     agaveSettings.hostname,
-	    method:   'GET',
-	    path:   '/meta/v2/data?q='
-		+ encodeURIComponent('{'
-				     + '"name": "' + type + '",'
-				     + '"associationIds": "' + projectUuid + '"'
-				     + '}')
-		+ '&limit=50&offset=' + offset,
-	    rejectUnauthorized: false,
-	    headers: {
-		'Authorization': 'Bearer ' + accessToken
-	    }
-	};
-
-	return agaveIO.sendRequest(requestSettings, null)
-            .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
-		} else {
-		    // no more data
-		    deferred.resolve(models);
-		}
-	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
-            });
-    }
-
-    doFetch(0);
-
-    return deferred.promise;
-};
-
-agaveIO.createMetadataForType = function(projectUuid, type, value) {
-
-    var deferred = Q.defer();
-
-    var postData = {
-	associationIds: [ projectUuid ],
-        name: type,
-        value: value,
-    };
-
-    postData = JSON.stringify(postData);
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
-
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            // get the project metadata
+	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+	.then(function(_projectMetadata) {
+            projectMetadata = _projectMetadata;
 
-    return deferred.promise;
-};
-
-agaveIO.getMetadataColumnsForType = function(projectUuid, type) {
-
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:   '/meta/v2/data?q='
-		    + encodeURIComponent('{'
-		    + '"name": "' + agaveSettings.metadataColumns[type] + '",'
-		    + '"associationIds": "' + projectUuid + '"'
-		    + '}')
-		    + '&limit=1',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
-
-	    return agaveIO.sendRequest(requestSettings, null)
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            // get repertoire objects
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
+	.then(function(models) {
+            // put into AIRR format
+            var study = projectMetadata.value;
+            var blank = airr.repertoireTemplate();
 
-    return deferred.promise;
-};
+            // only the AIRR fields
+            for (var o in blank['study']) {
+                blank['study'][o] = study[o];
+            }
+            // always save vdjserver project uuid in custom field
+            blank['study']['vdjserver_uuid'] = projectUuid;
 
-agaveIO.createMetadataColumnsForType = function(projectUuid, type, value, metadataUuid) {
+            for (var i in models) {
+                var model = models[i].value;
+                model['study'] = blank['study']
+                repertoireMetadata.push(model);
+            }
 
-    var deferred = Q.defer();
-
-    var postData = {
-	associationIds: [ projectUuid ],
-        name: agaveSettings.metadataColumns[type],
-        value: value,
-    };
-
-    postData = JSON.stringify(postData);
-
-    ServiceAccount.getToken()
-	.then(function(token) {
-	    var path = '/meta/v2/data'
-	    if (metadataUuid) path = path + '/' + metadataUuid;
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     path,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
-
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
-        .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            // get subject objects
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+	.then(function(models) {
+            for (var i in models) {
+                subjectMetadata[models[i].uuid] = models[i].value;
+            }
+
+            // get sample objects
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+        })
+	.then(function(models) {
+            for (var i in models) {
+                sampleMetadata[models[i].uuid] = models[i].value;
+            }
+
+            // get data processing objects
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
+        })
+	.then(function(models) {
+            for (var i in models) {
+                dpMetadata[models[i].uuid] = models[i].value;
+            }
+        })
+	.then(function() {
+            // put into AIRR format
+            for (var i in repertoireMetadata) {
+                var rep = repertoireMetadata[i];
+                var subject = subjectMetadata[rep['subject']['vdjserver_uuid']];
+                if (! subject) {
+                    console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect subject: '
+                                  + rep['subject']['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                }
+                if (keep_uuids) subject['vdjserver_uuid'] = rep['subject']['vdjserver_uuid'];
+                rep['subject'] = subject;
+
+                var samples = [];
+                for (var j in rep['sample']) {
+                    var sample = sampleMetadata[rep['sample'][j]['vdjserver_uuid']];
+                    if (! sample) {
+                        console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect sample: '
+                                      + rep['sample'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                    }
+                    if (keep_uuids) sample['vdjserver_uuid'] = rep['sample'][j]['vdjserver_uuid'];
+                    samples.push(sample);
+                }
+                rep['sample'] = samples;
+
+                var dps = [];
+                for (var j in rep['data_processing']) {
+                    var dp = dpMetadata[rep['data_processing'][j]['vdjserver_uuid']];
+                    if (! dp) {
+                        console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect data_processing: '
+                                      + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                    }
+                    if (keep_uuids) dp['vdjserver_uuid'] = rep['data_processing'][j]['vdjserver_uuid'];
+                    dps.push(dp);
+                }
+                rep['data_processing'] = dps;
+            }
+
+            return repertoireMetadata;
         });
-
-    return deferred.promise;
-};
-
-//
-/////////////////////////////////////////////////////////////////////
-//
-// Sample groups metadata
-//
-
-agaveIO.getSampleGroupsMetadata = function(accessToken, projectUuid) {
-
-    var deferred = Q.defer();
-
-    var models = [];
-
-    var doFetch = function(offset) {
-	var requestSettings = {
-	    host:     agaveSettings.hostname,
-	    method:   'GET',
-	    path:   '/meta/v2/data?q='
-		+ encodeURIComponent('{'
-				     + '"name": "sampleGroup",'
-				     + '"associationIds": "' + projectUuid + '"'
-				     + '}')
-		+ '&limit=50&offset=' + offset,
-	    rejectUnauthorized: false,
-	    headers: {
-		'Authorization': 'Bearer ' + accessToken
-	    }
-	};
-
-	return agaveIO.sendRequest(requestSettings, null)
-            .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
-		} else {
-		    // no more data
-		    deferred.resolve(models);
-		}
-	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
-            });
-    }
-
-    doFetch(0);
-
-    return deferred.promise;
 };
 
 //
@@ -3894,7 +3886,7 @@ agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
     return deferred.promise;
 };
 
-// 
+// set permissions on a metadata object
 agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUuid) {
 
     var deferred = Q.defer();
@@ -3929,6 +3921,18 @@ agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUu
         });
 
     return deferred.promise;
+};
+
+agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value) {
+    var object = null;
+    return agaveIO.createMetadataForType(projectUuid, type, value)
+	.then(function(_obj) {
+            object = _obj;
+            return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, object['uuid']);
+	})
+        .then(function() {
+            return object;
+        });
 };
 
 // delete all metadata for type for a project

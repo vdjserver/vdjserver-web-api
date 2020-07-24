@@ -33,6 +33,7 @@ module.exports = ProjectQueueManager;
 // App
 var app = require('../app');
 var agaveSettings = require('../config/agaveSettings');
+var mongoSettings = require('../config/mongoSettings');
 
 // Models
 var FilePermissions = require('../models/filePermissions');
@@ -1173,6 +1174,9 @@ ProjectQueueManager.processProjects = function() {
     // in small steps to allow easier recovery from errors. Most of the
     // complexity of these tasks involves the rearrangement data.
     //
+    // The load records keep track of the rearrangement collection, so
+    // that we can support separate load and query collections.
+    //
     // 1. check if projects to be loaded
     // 2. load repertoire metadata
     // 3. check if rearrangement data to be loaded
@@ -1185,7 +1189,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
                 if (projectList.length > 0) {
@@ -1219,7 +1223,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
                 // look for project that needs repertoire metadata to be loaded
                 for (var i = 0; i < projectList.length; ++i) {
@@ -1303,7 +1307,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
 
@@ -1340,7 +1344,7 @@ ProjectQueueManager.processProjects = function() {
                         }
 
                         // check if there are existing rearrangement load records
-                        return agaveIO.getRearrangementsToBeLoaded(projectUuid);
+                        return agaveIO.getRearrangementsToBeLoaded(projectUuid, mongoSettings.loadCollection);
                     })
                     .then(function(rearrangementLoad) {
                         if (!rearrangementLoad) return;
@@ -1352,7 +1356,7 @@ ProjectQueueManager.processProjects = function() {
 
 		            function createAgaveCall(projectUuid, repertoire_id) {
                                 return function() {
-			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id);
+			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id, mongoSettings.loadCollection);
                                 };
 		            }
 
@@ -1372,7 +1376,7 @@ ProjectQueueManager.processProjects = function() {
 
 		            function createAgaveCall(projectUuid, repertoire_id) {
                                 return function() {
-			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id);
+			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id, mongoSettings.loadCollection);
                                 };
 		            }
 
@@ -1434,7 +1438,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, ' + projectList.length + ' project(s) to be loaded.');
 
@@ -1457,7 +1461,7 @@ ProjectQueueManager.processProjects = function() {
                 }
 
                 // check if there are existing rearrangement load records
-                return agaveIO.getRearrangementsToBeLoaded(projectUuid)
+                return agaveIO.getRearrangementsToBeLoaded(projectUuid, mongoSettings.loadCollection)
                     .then(function(_rearrangementLoad) {
                         rearrangementLoad = _rearrangementLoad;
                         if (! rearrangementLoad || rearrangementLoad.length == 0) {

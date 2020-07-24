@@ -47,6 +47,8 @@ var csv = require('csv-parser');
 var fs = require('fs');
 const zlib = require('zlib');
 
+var airr = require('../vendor/airr');
+
 //
 // Clean object by removing fields with null or empty string values
 //
@@ -84,6 +86,16 @@ function getAllSubstrings(str,size) {
       }
   }
   return result;
+}
+
+function getAllSuffixes(str,size) {
+    var i, j, result = [];
+    size = (size || 4);
+    if (str.length < size) return null;
+    for (i = 0; i <= (str.length - size); i++) {
+        result.push(str.slice(i));
+    }
+    return result;
 }
 
 function parseGene(str) {
@@ -252,23 +264,33 @@ mongoIO.processRearrangementRow = function(row, rep, dp_id, load_set) {
     // junction substrings
     if (row['junction_aa']) {
         if (row['junction_aa'].length > 3) {
-            var result = getAllSubstrings(row['junction_aa'], 4);
-            row["vdjserver_junction_substrings"] = result;
+            //var result = getAllSubstrings(row['junction_aa'], 4);
+            //row["vdjserver_junction_substrings"] = result;
+            var result = getAllSuffixes(row['junction_aa'], 4);
+            row["vdjserver_junction_suffixes"] = result;
         }
     }
 
     return;
 }
 
-mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, load_set_start) {
+mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, load_set_start, loadCollection) {
     var deferred = Q.defer();
 
     var records = [];
     var rows = [];
     var total_cnt = 0;
+
+    var schema = airr.getSchema('Rearrangement');
+    //console.log(schema.spec('sequence_id'));
+
+    var mapValues = function(map) {
+        return schema.map_value(map);
+    };
+
     var readable = fs.createReadStream(filename)
         .pipe(zlib.createGunzip())
-        .pipe(csv({separator:'\t'}))
+        .pipe(csv({separator:'\t', mapValues: mapValues}))
         .on('data', async function(row) {
             rows.push(row);
             if (rows.length == 10000) {
@@ -286,7 +308,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     }
 
                     // perform the database insert
-                    await mongoIO.insertRearrangement(records);
+                    await mongoIO.insertRearrangement(records, loadCollection);
 
                     // update rearrangement data load record
                     dataLoad['value']['load_set'] = load_set + 1;
@@ -319,7 +341,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     }
 
                     // perform the database insert
-                    await mongoIO.insertRearrangement(records);
+                    await mongoIO.insertRearrangement(records, loadCollection);
 
                     // update rearrangement data load record
                     dataLoad['value']['load_set'] = load_set + 1;
@@ -344,7 +366,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
 
 // Delete all rearrangements for a repertoire_id or for
 // just a given load_set.
-mongoIO.deleteLoadSet = async function(repertoire_id, load_set) {
+mongoIO.deleteLoadSet = async function(repertoire_id, load_set, loadCollection) {
     var deferred = Q.defer();
 
     console.log('VDJ-API INFO: mongoIO.deleteLoadSet, repertoire: ' + repertoire_id + ' load set: ' + load_set);
@@ -357,7 +379,7 @@ mongoIO.deleteLoadSet = async function(repertoire_id, load_set) {
             deferred.reject(new Error(msg))
         } else {
             var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection(mongoSettings.loadCollection);
+            var collection = v1airr.collection(loadCollection);
 
             // delete load_set for repertoire
             var filter = {"repertoire_id":repertoire_id}
@@ -376,7 +398,7 @@ mongoIO.deleteLoadSet = async function(repertoire_id, load_set) {
 }
 
 // Insert rearrangement records
-mongoIO.insertRearrangement = async function(records) {
+mongoIO.insertRearrangement = async function(records, loadCollection) {
     var deferred = Q.defer();
 
     // get connection to database
@@ -389,7 +411,7 @@ mongoIO.insertRearrangement = async function(records) {
         } else {
             var v1airr = db.db(mongoSettings.dbname);
             //var collection = v1airr.collection('rearrangement');
-            var collection = v1airr.collection(mongoSettings.loadCollection);
+            var collection = v1airr.collection(loadCollection);
 
             //var bulk = collection.initializeUnorderedBulkOp();
             //for (var r in records)
@@ -481,19 +503,20 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
     var filePath = '/vdjZ' + jobOutput['archivePath'];
     var files = primaryDP['data_processing_files'];
     var dp_id = primaryDP['data_processing_id'];
+    var loadCollection = dataLoad['value']['collection'];
     var load_set_start = dataLoad['value']['load_set'];
     var load_set = 0;
     var total_cnt = 0;
 
     // delete starting load set in case it has partial records
-    await mongoIO.deleteLoadSet(repertoire['repertoire_id'], load_set_start);
+    await mongoIO.deleteLoadSet(repertoire['repertoire_id'], load_set_start, loadCollection);
 
     // loop through files and load
     for (var i = 0; i < files.length; ++i) {
         var filename = filePath + '/' + files[i];
 	console.log('VDJ-API INFO: mongoIO.loadRearrangementData, processing file: ' + filename + ' load set start: ' + load_set_start);
 
-        var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start)
+        var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start, loadCollection)
             .catch(function(error) {
                 // pass reject to next level
 	        return Q.reject(error);

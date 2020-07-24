@@ -39,11 +39,13 @@ var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
+var airr = require('./vendor/airr');
 
 // Express app
 var app = module.exports = express();
 
 var webhookIO = require('./vendor/webhookIO');
+var mongoSettings = require('./config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
@@ -104,6 +106,9 @@ for (var obj in airr_spec) {
     }
 }
 
+console.log('VDJ-API INFO: Using query collection: ' + mongoSettings.queryCollection);
+console.log('VDJ-API INFO: Using load collection: ' + mongoSettings.loadCollection);
+
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,
 // as it is restricted to the TACC vdj account.
@@ -118,6 +123,10 @@ ServiceAccount.getToken()
     .then(function(serviceToken) {
         console.log('VDJ-API INFO: Successfully acquired service token.');
 
+        // wait for the AIRR spec to be dereferenced
+        return airr.schemaPromise();
+    })
+    .then(function() {
         // dereference the AIRR spec
         return $RefParser.dereference(airr_spec);
     })
@@ -175,6 +184,8 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: projectController.createProject,
+                exportMetadata: projectController.exportMetadata,
+                importMetadata: projectController.importMetadata,
                 publishProject: projectController.publishProject,
                 unpublishProject: projectController.unpublishProject,
                 loadProject: projectController.loadProject,
