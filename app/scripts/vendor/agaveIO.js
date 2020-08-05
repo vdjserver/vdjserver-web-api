@@ -3714,7 +3714,8 @@ agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
 // gather list of repertoire metadata for project
 // TODO: this function should transform the normalized metadata
 // records into the denormalized AIRR metadata format.
-agaveIO.gatherRepertoireMetadataForProject = function(projectUuid) {
+/*
+agaveIO.collectRepertoireMetadataForProject = function(projectUuid) {
 
     return ServiceAccount.getToken()
 	.then(function(token) {
@@ -3736,12 +3737,12 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid) {
             }
             return models;
         });
-};
+}; */
 
 // Collect list of repertoire metadata for project.
 // This function transforms the normalized metadata
 // records into the denormalized AIRR metadata format.
-agaveIO.collectRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
+agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 
     var msg = null;
     var repertoireMetadata = [];
@@ -3809,7 +3810,7 @@ agaveIO.collectRepertoireMetadataForProject = function(projectUuid, keep_uuids) 
                 var rep = repertoireMetadata[i];
                 var subject = subjectMetadata[rep['subject']['vdjserver_uuid']];
                 if (! subject) {
-                    console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect subject: '
+                    console.error('VDJ-API ERROR: agaveIO.gatherRepertoireMetadataForProject, cannot collect subject: '
                                   + rep['subject']['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                 }
                 if (keep_uuids) subject['vdjserver_uuid'] = rep['subject']['vdjserver_uuid'];
@@ -3819,7 +3820,7 @@ agaveIO.collectRepertoireMetadataForProject = function(projectUuid, keep_uuids) 
                 for (var j in rep['sample']) {
                     var sample = sampleMetadata[rep['sample'][j]['vdjserver_uuid']];
                     if (! sample) {
-                        console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect sample: '
+                        console.error('VDJ-API ERROR: agaveIO.gatherRepertoireMetadataForProject, cannot collect sample: '
                                       + rep['sample'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                     }
                     if (keep_uuids) sample['vdjserver_uuid'] = rep['sample'][j]['vdjserver_uuid'];
@@ -3831,7 +3832,7 @@ agaveIO.collectRepertoireMetadataForProject = function(projectUuid, keep_uuids) 
                 for (var j in rep['data_processing']) {
                     var dp = dpMetadata[rep['data_processing'][j]['vdjserver_uuid']];
                     if (! dp) {
-                        console.error('VDJ-API ERROR: agaveIO.collectRepertoireMetadataForProject, cannot collect data_processing: '
+                        console.error('VDJ-API ERROR: agaveIO.gatherRepertoireMetadataForProject, cannot collect data_processing: '
                                       + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                     }
                     if (keep_uuids) dp['vdjserver_uuid'] = rep['data_processing'][j]['vdjserver_uuid'];

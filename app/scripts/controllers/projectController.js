@@ -268,7 +268,7 @@ ProjectController.importMetadata = function(request, response) {
                     var doc = JSON.parse(fileData);
                     if (doc) data = doc;
                 } catch (e) {
-                    json_parse_msg = 'Attempt to parse as JSON document generated error: ' + error;
+                    json_parse_msg = 'Attempt to parse as JSON document generated error: ' + e;
                     data = null;
                 }
                 if (! data) {
@@ -277,7 +277,7 @@ ProjectController.importMetadata = function(request, response) {
                         var doc = yaml.safeLoad(fileData);
                         if (doc) data = doc;
                     } catch (e) {
-                        yaml_parse_msg = 'Attempt to parse as JSON document generated error: ' + error;
+                        yaml_parse_msg = 'Attempt to parse as YAML document generated error: ' + e;
                         data = null;
                     }
                 }
@@ -292,6 +292,8 @@ ProjectController.importMetadata = function(request, response) {
 	})
 	.then(function() {
             if (! data) return null;
+
+	    console.log('VDJ-API INFO: ProjectController.importMetadata - parsed file');
 
             // get existing repertoires
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
@@ -364,13 +366,14 @@ ProjectController.importMetadata = function(request, response) {
                 var found = false;
                 for (var dp in repList[r]['data_processing']) {
                     if (repList[r]['data_processing'][dp]['primary_annotation']) found = true;
+                    /* disable for now
                     if (repList[r]['data_processing'][dp]['data_processing_id']) {
                         if (! existingJobs[repList[r]['data_processing'][dp]['data_processing_id']]) {
                             msg = 'Repertoire has invalid data_processing_id: ' + repList[r]['data_processing'][dp]['data_processing_id'];
                             data = null;
                             return;
                         }
-                    }
+                    } */
                     if (repList[r]['data_processing'][dp]['analysis_provenance_id']) {
                         if (! existingDPs[repList[r]['data_processing'][dp]['analysis_provenance_id']]) {
                             msg = 'Repertoire has invalid analysis_provenance_id: ' + repList[r]['data_processing'][dp]['analysis_provenance_id'];
@@ -736,7 +739,7 @@ ProjectController.exportMetadata = function(request, response) {
     console.log('VDJ-API INFO: ProjectController.exportMetadata - start, project:', projectUuid);
 
     // gather the repertoire objects
-    agaveIO.collectRepertoireMetadataForProject(projectUuid, true)
+    agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
         .then(function(repertoireMetadata) {
 	    console.log('VDJ-API INFO: ProjectController.exportMetadata, gathered ' + repertoireMetadata.length
                         + ' repertoire metadata for project: ' + projectUuid);

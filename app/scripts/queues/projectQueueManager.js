@@ -1249,7 +1249,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, load repertoire metadata for project: ' + projectUuid);
 
                 // gather the repertoire objects
-                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
                     .then(function(repertoireMetadata) {
                         //console.log(JSON.stringify(repertoireMetadata));
 	                console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, gathered ' + repertoireMetadata.length
@@ -1331,7 +1331,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, setup rearrangement data load for project: ' + projectUuid);
 
                 // gather the repertoire objects
-                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
                     .then(function(_repertoireMetadata) {
                         repertoireMetadata = _repertoireMetadata;
                         //console.log(JSON.stringify(repertoireMetadata));
@@ -1488,7 +1488,7 @@ ProjectQueueManager.processProjects = function() {
                                     + ' of the total ' + rearrangementLoad.length
                                     + ' rearrangement load records have been loaded.');
 
-                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid);
+                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true);
                     })
             })
             .then(function(_repertoireMetadata) {
