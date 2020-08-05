@@ -344,12 +344,23 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     await mongoIO.insertRearrangement(records, loadCollection);
 
                     // update rearrangement data load record
+                    var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .fail(function(error) {
 	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
-                            return deferred.reject(msg);
+                            console.error(msg);
+                            retry = true;
                         });
+                    if (retry) {
+                        console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
+                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                            .fail(function(error) {
+	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                                console.error(msg);
+                            });
+                    }
+
                 } else {
                     console.log('VDJ-API INFO: mongoIO.loadRearrangementData, end file, skipping load set: ' + load_set);
                 }
