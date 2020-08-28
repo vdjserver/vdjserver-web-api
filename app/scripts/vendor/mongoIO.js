@@ -311,12 +311,23 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     await mongoIO.insertRearrangement(records, loadCollection);
 
                     // update rearrangement data load record
+                    var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .fail(function(error) {
 	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
-                            return deferred.reject(msg);
+                            console.error(msg);
+                            retry = true;
                         });
+                    if (retry) {
+                        console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
+                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                            .fail(function(error) {
+	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                                console.error(msg);
+                                return deferred.reject(msg);
+                            });
+                    }
                 } else {
                     console.log('VDJ-API INFO: mongoIO.loadRearrangementData, skipping load set: ' + load_set);
                 }
@@ -358,6 +369,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                             .fail(function(error) {
 	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
+                                return deferred.reject(msg);
                             });
                     }
 
@@ -442,7 +454,7 @@ mongoIO.insertRearrangement = async function(records, loadCollection) {
 }
 
 // Delete repertoire for given repertoire_id
-mongoIO.deleteRepertoire = async function(repertoire_id) {
+mongoIO.deleteRepertoire = async function(repertoire_id, loadCollection) {
     var deferred = Q.defer();
 
     // get connection to database
@@ -453,7 +465,7 @@ mongoIO.deleteRepertoire = async function(repertoire_id) {
             deferred.reject(new Error(msg))
         } else {
             var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection('repertoire');
+            var collection = v1airr.collection(loadCollection);
 
             // delete than insert repertoire
             var filter = {"repertoire_id":repertoire_id}
@@ -470,7 +482,7 @@ mongoIO.deleteRepertoire = async function(repertoire_id) {
 }
 
 // Insert repertoire
-mongoIO.insertRepertoire = async function(repertoire) {
+mongoIO.insertRepertoire = async function(repertoire, loadCollection) {
     var deferred = Q.defer();
 
     // get connection to database
@@ -481,7 +493,7 @@ mongoIO.insertRepertoire = async function(repertoire) {
             deferred.reject(new Error(msg))
         } else {
             var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection('repertoire');
+            var collection = v1airr.collection(loadCollection);
 
             mongoIO.cleanObject(repertoire);
 
@@ -499,11 +511,12 @@ mongoIO.insertRepertoire = async function(repertoire) {
 //
 // Load a set of repertoire metadata objects
 //
-mongoIO.loadRepertoireMetadata = async function(repertoireMetadata) {
+mongoIO.loadRepertoireMetadata = async function(repertoireMetadata, collection) {
+    var loadCollection = 'repertoire' + collection;
     for (var i in repertoireMetadata) {
         var rep = repertoireMetadata[i];
-        var result = await mongoIO.deleteRepertoire(rep['repertoire_id']);
-        result = await mongoIO.insertRepertoire(rep);
+        var result = await mongoIO.deleteRepertoire(rep['repertoire_id'], loadCollection);
+        result = await mongoIO.insertRepertoire(rep, loadCollection);
     }
 }
 
@@ -514,7 +527,7 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
     var filePath = '/vdjZ' + jobOutput['archivePath'];
     var files = primaryDP['data_processing_files'];
     var dp_id = primaryDP['data_processing_id'];
-    var loadCollection = dataLoad['value']['collection'];
+    var loadCollection = 'rearrangement' + dataLoad['value']['collection'];
     var load_set_start = dataLoad['value']['load_set'];
     var load_set = 0;
     var total_cnt = 0;

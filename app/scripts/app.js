@@ -106,8 +106,8 @@ for (var obj in airr_spec) {
     }
 }
 
-console.log('VDJ-API INFO: Using query collection: ' + mongoSettings.queryCollection);
-console.log('VDJ-API INFO: Using load collection: ' + mongoSettings.loadCollection);
+console.log('VDJ-API INFO: Using query collection suffix: ' + mongoSettings.queryCollection);
+console.log('VDJ-API INFO: Using load collection suffix: ' + mongoSettings.loadCollection);
 
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,

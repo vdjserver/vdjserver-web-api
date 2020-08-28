@@ -152,7 +152,7 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
         .then(function(projectMetadata) {
 	    // make sure its project metadata and not some random uuid
             // TODO: should disallow old VDJServer V1 projects at some point
-            if (projectMetadata && (projectMetadata.name == 'privateProject') || (projectMetadata.name == 'publicProject') || (projectMetadata.name == 'project')) {
+            if (projectMetadata && (projectMetadata.name == 'private_project') || (projectMetadata.name == 'public_project') || (projectMetadata.name == 'project')) {
 		return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
             }
             else {

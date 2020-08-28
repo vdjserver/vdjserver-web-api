@@ -625,7 +625,7 @@ agaveIO.createProjectMetadata = function(project) {
     var deferred = Q.defer();
 
     var postData = {
-        name: 'privateProject',
+        name: 'private_project',
         value: project
     };
 
@@ -2829,7 +2829,7 @@ agaveIO.launchJob = function(jobDataString) {
 // Community data
 //
 
-agaveIO.setCommunityFilePermissions = function(filePath) {
+agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunity) {
 
     var deferred = Q.defer();
 
@@ -2839,7 +2839,7 @@ agaveIO.setCommunityFilePermissions = function(filePath) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
 		method:   'GET',
-		path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//community/' + filePath,
+		path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
 		rejectUnauthorized: false,
 		headers: {
 		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
@@ -2855,28 +2855,32 @@ agaveIO.setCommunityFilePermissions = function(filePath) {
             var promises = permissionsList.map(function(entry) {
                 return function() {
 		    if (entry.username == agaveSettings.serviceAccountKey) return;
-		    else return agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/community/' + filePath);
+		    else return agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/projects/' + filePath);
                 };
             });
 
             return promises.reduce(Q.when, new Q());
 	})
         .then(function(responseObject) {
-	    // guest account READ only
-	    var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ&recursive=false';
+            if (toCommunity) {
+	        // guest account READ only
+	        var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ&recursive=false';
 
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//community/' + filePath,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+	        var requestSettings = {
+		    host:     agaveSettings.hostname,
+		    method:   'POST',
+		    path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
+		    rejectUnauthorized: false,
+		    headers: {
+		        'Content-Length': Buffer.byteLength(postData),
+		        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+		    }
+	        };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
+	        return agaveIO.sendRequest(requestSettings, postData);
+            } else {
+	        return agaveIO.setFilePermissionsForProjectUsers(projectUuid, filePath, false);
+            }
 	})
 	.then(function(responseObject) {
             deferred.resolve(responseObject);
@@ -2888,6 +2892,7 @@ agaveIO.setCommunityFilePermissions = function(filePath) {
     return deferred.promise;
 };
 
+/*
 agaveIO.createCommunityDirectory = function(directory) {
 
     var deferred = Q.defer();
@@ -2921,7 +2926,9 @@ agaveIO.createCommunityDirectory = function(directory) {
 
     return deferred.promise;
 };
+*/
 
+/*
 agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity) {
 
     var deferred = Q.defer();
@@ -3018,7 +3025,9 @@ agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity
 
     return deferred.promise;
 };
+*/
 
+/*
 agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toCommunity) {
 
     var deferred = Q.defer();
@@ -3116,13 +3125,37 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
 
     return deferred.promise;
 };
+*/
 
 agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 
     var deferred = Q.defer();
 
+    var jobFiles = [];
     ServiceAccount.getToken()
 	.then(function(token) {
+            return agaveIO.getProjectJobFileMetadatas(projectUuid, jobId);
+	})
+        .then(function(_jobFiles) {
+	    jobFiles = _jobFiles;
+
+            // permissions on the job archive path directory
+            if (jobFiles.length > 0) {
+	        return agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + jobFiles[0].value.relativeArchivePath, toCommunity);
+            }
+	})
+	.then(function() {
+            // permissions on each job file
+            var promises = jobFiles.map(function(file) {
+                return function() {
+	            return agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + file.value.relativeArchivePath + '/' + file.value.name, toCommunity);
+                };
+            });
+
+            return promises.reduce(Q.when, new Q());
+	})
+	.then(function() {
+            // permissions for the job itself
 	    return agaveIO.getJobPermissions(jobId);
 	})
 	.then(function(permissionsList) {
@@ -3155,6 +3188,7 @@ agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
     return deferred.promise;
 };
 
+/*
 agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 
     var deferred = Q.defer();
@@ -3188,6 +3222,7 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 
     return deferred.promise;
 };
+*/
 
 agaveIO.clearCommunityMetadataPermissions = function(uuid) {
 
