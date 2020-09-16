@@ -1,5 +1,6 @@
 'use strict';
 
+var emailSettings = require('../config/emailSettings');
 var agaveSettings = require('../config/agaveSettings');
 var nodemailer    = require('nodemailer');
 var sendmailTransport = require('nodemailer-sendmail-transport');
@@ -15,8 +16,8 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 
     var mailOptions = {
         to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        replyTo: agaveSettings.replyToAddress,
+        from: emailSettings.fromAddress,
+        replyTo: emailSettings.replyToAddress,
         subject: 'VDJ Password Reset',
         generateTextFromHTML: true,
         html: 'A VDJ password reset request has been submitted to vdjserver.org.'
@@ -40,8 +41,8 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
 emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
     var mailOptions = {
         to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        replyTo: agaveSettings.replyToAddress,
+        from: emailSettings.fromAddress,
+        replyTo: emailSettings.replyToAddress,
         subject: 'VDJServer.org Feedback',
         text: feedback,
     };
@@ -59,8 +60,8 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
 emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
     var mailOptions = {
         to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        replyTo: agaveSettings.replyToAddress,
+        from: emailSettings.fromAddress,
+        replyTo: emailSettings.replyToAddress,
         subject: 'VDJServer.org Feedback',
         text: 'Thank you for your feedback! Someone will respond shortly. Your feedback text is shown below\n\n-----\n\n' + feedback,
     };
@@ -85,8 +86,8 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
 
     var mailOptions = {
         to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        replyTo: agaveSettings.replyToAddress,
+        from: emailSettings.fromAddress,
+        replyTo: emailSettings.replyToAddress,
         subject: 'VDJServer Account Verification',
         generateTextFromHTML: true,
         html: 'Welcome to VDJServer.'
@@ -112,8 +113,8 @@ emailIO.sendGenericEmail = function(recipientEmail, subject, message) {
 
     var mailOptions = {
         to: recipientEmail,
-        from: agaveSettings.fromAddress,
-        replyTo: agaveSettings.replyToAddress,
+        from: emailSettings.fromAddress,
+        replyTo: emailSettings.replyToAddress,
         subject: subject,
         generateTextFromHTML: true,
         html: message
