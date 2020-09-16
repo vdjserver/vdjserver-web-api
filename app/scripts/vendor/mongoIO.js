@@ -40,7 +40,6 @@ var webhookIO = require('../vendor/webhookIO');
 var agaveIO = require('../vendor/agaveIO');
 
 // Node Libraries
-var Q = require('q');
 var _ = require('underscore');
 var MongoClient = require('mongodb').MongoClient;
 var csv = require('csv-parser');
@@ -109,6 +108,13 @@ function parseGene(str) {
 
     var didx = result.gene.indexOf('-');
     if (didx >= 0) result.subgroup = result.gene.slice(0,didx);
+    else {
+        // maybe it's mouse with an S separator
+        // else just use gene as subgroup
+        var sidx = result.gene.indexOf('S');
+        if (sidx >= 0) result.subgroup = result.gene.slice(0,sidx);
+        else result.subgroup = result.gene;
+    }
     
     return result;
 }
@@ -275,7 +281,6 @@ mongoIO.processRearrangementRow = function(row, rep, dp_id, load_set) {
 }
 
 mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, load_set_start, loadCollection) {
-    var deferred = Q.defer();
 
     var records = [];
     var rows = [];
@@ -287,6 +292,8 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
     var mapValues = function(map) {
         return schema.map_value(map);
     };
+
+    return new Promise(function(resolve, reject) {
 
     var readable = fs.createReadStream(filename)
         .pipe(zlib.createGunzip())
@@ -314,7 +321,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
-                        .fail(function(error) {
+                        .catch(function(error) {
 	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
                             retry = true;
@@ -322,10 +329,10 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     if (retry) {
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
                         await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
-                            .fail(function(error) {
+                            .catch(function(error) {
 	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
-                                return deferred.reject(msg);
+                                return reject(msg);
                             });
                     }
                 } else {
@@ -358,7 +365,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
-                        .fail(function(error) {
+                        .catch(function(error) {
 	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
                             retry = true;
@@ -366,10 +373,10 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     if (retry) {
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
                         await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
-                            .fail(function(error) {
+                            .catch(function(error) {
 	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
-                                return deferred.reject(msg);
+                                return reject(msg);
                             });
                     }
 
@@ -382,130 +389,120 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                 rows = [];
             }
             console.log('VDJ-API INFO: mongoIO.loadRearrangementData, file successfully processed: ' + filename + ', rearrangement count: ' + total_cnt);
-            return deferred.resolve(load_set);
+            return resolve(load_set);
         });
-    return deferred.promise;
+    });
 }
 
 // Delete all rearrangements for a repertoire_id or for
 // just a given load_set.
 mongoIO.deleteLoadSet = async function(repertoire_id, load_set, loadCollection) {
-    var deferred = Q.defer();
 
     console.log('VDJ-API INFO: mongoIO.deleteLoadSet, repertoire: ' + repertoire_id + ' load set: ' + load_set);
 
-    // get connection to database
-    MongoClient.connect(mongoSettings.url, async function(err, db) {
-        if (err) {
-            var msg = "Could not connect to database: " + err;
-            console.error(msg);
-            deferred.reject(new Error(msg))
-        } else {
-            var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection(loadCollection);
+    return new Promise(function(resolve, reject) {
+        // get connection to database
+        MongoClient.connect(mongoSettings.url, async function(err, db) {
+            if (err) {
+                var msg = "Could not connect to database: " + err;
+                console.error(msg);
+                reject(new Error(msg))
+            } else {
+                var v1airr = db.db(mongoSettings.dbname);
+                var collection = v1airr.collection(loadCollection);
 
-            // delete load_set for repertoire
-            var filter = {"repertoire_id":repertoire_id}
-            if (load_set >= 0)
-                filter['vdjserver_load_set'] = load_set;
-            console.log(filter);
+                // delete load_set for repertoire
+                var filter = {"repertoire_id":repertoire_id}
+                if (load_set >= 0)
+                    filter['vdjserver_load_set'] = load_set;
+                console.log(filter);
 
-            var result = await collection.deleteMany(filter);
-            console.log('VDJ-API INFO: mongoIO.deleteLoadSet, deleted rearrangements: ' + result);
-            db.close();
-            deferred.resolve(result);
-        }
+                var result = await collection.deleteMany(filter);
+                console.log('VDJ-API INFO: mongoIO.deleteLoadSet, deleted rearrangements: ' + result);
+                db.close();
+                resolve(result);
+            }
+        });
     });
-
-    return deferred.promise;
 }
 
 // Insert rearrangement records
 mongoIO.insertRearrangement = async function(records, loadCollection) {
-    var deferred = Q.defer();
 
-    // get connection to database
-    const client = new MongoClient(mongoSettings.url, { socketTimeoutMS: 0 });
-    client.connect(async function(err, db) {
-        if (err) {
-            var msg = "Could not connect to database: " + err;
-            console.error(msg);
-            deferred.reject(new Error(msg))
-        } else {
-            var v1airr = db.db(mongoSettings.dbname);
-            //var collection = v1airr.collection('rearrangement');
-            var collection = v1airr.collection(loadCollection);
+    return new Promise(function(resolve, reject) {
+        // get connection to database
+        const client = new MongoClient(mongoSettings.url, { socketTimeoutMS: 0 });
+        client.connect(async function(err, db) {
+            if (err) {
+                var msg = "Could not connect to database: " + err;
+                console.error(msg);
+                reject(new Error(msg))
+            } else {
+                var v1airr = db.db(mongoSettings.dbname);
+                //var collection = v1airr.collection('rearrangement');
+                var collection = v1airr.collection(loadCollection);
 
-            //var bulk = collection.initializeUnorderedBulkOp();
-            //for (var r in records)
-            //    bulk.insert(records[r]);
-            //var result = await bulk.execute();
-            // insert rearrangements
-            //console.log(records[0]);
-            var result = await collection.insertMany(records);
+                var result = await collection.insertMany(records);
 
-            console.log('Inserted rearrangements: ' + JSON.stringify(result['result']));
-            db.close();
-            deferred.resolve(result);
-        }
+                console.log('Inserted rearrangements: ' + JSON.stringify(result['result']));
+                db.close();
+                resolve(result);
+            }
+        });
     });
-
-    return deferred.promise;
 }
 
 // Delete repertoire for given repertoire_id
 mongoIO.deleteRepertoire = async function(repertoire_id, loadCollection) {
-    var deferred = Q.defer();
 
-    // get connection to database
-    MongoClient.connect(mongoSettings.url, async function(err, db) {
-        if (err) {
-            var msg = "Could not connect to database: " + err;
-            console.error(msg);
-            deferred.reject(new Error(msg))
-        } else {
-            var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection(loadCollection);
+    return new Promise(function(resolve, reject) {
+        // get connection to database
+        MongoClient.connect(mongoSettings.url, async function(err, db) {
+            if (err) {
+                var msg = "Could not connect to database: " + err;
+                console.error(msg);
+                reject(new Error(msg))
+            } else {
+                var v1airr = db.db(mongoSettings.dbname);
+                var collection = v1airr.collection(loadCollection);
 
-            // delete than insert repertoire
-            var filter = {"repertoire_id":repertoire_id}
-            console.log(filter);
+                // delete than insert repertoire
+                var filter = {"repertoire_id":repertoire_id}
+                console.log(filter);
 
-            var result = await collection.deleteMany(filter);
-            console.log('Deleted repertoire: ' + JSON.stringify(result));
-            db.close();
-            deferred.resolve(result);
-        }
+                var result = await collection.deleteMany(filter);
+                console.log('Deleted repertoire: ' + JSON.stringify(result));
+                db.close();
+                resolve(result);
+            }
+        });
     });
-
-    return deferred.promise;
 }
 
 // Insert repertoire
 mongoIO.insertRepertoire = async function(repertoire, loadCollection) {
-    var deferred = Q.defer();
 
-    // get connection to database
-    MongoClient.connect(mongoSettings.url, async function(err, db) {
-        if (err) {
-            var msg = "Could not connect to database: " + err;
-            console.error(msg);
-            deferred.reject(new Error(msg))
-        } else {
-            var v1airr = db.db(mongoSettings.dbname);
-            var collection = v1airr.collection(loadCollection);
+    return new Promise(function(resolve, reject) {
+        // get connection to database
+        MongoClient.connect(mongoSettings.url, async function(err, db) {
+            if (err) {
+                var msg = "Could not connect to database: " + err;
+                console.error(msg);
+                reject(new Error(msg))
+            } else {
+                var v1airr = db.db(mongoSettings.dbname);
+                var collection = v1airr.collection(loadCollection);
 
-            mongoIO.cleanObject(repertoire);
+                mongoIO.cleanObject(repertoire);
 
-            // do insert
-            var result = await collection.insertOne(repertoire);
-            console.log('Inserted repertoire: ' + JSON.stringify(result['result']));
-            db.close();
-            deferred.resolve(result);
-        }
+                // do insert
+                var result = await collection.insertOne(repertoire);
+                console.log('Inserted repertoire: ' + JSON.stringify(result['result']));
+                db.close();
+                resolve(result);
+            }
+        });
     });
-
-    return deferred.promise;
 }
 
 //
@@ -543,7 +540,7 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
         var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start, loadCollection)
             .catch(function(error) {
                 // pass reject to next level
-	        return Q.reject(error);
+	        return Promise.reject(error);
             });
         load_set = result;
         //console.log(result);
@@ -552,8 +549,8 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
     // update rearrangement data load record
     dataLoad['value']['isLoaded'] = true;
     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
-	    return Q.reject(msg);
+	    return Promise.reject(msg);
         });
 }

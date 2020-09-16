@@ -49,7 +49,6 @@ var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var yaml = require('js-yaml');
-var Q = require('q');
 var d3 = require('d3');
 var kue = require('kue');
 var taskQueue = kue.createQueue({
@@ -116,7 +115,7 @@ ProjectController.createProject = function(request, response) {
             // End user should only see standard Agave meta output
             apiResponseController.sendSuccess(projectMetadata, response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);            
@@ -169,7 +168,7 @@ ProjectController.publishProject = function(request, response) {
 		return null;
 	    } else {
 		msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
-		return Q.reject(new Error(msg));
+		return Promise.reject(new Error(msg));
 	    }
 	})
         .then(function(responseObject) {
@@ -186,7 +185,7 @@ ProjectController.publishProject = function(request, response) {
 
 	    return apiResponseController.sendSuccess('ok', response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -226,7 +225,7 @@ ProjectController.unpublishProject = function(request, response) {
 		return null;
 	    } else {
 		msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
-		return Q.reject(new Error(msg));
+		return Promise.reject(new Error(msg));
 	    }
 	})
         .then(function() {
@@ -242,7 +241,7 @@ ProjectController.unpublishProject = function(request, response) {
 
 	    return apiResponseController.sendSuccess('ok', response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -300,7 +299,7 @@ ProjectController.loadProject = function(request, response) {
                     });
             }
         })
-        .fail(function(error) {
+        .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);            
@@ -530,16 +529,16 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + subjectList.length + ' subjects');
 
             // create/update subject data
-            var promises = subjectList.map(function(entry) {
-                return function() {
-                    if (existingSubjects[entry['subject_id']])
-		        return agaveIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
-                    else
-                        return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < subjectList.length; i++) {
+                var entry = subjectList[i];
+                if (existingSubjects[entry['subject_id']])
+		    promises[i] = agaveIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
+                else
+                    promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
 	})
 	.then(function() {
             if (! data) return null;
@@ -556,13 +555,13 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old subjects');
 
             // delete subjects
-            var promises = deleteList.map(function(entry) {
-                return function() {
-		    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < deleteList.length; i++) {
+                var entry = deleteList[i];
+		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -610,13 +609,13 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old samples');
 
             // delete samples
-            var promises = deleteList.map(function(entry) {
-                return function() {
-		    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < deleteList.length; i++) {
+                var entry = deleteList[i];
+		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -631,16 +630,16 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + samples.length + ' samples');
 
             // create samples
-            var promises = samples.map(function(entry) {
-                return function() {
-                    return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
-                        .then(function(object) {
-                            entry['uuid'] = object['uuid'];
-                        });
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < samples.length; i++) {
+                var entry = samples[i];
+                promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
+                    .then(function(object) {
+                        entry['uuid'] = object['uuid'];
+                    });
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -664,13 +663,13 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old data processing');
 
             // delete data processing
-            var promises = deleteList.map(function(entry) {
-                return function() {
-		    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < deleteList.length; i++) {
+                var entry = deleteList[i];
+		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -685,16 +684,16 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + data_processes.length + ' data processing');
 
             // create records
-            var promises = data_processes.map(function(entry) {
-                return function() {
-                    return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
-                        .then(function(object) {
-                            entry['uuid'] = object['uuid'];
-                        });
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < data_processes.length; i++) {
+                var entry = data_processes[i];
+                promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
+                    .then(function(object) {
+                        entry['uuid'] = object['uuid'];
+                    });
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -727,13 +726,13 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old repertoires');
 
             // delete repertoires
-            var promises = deleteList.map(function(entry) {
-                return function() {
-		    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < deleteList.length; i++) {
+                var entry = deleteList[i];
+		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -741,16 +740,16 @@ ProjectController.importMetadata = function(request, response) {
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + repList.length + ' repertoires');
 
             // create/update repertoires
-            var promises = repList.map(function(entry) {
-                return function() {
-                    if (entry['repertoire_id'])
-		        return agaveIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
-                    else
-                        return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < repList.length; i++) {
+                var entry = repList[i];
+                if (entry['repertoire_id'])
+		    promises[i] = agaveIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
+                else
+                    promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
         })
 	.then(function() {
             if (! data) return null;
@@ -767,13 +766,13 @@ ProjectController.importMetadata = function(request, response) {
             for (var r in _reps) _reps[r]['value']['repertoire_id'] = _reps[r]['uuid'];
 
             // create/update repertoires
-            var promises = _reps.map(function(entry) {
-                return function() {
-		    return agaveIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < _reps.length; i++) {
+                var entry = _reps[i];
+		promises[i] = agaveIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
+            }
 
-            return promises.reduce(Q.when, new Q());            
+            return Promise.allSettled(promises);
 	})
 	.then(function() {
             if (! data) {
@@ -788,7 +787,7 @@ ProjectController.importMetadata = function(request, response) {
                 apiResponseController.sendSuccess('Successfully imported metadata', response);
             }
         })
-        .fail(function(error) {
+        .catch(function(error) {
             msg = 'VDJ-API ERROR: ProjectController.importMetadata - error - project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);            
@@ -807,7 +806,7 @@ ProjectController.exportMetadata = function(request, response) {
     console.log('VDJ-API INFO: ProjectController.exportMetadata - start, project:', projectUuid);
 
     // gather the repertoire objects
-    agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
+    return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
         .then(function(repertoireMetadata) {
 	    console.log('VDJ-API INFO: ProjectController.exportMetadata, gathered ' + repertoireMetadata.length
                         + ' repertoire metadata for project: ' + projectUuid);
@@ -817,7 +816,7 @@ ProjectController.exportMetadata = function(request, response) {
             apiResponse['Repertoire'] = repertoireMetadata;
             response.status(200).json(apiResponse);
         })
-        .fail(function(error) {
+        .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.exportMetadata - error - project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);            
@@ -885,7 +884,7 @@ ProjectController.createPublicPostit = function(request, response) {
 
 	    return apiResponseController.sendSuccess(targetUrl, response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' error ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);

@@ -2,7 +2,7 @@
 'use strict';
 
 //
-// authController.js
+// permissionsController.js
 // Handle security and authorization checks
 //
 // VDJServer Analysis Portal
@@ -52,7 +52,6 @@ var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
-var Q = require('q');
 var d3 = require('d3');
 var kue = require('kue');
 var taskQueue = kue.createQueue({
@@ -124,7 +123,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
                 );
             }
 
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
         })
         // Get fileMetadata pems listing to return to user
         .then(function() {
@@ -142,7 +141,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 
             return apiResponseController.sendSuccess(updatedFileMetadataPermissions, response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
             console.error('VDJ-API ERROR: PermissionsController.syncMetadataPermissionsWithProject - error - projectUuid ' + projectUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })
@@ -192,7 +191,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
 
 	    return apiResponseController.sendSuccess('ok', response);
 	})
-        .fail(function(error) {
+        .catch(function(error) {
             var msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -246,7 +245,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
 
 	    return apiResponseController.sendSuccess('ok', response);
 	})
-	.fail(function(error) {
+	.catch(function(error) {
             var msg = 'VDJ-API ERROR: PermissionsController.removePermissionsForUsername - error - projectUuid ' + projectUuid + ', error ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -402,7 +401,7 @@ PermissionsController.addPermissionsForJob = function(request, response) {
 
             return apiResponseController.sendSuccess('success', response);
         })
-        .fail(function(error) {
+        .catch(function(error) {
             console.error('VDJ-API ERROR: PermissionsController.addPermissionsForJob - error - job ' + jobUuid + ', error ' + error);
             apiResponseController.sendError(error.message, 500, response);
         })

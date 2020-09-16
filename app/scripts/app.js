@@ -160,6 +160,7 @@ ServiceAccount.getToken()
             errorMiddleware: function(err, req, res, next) {
                 console.log('Got an error!');
                 console.log(JSON.stringify(err));
+                //console.trace("Here I am!");
                 res.status(err.status).json(err.errors);
             },
             securityHandlers: {
@@ -211,7 +212,7 @@ ServiceAccount.getToken()
             projectQueueManager.checkRearrangementLoad();
         });
     })
-    .fail(function(error) {
+    .catch(function(error) {
         var msg = 'VDJ-API ERROR: Error occurred while initializing API service.\nSystem may need to be restarted.\n' + error;
         console.error(msg);
         webhookIO.postToSlack(msg);

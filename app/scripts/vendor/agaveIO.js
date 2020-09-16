@@ -42,7 +42,6 @@ var webhookIO = require('../vendor/webhookIO');
 var airr = require('../vendor/airr');
 
 // Node Libraries
-var Q = require('q');
 var _ = require('underscore');
 var jsonApprover = require('json-approver');
 var FormData = require('form-data');
@@ -52,64 +51,47 @@ var FormData = require('form-data');
 //
 agaveIO.sendRequest = function(requestSettings, postData) {
 
-    var deferred = Q.defer();
+    return new Promise(function(resolve, reject) {
+        var request = require('https').request(requestSettings, function(response) {
 
-    var request = require('https').request(requestSettings, function(response) {
+            var output = '';
 
-        var output = '';
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
 
-        response.on('data', function(chunk) {
-            output += chunk;
-        });
+            response.on('end', function() {
 
-        response.on('end', function() {
+                var responseObject;
 
-            var responseObject;
-
-            if (output && jsonApprover.isJSON(output)) {
-                responseObject = JSON.parse(output);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave response is not json. Raw output: ' + output);
+                if (output && jsonApprover.isJSON(output)) {
+                    responseObject = JSON.parse(output);
+                }
+                else {
+                    reject(new Error('Agave response is not json. Raw output: ' + output));
                 }
 
-                deferred.reject(new Error('Agave response is not json. Raw output: ' + output));
-            }
-
-            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-                deferred.resolve(responseObject);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + JSON.stringify(responseObject));
-                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + responseObject);
+                if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                    resolve(responseObject);
+                }
+                else {
+                    reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
                 }
 
-                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
-            }
-
+            });
         });
-    });
 
-    request.on('error', function(error) {
-        if (agaveSettings.debugConsole === true) {
-            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
+        request.on('error', function(error) {
+            reject(new Error('Agave connection error'));
+        });
+
+        if (postData) {
+            // Request body parameters
+            request.write(postData);
         }
 
-        deferred.reject(new Error('Agave connection error'));
+        request.end();
     });
-
-    if (postData) {
-        // Request body parameters
-        request.write(postData);
-    }
-
-    request.end();
-
-    return deferred.promise;
 };
 
 //
@@ -117,126 +99,86 @@ agaveIO.sendRequest = function(requestSettings, postData) {
 //
 agaveIO.sendFormRequest = function(requestSettings, formData) {
 
-    var deferred = Q.defer();
+    return new Promise(function(resolve, reject) {
+        var request = formData.submit(requestSettings, function(error, response) {
 
-    var request = formData.submit(requestSettings, function(error, response) {
+            var output = '';
 
-        var output = '';
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
 
-        response.on('data', function(chunk) {
-            output += chunk;
-        });
+            response.on('end', function() {
 
-        response.on('end', function() {
+                var responseObject;
 
-            var responseObject;
-
-            if (output && jsonApprover.isJSON(output)) {
-                responseObject = JSON.parse(output);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave response is not json.');
+                if (output && jsonApprover.isJSON(output)) {
+                    responseObject = JSON.parse(output);
+                }
+                else {
+                    reject(new Error('Agave response is not json'));
                 }
 
-                deferred.reject(new Error('Agave response is not json'));
-            }
-
-            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-                deferred.resolve(responseObject);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + JSON.stringify(responseObject));
-                    console.error('VDJ-API ERROR: Agave returned an error. it is: ' + responseObject);
+                if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+                    resolve(responseObject);
                 }
+                else {
+                    reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
+                }
+            });
+        });
 
-                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
-            }
-
+        request.on('error', function(error) {
+            reject(new Error('Agave connection error. ' + JSON.stringify(error)));
         });
     });
-
-    request.on('error', function(error) {
-        if (agaveSettings.debugConsole === true) {
-            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
-        }
-
-        deferred.reject(new Error('Agave connection error. ' + JSON.stringify(error)));
-    });
-
-    return deferred.promise;
 };
 
 agaveIO.sendTokenRequest = function(requestSettings, postData) {
 
-    var deferred = Q.defer();
+    return new Promise(function(resolve, reject) {
+        var request = require('https').request(requestSettings, function(response) {
 
-    var request = require('https').request(requestSettings, function(response) {
+            var output = '';
 
-        var output = '';
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
 
-        response.on('data', function(chunk) {
-            output += chunk;
-        });
+            response.on('end', function() {
 
-        response.on('end', function() {
+                var responseObject;
 
-            var responseObject;
-
-            if (output && jsonApprover.isJSON(output)) {
-                responseObject = JSON.parse(output);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave token response is not json.');
+                if (output && jsonApprover.isJSON(output)) {
+                    responseObject = JSON.parse(output);
+                } else {
+                    reject(new Error('Agave response is not json'));
                 }
 
-                deferred.reject(new Error('Agave response is not json'));
-            }
-
-            if (
-                responseObject
-                && responseObject.access_token
-                && responseObject.refresh_token
-                && responseObject.token_type
-                && responseObject.expires_in
-            ) {
-                deferred.resolve(responseObject);
-            }
-            else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave returned a token error. it is: ' + JSON.stringify(responseObject));
-                    console.error('VDJ-API ERROR: Agave returned a token error. it is: ' + responseObject);
+                if (responseObject
+                    && responseObject.access_token
+                    && responseObject.refresh_token
+                    && responseObject.token_type
+                    && responseObject.expires_in)
+                {
+                    resolve(responseObject);
+                } else {
+                    reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
                 }
-
-                deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
-            }
-
+            });
         });
-    });
 
-    request.on('error', function() {
+        request.on('error', function() {
+            reject(new Error('Agave connection error'));
+        });
 
-        if (agaveSettings.debugConsole === true) {
-            console.error('VDJ-API ERROR: Agave token connection error.');
+        if (postData) {
+            // Request body parameters
+            request.write(postData);
         }
 
-        deferred.reject(new Error('Agave connection error'));
+        request.end();
     });
-
-    if (postData) {
-        // Request body parameters
-        request.write(postData);
-    }
-
-    request.end();
-
-    return deferred.promise;
 };
 
 //
@@ -244,40 +186,34 @@ agaveIO.sendTokenRequest = function(requestSettings, postData) {
 //
 agaveIO.sendFileRequest = function(requestSettings, postData) {
 
-    var deferred = Q.defer();
+    return new Promise(function(resolve, reject) {
+        var request = require('https').request(requestSettings, function(response) {
 
-    var request = require('https').request(requestSettings, function(response) {
+            var output = '';
 
-        var output = '';
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
 
-        response.on('data', function(chunk) {
-            output += chunk;
+            response.on('end', function() {
+
+	        // do not attempt to parse
+	        resolve(output);
+
+            });
         });
 
-        response.on('end', function() {
-
-	    // do not attempt to parse
-	    deferred.resolve(output);
-
+        request.on('error', function(error) {
+            reject(new Error('Agave connection error'));
         });
-    });
 
-    request.on('error', function(error) {
-        if (agaveSettings.debugConsole === true) {
-            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
+        if (postData) {
+            // Request body parameters
+            request.write(postData);
         }
 
-        deferred.reject(new Error('Agave connection error'));
+        request.end();
     });
-
-    if (postData) {
-        // Request body parameters
-        request.write(postData);
-    }
-
-    request.end();
-
-    return deferred.promise;
 };
 
 //
@@ -286,70 +222,53 @@ agaveIO.sendFileRequest = function(requestSettings, postData) {
 //
 agaveIO.sendCheckRequest = function(requestSettings, postData) {
 
-    var deferred = Q.defer();
+    return new Promise(function(resolve, reject) {
+        var request = require('https').request(requestSettings, function(response) {
 
-    var request = require('https').request(requestSettings, function(response) {
+            var output = '';
 
-        var output = '';
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
 
-        response.on('data', function(chunk) {
-            output += chunk;
-        });
+            response.on('end', function() {
 
-        response.on('end', function() {
+                var responseObject;
 
-            var responseObject;
-
-            if (output && jsonApprover.isJSON(output)) {
-                responseObject = JSON.parse(output);
-            } else {
-
-                if (agaveSettings.debugConsole === true) {
-                    console.error('VDJ-API ERROR: Agave response is not json.');
+                if (output && jsonApprover.isJSON(output)) {
+                    responseObject = JSON.parse(output);
+                } else {
+                    reject(new Error('Agave response is not json'));
                 }
 
-                deferred.reject(new Error('Agave response is not json'));
-            }
-
-            if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-		deferred.resolve(responseObject);
-            } else {
-		if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
-		    deferred.resolve(responseObject);
-		} else {
-                    if (agaveSettings.debugConsole === true) {
-			console.error('VDJ-API ERROR: Agave returned an error. it is: ' + JSON.stringify(responseObject));
-			console.error('VDJ-API ERROR: Agave returned an error. it is: ' + responseObject);
-                    }
-                    deferred.reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
-		}
-	    }	    
+                if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
+		    resolve(responseObject);
+                } else {
+		    if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
+		        resolve(responseObject);
+		    } else {
+                        reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
+		    }
+	        }	    
+            });
         });
-    });
 
-    request.on('error', function(error) {
-        if (agaveSettings.debugConsole === true) {
-            console.error('VDJ-API ERROR: Agave connection error.' + JSON.stringify(error));
+        request.on('error', function(error) {
+            reject(new Error('Agave connection error'));
+        });
+
+        if (postData) {
+            // Request body parameters
+            request.write(postData);
         }
 
-        deferred.reject(new Error('Agave connection error'));
+        request.end();
     });
-
-    if (postData) {
-        // Request body parameters
-        request.write(postData);
-    }
-
-    request.end();
-
-    return deferred.promise;
 };
 
 // Fetches a user token based on the supplied auth object
 // and returns the auth object with token data on success
 agaveIO.getToken = function(auth) {
-
-    var deferred = Q.defer();
 
     var postData = 'grant_type=password&scope=PRODUCTION&username=' + auth.username + '&password=' + auth.password;
 
@@ -365,22 +284,11 @@ agaveIO.getToken = function(auth) {
         }
     };
 
-    agaveIO.sendTokenRequest(requestSettings, postData)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
+    return agaveIO.sendTokenRequest(requestSettings, postData);
 };
 
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
-
-    var deferred = Q.defer();
-
     var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.refresh_token;
 
     var requestSettings = {
@@ -395,26 +303,16 @@ agaveIO.refreshToken = function(auth) {
         }
     };
 
-    agaveIO.sendTokenRequest(requestSettings, postData)
-        .then(function(responseObject) {
-            deferred.resolve(responseObject);
-        })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        });
-
-    return deferred.promise;
+    return agaveIO.sendTokenRequest(requestSettings, postData);
 };
 
 agaveIO.createUser = function(user) {
-
-    var deferred = Q.defer();
 
     var postData = 'username='  + user.username
                  + '&password=' + user.password
                  + '&email='    + user.email;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -431,20 +329,16 @@ agaveIO.createUser = function(user) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getAgaveUserProfile = function(accessToken, username) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -459,18 +353,14 @@ agaveIO.getAgaveUserProfile = function(accessToken, username) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createUserProfile = function(user, userAccessToken) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'profile',
@@ -491,22 +381,18 @@ agaveIO.createUserProfile = function(user, userAccessToken) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getUserProfile = function(username) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -521,13 +407,11 @@ agaveIO.getUserProfile = function(username) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 //
@@ -536,8 +420,6 @@ agaveIO.getUserProfile = function(username) {
 
 // generic metadata query
 agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -564,26 +446,22 @@ agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 // generic metadata creation
 agaveIO.createMetadataForType = function(projectUuid, type, value) {
-
-    var deferred = Q.defer();
 
     var postData = {
 	associationIds: [ projectUuid ],
@@ -593,7 +471,7 @@ agaveIO.createMetadataForType = function(projectUuid, type, value) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -610,19 +488,15 @@ agaveIO.createMetadataForType = function(projectUuid, type, value) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 // create metadata record for a private project
 agaveIO.createProjectMetadata = function(project) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'private_project',
@@ -631,7 +505,7 @@ agaveIO.createProjectMetadata = function(project) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -648,18 +522,14 @@ agaveIO.createProjectMetadata = function(project) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
 	host:     agaveSettings.hostname,
@@ -671,24 +541,20 @@ agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
 	}
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createProjectDirectory = function(directory) {
 
-    var deferred = Q.defer();
-
     var postData = 'action=mkdir&path=' + directory;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -704,18 +570,14 @@ agaveIO.createProjectDirectory = function(directory) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid) {
-
-    var deferred = Q.defer();
 
     var postData = 'username=' + username + '&permission=READ_WRITE';
 
@@ -730,20 +592,16 @@ agaveIO.addUsernameToMetadataPermissions = function(username, accessToken, uuid)
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.removeUsernameFromMetadataPermissions = function(username, accessToken, uuid) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -755,20 +613,16 @@ agaveIO.removeUsernameFromMetadataPermissions = function(username, accessToken, 
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getMetadataPermissions = function(accessToken, uuid) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -780,20 +634,16 @@ agaveIO.getMetadataPermissions = function(accessToken, uuid) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getMetadataPermissionsForUser = function(accessToken, uuid, username) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -805,20 +655,16 @@ agaveIO.getMetadataPermissionsForUser = function(accessToken, uuid, username) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProjectFileMetadata = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -849,25 +695,21 @@ agaveIO.getProjectFileMetadata = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getProjectFiles = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -898,20 +740,18 @@ agaveIO.getProjectFiles = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 //
@@ -920,8 +760,6 @@ agaveIO.getProjectFiles = function(projectUuid) {
 // This performs multiple requests to get all of the records
 //
 agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -951,25 +789,21 @@ agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getFilePermissions = function(accessToken, filePath) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -981,20 +815,16 @@ agaveIO.getFilePermissions = function(accessToken, filePath) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getFileListings = function(accessToken, projectUuid) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:     agaveSettings.hostname,
@@ -1006,20 +836,16 @@ agaveIO.getFileListings = function(accessToken, projectUuid) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.enumerateFileListings = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var pathList = [];
     var dirStack = [];
@@ -1064,31 +890,27 @@ agaveIO.enumerateFileListings = function(projectUuid) {
 		    }
 		    // maybe more data
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset, filePath);
+		    return doFetch(newOffset, filePath);
 		} else {
 		    // nothing left to enumerate
 		    if (dirStack.length == 0)
-			deferred.resolve(pathList);
+			return Promise.resolve(pathList);
 		    else
-			doFetch(0, dirStack.pop());
+			return doFetch(0, dirStack.pop());
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
     pathList.push('');
-    doFetch(0, '');
-
-    return deferred.promise;
+    return doFetch(0, '');
 };
 
 agaveIO.getFileHistory = function(relativePath) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1103,20 +925,16 @@ agaveIO.getFileHistory = function(relativePath) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProjectFileContents = function(projectUuid, fileName) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1135,18 +953,14 @@ agaveIO.getProjectFileContents = function(projectUuid, fileName) {
 	    return agaveIO.sendFileRequest(requestSettings, null);
 	})
         .then(function(fileData) {
-            deferred.resolve(fileData);
+            return Promise.resolve(fileData);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': username,
@@ -1167,20 +981,16 @@ agaveIO.addUsernameToJobPermissions = function(username, accessToken, jobId) {
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.removeUsernameFromJobPermissions = function(username, accessToken, jobId) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': username,
@@ -1201,20 +1011,16 @@ agaveIO.removeUsernameFromJobPermissions = function(username, accessToken, jobId
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setJobPermissions = function(username, permission, accessToken, jobId) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': username,
@@ -1235,20 +1041,16 @@ agaveIO.setJobPermissions = function(username, permission, accessToken, jobId) {
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, filePath, recursive) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': username,
@@ -1270,22 +1072,18 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
         }
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setFilePermissionsForProjectUsers = function(projectUuid, filePath, recursive) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    // get list of users from project metadata permissions
 	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
@@ -1295,33 +1093,28 @@ agaveIO.setFilePermissionsForProjectUsers = function(projectUuid, filePath, recu
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-            var promises = projectUsernames.map(function(username) {
+            var promises = [];
+	    for (var i = 0; i < projectUsernames.length; i++) {
+                var username = projectUsernames[i];
+                promises[i] = agaveIO.addUsernameToFullFilePermissions(
+                    username,
+                    ServiceAccount.accessToken(),
+                    filePath,
+		    recursive
+                );
+            }
 
-                return function() {
-                    return agaveIO.addUsernameToFullFilePermissions(
-                        username,
-                        ServiceAccount.accessToken(),
-                        filePath,
-			recursive
-                    );
-                };
-            });
-
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setFilePermissions = function(accessToken, username, permission, recursive, filePath) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': username,
@@ -1343,22 +1136,17 @@ agaveIO.setFilePermissions = function(accessToken, username, permission, recursi
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, filePath) {
 
-    var deferred = Q.defer();
-
-    //var postData = 'username=' + username + '&read=false&write=false&execute=false';
     var postData = {
         'username': username,
         'permission': 'NONE',
@@ -1379,20 +1167,16 @@ agaveIO.removeUsernameFromFilePermissions = function(username, accessToken, file
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.removeAllFilePermissions = function(accessToken, filePath, recursive) {
-
-    var deferred = Q.defer();
 
     var postData = {
         'username': '*',
@@ -1414,20 +1198,16 @@ agaveIO.removeAllFilePermissions = function(accessToken, filePath, recursive) {
         },
     };
 
-    agaveIO.sendRequest(requestSettings, postData)
+    return agaveIO.sendRequest(requestSettings, postData)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createUserVerificationMetadata = function(username) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'userVerification',
@@ -1439,7 +1219,7 @@ agaveIO.createUserVerificationMetadata = function(username) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1456,20 +1236,16 @@ agaveIO.createUserVerificationMetadata = function(username) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getUserVerificationMetadata = function(username) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1492,18 +1268,14 @@ agaveIO.getUserVerificationMetadata = function(username) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.verifyUser = function(username, verificationId) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'userVerification',
@@ -1515,7 +1287,7 @@ agaveIO.verifyUser = function(username, verificationId) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1532,18 +1304,14 @@ agaveIO.verifyUser = function(username, verificationId) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createPasswordResetMetadata = function(username) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'passwordReset',
@@ -1554,7 +1322,7 @@ agaveIO.createPasswordResetMetadata = function(username) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1571,18 +1339,14 @@ agaveIO.createPasswordResetMetadata = function(username) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
-
-    var deferred = Q.defer();
 
     var postData = {
 	associationIds: [ projectUuid, jobUuid ],
@@ -1596,7 +1360,7 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1613,18 +1377,14 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.updateJobMetadata = function(uuid, name, value) {
-
-    var deferred = Q.defer();
 
     var postData = {
 	associationIds: [ value.projectUuid, value.jobUuid ],
@@ -1634,7 +1394,7 @@ agaveIO.updateJobMetadata = function(uuid, name, value) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1651,20 +1411,16 @@ agaveIO.updateJobMetadata = function(uuid, name, value) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -1688,18 +1444,14 @@ agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobMetadataForProject = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -1732,27 +1484,23 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getJobMetadataForJob = function(jobUuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -1775,20 +1523,16 @@ agaveIO.getJobMetadataForJob = function(jobUuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -1811,18 +1555,14 @@ agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobsForProject = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -1848,27 +1588,23 @@ agaveIO.getJobsForProject = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getPasswordResetMetadata = function(uuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1890,20 +1626,16 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getMetadata = function(uuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1918,18 +1650,14 @@ agaveIO.getMetadata = function(uuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: name,
@@ -1939,7 +1667,7 @@ agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -1955,19 +1683,15 @@ agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
+        .catch(function(errorObject) {
             console.log('agaveIO.updateMetadata error: ' + errorObject);
-            deferred.reject(errorObject);
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.deleteMetadata = function(accessToken, uuid) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
 	host:     agaveSettings.hostname,
@@ -1979,26 +1703,22 @@ agaveIO.deleteMetadata = function(accessToken, uuid) {
 	}
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.updateUserPassword = function(user) {
-
-    var deferred = Q.defer();
 
     var postData = 'username='  + user.username
                  + '&password=' + user.password
                  + '&email='    + user.email;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2015,20 +1735,16 @@ agaveIO.updateUserPassword = function(user) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobOutput = function(jobId) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2043,20 +1759,16 @@ agaveIO.getJobOutput = function(jobId) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobPermissions = function(jobId) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2071,18 +1783,14 @@ agaveIO.getJobPermissions = function(jobId) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -2112,27 +1820,23 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getJobProcessMetadataFileListing = function(projectUuid, relativeArchivePath) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2151,20 +1855,16 @@ agaveIO.getJobProcessMetadataFileListing = function(projectUuid, relativeArchive
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getJobProcessMetadataFileContents = function(projectUuid, relativeArchivePath) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2183,18 +1883,14 @@ agaveIO.getJobProcessMetadataFileContents = function(projectUuid, relativeArchiv
 	    return agaveIO.sendFileRequest(requestSettings, null);
 	})
         .then(function(fileData) {
-            deferred.resolve(fileData);
+            return Promise.resolve(fileData);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'processMetadata',
@@ -2204,7 +1900,7 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2221,18 +1917,14 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProcessMetadataForProject = function(projectUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -2264,27 +1956,23 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.getProcessMetadataForJob = function(jobUuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2306,18 +1994,14 @@ agaveIO.getProcessMetadataForJob = function(jobUuid) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileListingName, jobFileListingLength, jobFileType, jobName, relativeArchivePath) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'projectJobFile',
@@ -2341,7 +2025,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2358,18 +2042,14 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -2403,25 +2083,21 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, length, readDirection, tags) {
-
-    var deferred = Q.defer();
 
     var postData = {
         associationIds: [
@@ -2445,7 +2121,7 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2462,20 +2138,16 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getFileDetail = function(relativePath) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2490,18 +2162,14 @@ agaveIO.getFileDetail = function(relativePath) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -2533,25 +2201,21 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 agaveIO.createFeedbackMetadata = function(feedback, username, email) {
-
-    var deferred = Q.defer();
 
     var valueData = {
         feedbackMessage: feedback,
@@ -2572,7 +2236,7 @@ agaveIO.createFeedbackMetadata = function(feedback, username, email) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2589,19 +2253,14 @@ agaveIO.createFeedbackMetadata = function(feedback, username, email) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
-        })
-        ;
-
-    return deferred.promise;
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
 };
 
 agaveIO.validateToken = function(token) {
-
-    var deferred = Q.defer();
 
     var requestSettings = {
         host:   agaveSettings.hostname,
@@ -2613,22 +2272,18 @@ agaveIO.validateToken = function(token) {
         }
     };
 
-    agaveIO.sendRequest(requestSettings, null)
+    return agaveIO.sendRequest(requestSettings, null)
         .then(function(responseObject) {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(new Error('Unable to validate token.'));
+        .catch(function(errorObject) {
+            return Promise.reject(new Error('Unable to validate token.'));
         });
-
-    return deferred.promise;
 };
 
 agaveIO.isDuplicateUsername = function(username) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -2643,22 +2298,18 @@ agaveIO.isDuplicateUsername = function(username) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(true);
+            return Promise.resolve(true);
         })
-        .fail(function(errorObject) {
-            deferred.resolve(false);
+        .catch(function(errorObject) {
+            return Promise.resolve(false);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
 
-    var deferred = Q.defer();
-
     var postData = 'action=mkdir&path=' + relativeArchivePath;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2678,25 +2329,21 @@ agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.uploadFileToJobArchiveDirectory = function(archivePath, filename, filedata) {
-
-    var deferred = Q.defer();
 
     // filedata should be data stored in a Buffer()
     var form = new FormData();
     form.append('fileToUpload', filedata);
     form.append('filename', filename);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var formHeaders = form.getHeaders();
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
@@ -2713,25 +2360,21 @@ agaveIO.uploadFileToJobArchiveDirectory = function(archivePath, filename, fileda
 	    return agaveIO.sendFormRequest(requestSettings, form);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.uploadFileToProjectDirectory = function(projectUuid, filename, filedata) {
-
-    var deferred = Q.defer();
 
     // filedata should be data stored in a Buffer()
     var form = new FormData();
     form.append('fileToUpload', filedata);
     form.append('filename', filename);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var formHeaders = form.getHeaders();
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
@@ -2748,25 +2391,21 @@ agaveIO.uploadFileToProjectDirectory = function(projectUuid, filename, filedata)
 	    return agaveIO.sendFormRequest(requestSettings, form);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filedata) {
-
-    var deferred = Q.defer();
 
     // filedata should be data stored in a Buffer()
     var form = new FormData();
     form.append('fileToUpload', filedata);
     form.append('filename', filename);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var formHeaders = form.getHeaders();
 	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
@@ -2783,20 +2422,16 @@ agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filed
 	    return agaveIO.sendFormRequest(requestSettings, form);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.launchJob = function(jobDataString) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -2814,13 +2449,11 @@ agaveIO.launchJob = function(jobDataString) {
 	    return agaveIO.sendRequest(requestSettings, jobDataString);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 //
@@ -2831,9 +2464,7 @@ agaveIO.launchJob = function(jobDataString) {
 
 agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunity) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    // get all user permissions
 	    var requestSettings = {
@@ -2852,14 +2483,14 @@ agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunit
 	    var permissionsList = requestObject.result;
 
 	    // remove permissions
-            var promises = permissionsList.map(function(entry) {
-                return function() {
-		    if (entry.username == agaveSettings.serviceAccountKey) return;
-		    else return agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/projects/' + filePath);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < permissionsList.length; i++) {
+                var entry = permissionsList[i];
+		if (entry.username != agaveSettings.serviceAccountKey)
+		    promises[i] = agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/projects/' + filePath);
+            }
 
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function(responseObject) {
             if (toCommunity) {
@@ -2883,13 +2514,11 @@ agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunit
             }
 	})
 	.then(function(responseObject) {
-            deferred.resolve(responseObject);
+            return Promise.resolve(responseObject);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 /*
@@ -2918,10 +2547,10 @@ agaveIO.createCommunityDirectory = function(directory) {
 	    return agaveIO.setCommunityFilePermissions(directory);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
 
     return deferred.promise;
@@ -2992,7 +2621,7 @@ agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity
 		var msg = 'VDJ-API ERROR: project publish/unpublish: ' + projectUuid + ', File ' + filename + ' does not exist in either the project or community directory, trying to continue...';
 		console.error(msg);
 		webhookIO.postToSlack(msg);
-		deferred.resolve();
+		return Promise.resolve();
 	    }
 	})
 	.then(function() {
@@ -3017,10 +2646,10 @@ agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity
 	    else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/files/' + filename, false);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
 
     return deferred.promise;
@@ -3092,7 +2721,7 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
 		    + ' does not exist in either the project or community jobs directory' + jobPath + ', trying to continue...';
 		console.error(msg);
 		webhookIO.postToSlack(msg);
-		deferred.resolve();
+		return Promise.resolve();
 	    }
 	})
 	.then(function() {
@@ -3117,10 +2746,10 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
 	    else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/analyses/' + jobPath + '/' + filename, false);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
 
     return deferred.promise;
@@ -3129,10 +2758,8 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
 
 agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 
-    var deferred = Q.defer();
-
     var jobFiles = [];
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
             return agaveIO.getProjectJobFileMetadatas(projectUuid, jobId);
 	})
@@ -3146,13 +2773,13 @@ agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 	})
 	.then(function() {
             // permissions on each job file
-            var promises = jobFiles.map(function(file) {
-                return function() {
-	            return agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + file.value.relativeArchivePath + '/' + file.value.name, toCommunity);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < jobFiles.length; i++) {
+                var file = jobFiles[i];
+	        promises[i] = agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + file.value.relativeArchivePath + '/' + file.value.name, toCommunity);
+            }
 
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
 	.then(function() {
             // permissions for the job itself
@@ -3160,14 +2787,14 @@ agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 	})
 	.then(function(permissionsList) {
 	    // remove permissions
-            var promises = permissionsList.map(function(entry) {
-                return function() {
-		    if (entry.username == agaveSettings.serviceAccountKey) return;
-		    else return agaveIO.removeUsernameFromJobPermissions(entry.username, ServiceAccount.accessToken(), jobId);
-                };
-            });
-
-            return promises.reduce(Q.when, new Q());
+            var promises = [];
+	    for (var i = 0; i < permissionsList.length; i++) {
+                var entry = permissionsList[i];
+		if (entry.username != agaveSettings.serviceAccountKey)
+		    promises[i] = agaveIO.removeUsernameFromJobPermissions(entry.username, ServiceAccount.accessToken(), jobId);
+            }
+ 
+            return Promise.allSettled(promises);
 	})
         .then(function() {
 	    if (toCommunity) {
@@ -3179,13 +2806,11 @@ agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 	    }
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 /*
@@ -3214,10 +2839,10 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 	    return agaveIO.setCommunityJobPermissions(projectUuid, jobId, toCommunity);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
 
     return deferred.promise;
@@ -3226,9 +2851,7 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 
 agaveIO.clearCommunityMetadataPermissions = function(uuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    // get all user permissions
 	    var requestSettings = {
@@ -3247,30 +2870,26 @@ agaveIO.clearCommunityMetadataPermissions = function(uuid) {
 	    var permissionsList = requestObject.result;
 
 	    // remove permissions
-            var promises = permissionsList.map(function(entry) {
-                return function() {
-		    if (entry.username == agaveSettings.serviceAccountKey) return;
-		    else return agaveIO.removeUsernameFromMetadataPermissions(entry.username, ServiceAccount.accessToken(), uuid);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < permissionsList.length; i++) {
+                var entry = permissionsList[i];
+		if (entry.username != agaveSettings.serviceAccountKey)
+		    promises[i] = agaveIO.removeUsernameFromMetadataPermissions(entry.username, ServiceAccount.accessToken(), uuid);
+            }
 
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
 	.then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setMetadataPermissionsForCommunity = function(uuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.clearCommunityMetadataPermissions(uuid);
 	})
@@ -3292,20 +2911,16 @@ agaveIO.setMetadataPermissionsForCommunity = function(uuid) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
 	.then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setMetadataPermissionsForProject = function(projectUuid, uuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.clearCommunityMetadataPermissions(uuid);
 	})
@@ -3313,29 +2928,25 @@ agaveIO.setMetadataPermissionsForProject = function(projectUuid, uuid) {
 	    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, uuid);
 	})
 	.then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 
-    var deferred = Q.defer();
-
-    agaveIO.getAllProjectAssociatedMetadata(projectUuid)
+    return agaveIO.getAllProjectAssociatedMetadata(projectUuid)
         .then(function(metadataList) {
-            var promises = metadataList.map(function(entry) {
-                return function() {
-		    if (toCommunity) return agaveIO.setMetadataPermissionsForCommunity(entry.uuid);
-		    else return agaveIO.setMetadataPermissionsForProject(projectUuid, entry.uuid);
-                };
-            });
+            var promises = [];
+	    for (var i = 0; i < metadataList.length; i++) {
+                var entry = metadataList[i];
+		if (toCommunity) promises[i] = agaveIO.setMetadataPermissionsForCommunity(entry.uuid);
+		else promises[i] = agaveIO.setMetadataPermissionsForProject(projectUuid, entry.uuid);
+            }
 
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function() {
 	    if (toCommunity) {
@@ -3392,51 +3003,47 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 
 	    if (toCommunity) {
 		// change user permissions to READ only on project metadata
-		var promises = permissionsList.map(function(entry) {
-                    return function() {
-			if (entry.username == agaveSettings.serviceAccountKey) return;
-			else if (entry.username == agaveSettings.guestAccountKey) return;
-			else {
-			    var postData = 'permission=READ';
+                var promises = [];
+	        for (var i = 0; i < permissionsList.length; i++) {
+                    var entry = permissionsList[i];
+		    if (entry.username == agaveSettings.serviceAccountKey) continue;
+		    else if (entry.username == agaveSettings.guestAccountKey) continue;
+		    else {
+			var postData = 'permission=READ';
 
-			    var requestSettings = {
-				host:     agaveSettings.hostname,
-				method:   'POST',
-				path:     '/meta/v2/data/' + projectUuid + '/pems/' + entry.username,
-				rejectUnauthorized: false,
-				headers: {
-				    'Content-Length': Buffer.byteLength(postData),
-				    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-				},
-			    };
+			var requestSettings = {
+			    host:     agaveSettings.hostname,
+			    method:   'POST',
+			    path:     '/meta/v2/data/' + projectUuid + '/pems/' + entry.username,
+			    rejectUnauthorized: false,
+			    headers: {
+				'Content-Length': Buffer.byteLength(postData),
+				'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+			    },
+			};
 
-			    console.log(requestSettings);
-			    return agaveIO.sendRequest(requestSettings, postData);
-			}
-                    };
-		});
+			console.log(requestSettings);
+			promises[i] = agaveIO.sendRequest(requestSettings, postData);
+		    }
+                }
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
 	    } else {
 		// give users full permissions on project metadata
 		return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, projectUuid);
 	    }
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.getCommunityDataMetadata = function() {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:   agaveSettings.hostname,
@@ -3456,18 +3063,14 @@ agaveIO.getCommunityDataMetadata = function() {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createCommunityFilePostit = function(projectUuid, path) {
-
-    var deferred = Q.defer();
 
     var url = 'https://' + agaveSettings.hostname
 	+ '/files/v2/media/system/'
@@ -3486,7 +3089,7 @@ agaveIO.createCommunityFilePostit = function(projectUuid, path) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3503,13 +3106,11 @@ agaveIO.createCommunityFilePostit = function(projectUuid, path) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 //
@@ -3525,8 +3126,6 @@ agaveIO.createCommunityFilePostit = function(projectUuid, path) {
 
 agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 
-    var deferred = Q.defer();
-
     var postData = {
         name: 'projectLoad',
 	associationIds: [ projectUuid ],
@@ -3541,7 +3140,7 @@ agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3558,21 +3157,17 @@ agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 // there should be only a single metadata record
 agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3595,19 +3190,15 @@ agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
 	    return agaveIO.sendRequest(requestSettings, null);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 // get list of projects to be loaded
 agaveIO.getProjectsToBeLoaded = function(collection) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -3634,26 +3225,22 @@ agaveIO.getProjectsToBeLoaded = function(collection) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
 
 // status record for a rearrangement load
 agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, collection) {
-
-    var deferred = Q.defer();
 
     var postData = {
         name: 'rearrangementLoad',
@@ -3668,7 +3255,7 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, c
 
     postData = JSON.stringify(postData);
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    var requestSettings = {
 		host:     agaveSettings.hostname,
@@ -3685,19 +3272,15 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, c
 	    return agaveIO.sendRequest(requestSettings, postData);
 	})
         .then(function(responseObject) {
-            deferred.resolve(responseObject.result);
+            return Promise.resolve(responseObject.result);
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 // get list of repertoires that need their rearrangement data to be loaded
 agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
-
-    var deferred = Q.defer();
 
     var models = [];
 
@@ -3730,49 +3313,19 @@ agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
 		    // maybe more data
 		    models = models.concat(result);
 		    var newOffset = offset + result.length;
-		    doFetch(newOffset);
+		    return doFetch(newOffset);
 		} else {
 		    // no more data
-		    deferred.resolve(models);
+		    return Promise.resolve(models);
 		}
 	    })
-            .fail(function(errorObject) {
-		deferred.reject(errorObject);
+            .catch(function(errorObject) {
+		return Promise.reject(errorObject);
             });
     }
 
-    doFetch(0);
-
-    return deferred.promise;
+    return doFetch(0);
 };
-
-// gather list of repertoire metadata for project
-// TODO: this function should transform the normalized metadata
-// records into the denormalized AIRR metadata format.
-/*
-agaveIO.collectRepertoireMetadataForProject = function(projectUuid) {
-
-    return ServiceAccount.getToken()
-	.then(function(token) {
-            // get repertoire objects first
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
-        })
-	.then(function(models) {
-            // put into AIRR format
-            var repertoireMetadata = [];
-            for (var i in models) {
-                repertoireMetadata.push(models[i].value);
-            }
-            return repertoireMetadata;
-        })
-	.then(function(models) {
-            // save vdjserver project uuid in custom field
-            for (var i in models) {
-                models[i]['study']['vdjserver_uuid'] = projectUuid;
-            }
-            return models;
-        });
-}; */
 
 // Collect list of repertoire metadata for project.
 // This function transforms the normalized metadata
@@ -3888,9 +3441,7 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 
 agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
 	})
@@ -3899,35 +3450,30 @@ agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-            var promises = projectUsernames.map(function(username) {
+            var promises = [];
+	    for (var i = 0; i < projectUsernames.length; i++) {
+                var username = projectUsernames[i];
+                promises[i] = agaveIO.addUsernameToJobPermissions(
+                    username,
+                    ServiceAccount.accessToken(),
+                    jobId
+                );
+            }
 
-                return function() {
-                    return agaveIO.addUsernameToJobPermissions(
-                        username,
-                        ServiceAccount.accessToken(),
-                        jobId
-                    );
-                };
-            });
-
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 // set permissions on a metadata object
 agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUuid) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
 	})
@@ -3936,27 +3482,24 @@ agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUu
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-            var promises = projectUsernames.map(function(username) {
+            var promises = [];
+	    for (var i = 0; i < projectUsernames.length; i++) {
+                var username = projectUsernames[i];
+                promises[i] = agaveIO.addUsernameToMetadataPermissions(
+                    username,
+                    ServiceAccount.accessToken(),
+                    metadataUuid
+                );
+            }
 
-                return function() {
-                    return agaveIO.addUsernameToMetadataPermissions(
-                        username,
-                        ServiceAccount.accessToken(),
-                        metadataUuid
-                    );
-                };
-            });
-
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
 
 agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value) {
@@ -3974,30 +3517,25 @@ agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value
 // delete all metadata for type for a project
 agaveIO.deleteAllMetadataForType = function(projectUuid, type) {
 
-    var deferred = Q.defer();
-
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
 	.then(function(token) {
 	    return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
 	})
         .then(function(metadataList) {
 
 	    console.log('VDJ-API INFO: agaveIO.deleteAllMetadataForType - deleting ' + metadataList.length + ' metadata entries for type: ' + type);
-            var promises = metadataList.map(function(metadata) {
+            var promises = [];
+	    for (var i = 0; i < metadataList.length; i++) {
+                var metadata = metadataList[i];
+                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
+            }
 
-                return function() {
-                    return agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
-                };
-            });
-
-            return promises.reduce(Q.when, new Q());
+            return Promise.allSettled(promises);
 	})
         .then(function() {
-            deferred.resolve();
+            return Promise.resolve();
         })
-        .fail(function(errorObject) {
-            deferred.reject(errorObject);
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };

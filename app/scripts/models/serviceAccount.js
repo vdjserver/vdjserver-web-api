@@ -1,9 +1,6 @@
 
 'use strict';
 
-// Node Libraries
-var Q = require('q');
-
 var agaveSettings = require('../config/agaveSettings');
 var AgaveToken = require('./agaveToken');
 
@@ -27,20 +24,17 @@ var ServiceAccount = function() {
 
 ServiceAccount.getToken = function() {
 
-    var deferred = Q.defer();
     var that = this;
 
-    agaveIO.getToken(this)
-    .then(function(responseObject) {
-	that.agaveToken = new AgaveToken(responseObject);
-	deferred.resolve(that.agaveToken);
-    })
-    .fail(function(errorObject) {
-	console.log('VDJ-API ERROR: Unable to login with service account. ' + errorObject);
-        deferred.reject(errorObject);
-    });
-
-    return deferred.promise;
+    return agaveIO.getToken(this)
+        .then(function(responseObject) {
+	    that.agaveToken = new AgaveToken(responseObject);
+            return Promise.resolve(that.agaveToken);
+        })
+        .catch(function(errorObject) {
+	    console.log('VDJ-API ERROR: Unable to login with service account. ' + errorObject);
+            return Promise.reject(errorObject);
+        });
 }
 
 ServiceAccount.accessToken = function() {

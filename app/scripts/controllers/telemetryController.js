@@ -33,9 +33,6 @@ module.exports = TelemetryController;
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
-// Node Libraries
-var Q = require('q');
-
 var webhookIO = require('../vendor/webhookIO');
 
 // Retrieves a new user token from Agave and returns it to the client

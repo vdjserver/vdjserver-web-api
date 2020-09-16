@@ -113,7 +113,7 @@ AuthController.userAuthorization = function(req, scopes, definition) {
                 return false;
             }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid token: ' + token + ', error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -167,7 +167,7 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
                 return Promise.reject(new Error('user does not have write permission for project'));
 	    }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route: '
 		+ JSON.stringify(req.route.path) + ', error: ' + error;
             console.error(msg);
@@ -194,7 +194,7 @@ AuthController.verifyUser = function(username) {
 		return false;
             }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -221,7 +221,7 @@ AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
 		return false;
 	    }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.verifyMetadataAccess - uuid: ' + uuid
 		+ ', error validating user: ' + username + ', error ' + error;
             console.error(msg);
@@ -258,7 +258,7 @@ AuthController.authUser = function(request, response, next) {
 		return apiResponseController.send401(request, response);
 	    }
 	})
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.authUser - route '
 		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
@@ -294,7 +294,7 @@ AuthController.authForProject = function(request, response, next, projectUuid) {
 		return apiResponseController.send401(request, response);
 	    }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + projectUuid + ', route '
 		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
@@ -343,7 +343,7 @@ AuthController.authForUnpublishProject = function(request, response, next, proje
 		return apiResponseController.send401(request, response);
 	    }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.authForUnpublishProject - project: ' + projectUuid + ', route '
 		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
@@ -374,7 +374,7 @@ AuthController.authForMetadata = function(request, response, next, uuid) {
 		return apiResponseController.send401(request, response);
 	    }
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: AuthController.authForMetadata - uuid: ' + uuid + ', route '
 		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
