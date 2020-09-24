@@ -1,9 +1,6 @@
 
 'use strict';
 
-// Node Libraries
-var Q = require('q');
-
 var agaveSettings = require('../config/agaveSettings');
 var AgaveToken = require('./agaveToken');
 
@@ -20,20 +17,16 @@ var agaveIO = require('../vendor/agaveIO');
 
 GuestAccount.getToken = function() {
 
-    var deferred = Q.defer();
     var that = this;
 
-    agaveIO.getToken(this)
-    .then(function(responseObject) {
-	that.agaveToken = new AgaveToken(responseObject);
-	deferred.resolve(that.agaveToken);
-    })
-    .fail(function(errorObject) {
-	console.log('VDJ-GUEST ERROR: Unable to login with guest account. ' + errorObject);
-        deferred.reject(errorObject);
-    });
-
-    return deferred.promise;
+    return agaveIO.getToken(this)
+        .then(function(responseObject) {
+	    that.agaveToken = new AgaveToken(responseObject);
+        })
+        .catch(function(errorObject) {
+	    console.log('VDJ-GUEST ERROR: Unable to login with guest account. ' + errorObject);
+            return Promise.reject(errorObject);
+        });
 }
 
 GuestAccount.accessToken = function() {

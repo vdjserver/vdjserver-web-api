@@ -34,6 +34,35 @@ components:
         message:
           type: string
 
+    Info:
+      description: Provides information about the API service and/or response
+      discriminator:
+        propertyName: VDJServer
+      type: object
+      properties:
+        title:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        contact: 
+          type: object
+          properties:
+            name:
+              type: string
+            url:
+              type: string
+            email:
+              type: string
+        license:
+          type: object
+          properties:
+            name:
+              type: string
+            url:
+              type: string
+
     Recaptcha:
       description: Google recaptcha response.
       discriminator:
@@ -77,6 +106,18 @@ components:
         affiliation:
           type: string
 
+    MetadataFile:
+      description: AIRR metadata file.
+      discriminator:
+        propertyName: VDJServer
+      type: object
+      properties:
+        Info:
+          $ref: '#/components/schemas/Info'
+        Repertoire:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repertoire'
 
     Project:
       description: VDJServer project which is an extension of the AIRR Study object.
@@ -328,6 +369,84 @@ paths:
                     type: string
                   result:
                     $ref: '#/components/schemas/ProjectMetadata'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/import:
+    post:
+      description: import metadata into project
+      operationId: importMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - replace
+                    - append
+                filename:
+                  type: string
+              required:
+                - operation
+                - filename
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/export:
+    get:
+      description: export metadata from project
+      operationId: exportMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataFile'
         '400':
           description: Bad request.
         '401':

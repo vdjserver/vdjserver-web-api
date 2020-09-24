@@ -33,6 +33,7 @@ module.exports = ProjectQueueManager;
 // App
 var app = require('../app');
 var agaveSettings = require('../config/agaveSettings');
+var mongoSettings = require('../config/mongoSettings');
 
 // Models
 var FilePermissions = require('../models/filePermissions');
@@ -48,7 +49,6 @@ var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
 var jsonApprover = require('json-approver');
-var Q = require('q');
 var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
@@ -65,30 +65,25 @@ ProjectQueueManager.checkRearrangementLoad = function() {
 
     var isRunning = false;
 
-    Q()
+    var activePromise = new Promise(function(resolve, reject) {
+        kue.Job.rangeByType('rearrangementLoadTask', 'active', 0, 1000, 'asc', function(error, jobs) {
+            console.log(jobs.length);
+            if (jobs.length > 0) isRunning = true;
+            resolve();
+        });
+    });
+
+    var inactivePromise = new Promise(function(resolve, reject) {
+        kue.Job.rangeByType('rearrangementLoadTask', 'inactive', 0, 1000, 'asc', function(error, jobs) {
+            console.log(jobs.length);
+            if (jobs.length > 0) isRunning = true;
+            resolve();
+        });
+    });
+
+    return activePromise
         .then(function() {
-            let deferred = Q.defer();
-
-            kue.Job.rangeByType('rearrangementLoadTask', 'active', 0, 1000, 'asc', function(error, jobs) {
-                console.log(jobs.length);
-                if (jobs.length > 0) isRunning = true;
-
-                deferred.resolve();
-            });
-
-            return deferred.promise;
-        })
-        .then(function() {
-            let deferred = Q.defer();
-
-            kue.Job.rangeByType('rearrangementLoadTask', 'inactive', 0, 1000, 'asc', function(error, jobs) {
-                console.log(jobs.length);
-                if (jobs.length > 0) isRunning = true;
-
-                deferred.resolve();
-            });
-
-            return deferred.promise;
+            return inactivePromise;
         })
         .then(function() {
             if (! isRunning) {
@@ -103,63 +98,53 @@ ProjectQueueManager.checkRearrangementLoad = function() {
             } else {
                 console.log('VDJ-API INFO: projectQueueManager.checkRearrangementLoad, a rearrangement load task is running.');
             }
-
+    
             return isRunning;
-        })
-        ;
+        });
 };
 
 ProjectQueueManager.processProjects = function() {
 
-/*
     // Publishing a project to community data
-    //
-    // 1. Move project files to community data
-    // 2. Move job output files to community data
+    // mainly entails setting permissions on
+    // the files, jobs and metadata for the
+    // project to be readable for guest account.
+    // 
+    // 1. Set permissions on project files
+    // 2. Set permissions on jobs output files
     // 3. Set permissions on metadata
     // 4. Update project metadata to public
 
-    taskQueue.process('publishProjectMoveFilesTask', function(task, done) {
-	// 1. Move project files to community data
-
-	// This assumes that moving a file on the storage system does not
-	// change the UUID thus the metadata entries do not need to be updated.
-	// This seems to be true if moving individual files, but does not hold
-	// for moving directories.
-	//
-	// Permissions are set when the file is moved.
+    taskQueue.process('publishProjectFilesPermissionsTask', function(task, done) {
+        // 1. Set permissions on project files
 
         var projectUuid = task.data;
 	var msg = null;
 
-	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectMoveFilesTask.');
+	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectFilesPermissionsTask.');
 
-        // create community/files directory
-	agaveIO.createCommunityDirectory(projectUuid + '/files')
+        // set community permissions on the files directory
+        var directory = projectUuid + '/files/';
+	agaveIO.setCommunityFilePermissions(projectUuid, directory, true)
             .then(function() {
-		console.log('VDJ-API INFO: ProjectController.publishProject, created files directory for community data uuid: ' + projectUuid);
-
-		// create community/analyses directory
-		return agaveIO.createCommunityDirectory(projectUuid + '/analyses');
-            })
-            .then(function() {
-		console.log('VDJ-API INFO: ProjectController.publishProject, created analyses directory for community data uuid: ' + projectUuid); 
-
-		return agaveIO.getProjectFiles(projectUuid);
-            })
+                // get the project files
+	        return agaveIO.getProjectFiles(projectUuid);
+	    })
             .then(function(projectFiles) {
-		console.log('VDJ-API INFO: ProjectController.publishProject, moving project files (' + projectFiles.length + ' files) for community data uuid: ' + projectUuid);
-		var promises = projectFiles.map(function(entry) {
-                    return function() {
-			return agaveIO.moveProjectFileToCommunity(projectUuid, entry.value.name, true);
-		    }
-		});
+		console.log('VDJ-API INFO: ProjectController.publishProject, setting permissions on project files ('
+                            + projectFiles.length + ' files) for project: ' + projectUuid);
 
-		return promises.reduce(Q.when, new Q());
+                var promises = [];
+		for (var i = 0; i < projectFiles.length; i++) {
+                    var filename = projectFiles[i];
+                    promises[i] = agaveIO.setCommunityFilePermissions(projectUuid, directory + filename, true);
+                }
+
+                return Promise.allSettled(promises);
 	    })
             .then(function() {
                 taskQueue
-                    .create('publishProjectMoveJobsTask', projectUuid)
+                    .create('publishProjectJobsPermissionsTask', projectUuid)
                     .removeOnComplete(true)
                     .attempts(5)
                     .backoff({delay: 60 * 1000, type: 'fixed'})
@@ -167,11 +152,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectMoveFilesTask.');
+		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectFilesPermissionsTask.');
                 done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - publishProjectMoveFilesTask - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - publishProjectFilesPermissionsTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -179,25 +164,27 @@ ProjectQueueManager.processProjects = function() {
             ;
     });
 
-    taskQueue.process('publishProjectMoveJobsTask', function(task, done) {
-	// 2. Move job output files to community data
+    taskQueue.process('publishProjectJobsPermissionsTask', function(task, done) {
+        // 2. Set permissions on jobs output files
 
         var projectUuid = task.data;
 	var msg = null;
 
-	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectMoveJobsTask.');
+	console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', start publishProjectJobsPermissionsTask.');
 
         // get jobs (this leaves behind the archived jobs)
 	agaveIO.getJobMetadataForProject(projectUuid)
             .then(function(jobMetadata) {
-		console.log('VDJ-API INFO: ProjectController.publishProject, moving job data (' + jobMetadata.length + ' jobs) for community data uuid: ' + projectUuid);
-		var promises = jobMetadata.map(function(entry) {
-                    return function() {
-			return agaveIO.moveJobToCommunity(projectUuid, entry.value.jobUuid, true);
-		    }
-		});
+		console.log('VDJ-API INFO: ProjectController.publishProject, set permissions on job data ('
+                            + jobMetadata.length + ' jobs) for project: ' + projectUuid);
 
-		return promises.reduce(Q.when, new Q());
+                var promises = [];
+		for (var i = 0; i < jobMetadata.length; i++) {
+                    var entry = jobMetadata[i];
+                    promises[i] = agaveIO.setCommunityJobPermissions(projectUuid, entry.value.jobUuid, true);
+                }
+
+                return Promise.allSettled(promises);
             })
             .then(function() {
                 taskQueue
@@ -209,11 +196,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectMoveJobsTask.');
+		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectJobsPermissionsTask.');
                 done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - publishProjectMoveJobsTask - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - publishProjectJobsPermissionsTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -243,7 +230,7 @@ ProjectQueueManager.processProjects = function() {
 		console.log('VDJ-API INFO: ProjectController.publishProject, project ' + projectUuid + ', done publishProjectSetMetadataPermissionsTask.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -263,14 +250,14 @@ ProjectQueueManager.processProjects = function() {
 		return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
             })
 	    .then(function(projectMetadata) {
-		projectName = projectMetadata.value.name;
+		projectName = projectMetadata.value.study_title;
 		if (projectMetadata.name == 'projectPublishInProcess') {
-		    projectMetadata.name = 'publicProject';
+		    projectMetadata.name = 'public_project';
 		    projectMetadata.value.showArchivedJobs = false;
 		    return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
 		} else {
 		    msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in state: projectPublishInProcess.';
-		    return Q.reject(new Error(msg));
+		    return Promise.reject(new Error(msg));
 		}
 	    })
 	    .then(function() {
@@ -281,36 +268,36 @@ ProjectQueueManager.processProjects = function() {
 		var metadataPermissions = new MetadataPermissions();
 		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-		var promises = projectUsernames.map(function(username) {
-                    return function() {
-			return agaveIO.getUserProfile(username)
-			    .then(function(userProfileList) {
-				if (userProfileList.length == 0) return;
-				if (username == agaveSettings.guestAccountKey) return;
-				var userProfile = userProfileList[0];
-				if (!userProfile.value.disablePublishEmail) {
-				    var vdjWebappUrl = agaveSettings.vdjBackbone
-					+ '/community/' + projectUuid;
-				    emailIO.sendGenericEmail(userProfile.value.email,
-							     'VDJServer project has been published',
-							     'The VDJServer project "' + projectName + '" has been published to community data.'
-							     + '<br>'
-							     + 'You can view the project in community data with the link below:'
-							     + '<br>'
-							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
-							     );
-				}
-			    });
-                    };
-		});
+                var promises = [];
+		for (var i = 0; i < projectUsernames.length; i++) {
+                    var username = projectUsernames[i];
+                    promises[i] = agaveIO.getUserProfile(username)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disablePublishEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/community/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
+							 'VDJServer project has been published',
+							 'The VDJServer project "' + projectName + '" has been published to community data.'
+							 + '<br>'
+							 + 'You can view the project in community data with the link below:'
+							 + '<br>'
+							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							);
+			    }
+			});
+                }
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
 	    })
             .then(function() {
 		console.log('VDJ-API INFO: ProjectController.publishProject - done, project ' + projectUuid + ' has been published.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -319,34 +306,45 @@ ProjectQueueManager.processProjects = function() {
     });
 
     // Unpublishing a project from community data
-    //
-    // 1. Move project files from community data
-    // 2. Move job output files from community data
+    // mainly entails setting permissions on
+    // the files, jobs and metadata for the
+    // project for the project users.
+    // 
+    // 1. Set permissions on project files
+    // 2. Set permissions on jobs output files
     // 3. Set permissions on metadata
     // 4. Update project metadata to private
 
-    taskQueue.process('unpublishProjectMoveFilesTask', function(task, done) {
-	// 1. Move project files from community data
+    taskQueue.process('unpublishProjectFilesPermissionsTask', function(task, done) {
+        // 1. Set permissions on project files
 
         var projectUuid = task.data;
 	var msg = null;
 
-	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectMoveFilesTask.');
+	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectFilesPermissionsTask.');
 
-        agaveIO.getProjectFiles(projectUuid)
+        // set community permissions on the files directory
+        var directory = projectUuid + '/files/';
+	agaveIO.setCommunityFilePermissions(projectUuid, directory, false)
+            .then(function() {
+                // get the project files
+	        return agaveIO.getProjectFiles(projectUuid);
+	    })
             .then(function(projectFiles) {
-		console.log('VDJ-API INFO: ProjectController.unpublishProject, moving community data files back to project uuid: ' + projectUuid);
-		var promises = projectFiles.map(function(entry) {
-                    return function() {
-			return agaveIO.moveProjectFileToCommunity(projectUuid, entry.value.name, false);
-		    }
-		});
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, setting permissions on project files ('
+                            + projectFiles.length + ' files) for project: ' + projectUuid);
 
-		return promises.reduce(Q.when, new Q());
+                var promises = [];
+		for (var i = 0; i < projectFiles.length; i++) {
+                    var filename = projectFiles[i];
+	            promises[i] = agaveIO.setCommunityFilePermissions(projectUuid, directory + filename, false);
+		}
+
+                return Promise.allSettled(promises);
 	    })
             .then(function() {
                 taskQueue
-                    .create('unpublishProjectMoveJobsTask', projectUuid)
+                    .create('unpublishProjectJobsPermissionsTask', projectUuid)
                     .removeOnComplete(true)
                     .attempts(5)
                     .backoff({delay: 60 * 1000, type: 'fixed'})
@@ -354,11 +352,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectMoveFilesTask.');
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectFilesPermissionsTask.');
                 done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - unpublishProjectMoveFilesTask - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - unpublishProjectFilesPermissionsTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -366,25 +364,27 @@ ProjectQueueManager.processProjects = function() {
             ;
     });
 
-    taskQueue.process('unpublishProjectMoveJobsTask', function(task, done) {
-	// 2. Move job output files from community data
+    taskQueue.process('unpublishProjectJobsPermissionsTask', function(task, done) {
+        // 2. Set permissions on jobs output files
 
         var projectUuid = task.data;
 	var msg = null;
 
-	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectMoveJobsTask.');
+	console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', start unpublishProjectJobsPermissionsTask.');
 
         // get jobs (this leaves behind the archived jobs)
 	agaveIO.getJobMetadataForProject(projectUuid)
             .then(function(jobMetadata) {
-		console.log('VDJ-API INFO: ProjectController.unpublishProject, moving job data (' + jobMetadata.length + ' jobs) for community data uuid: ' + projectUuid);
-		var promises = jobMetadata.map(function(entry) {
-                    return function() {
-			return agaveIO.moveJobToCommunity(projectUuid, entry.value.jobUuid, false);
-		    }
-		});
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, set permissions on job data ('
+                            + jobMetadata.length + ' jobs) for project: ' + projectUuid);
 
-		return promises.reduce(Q.when, new Q());
+                var promises = [];
+		for (var i = 0; i < jobMetadata.length; i++) {
+                    var entry = jobMetadata[i];
+		    promises[i] = agaveIO.setCommunityJobPermissions(projectUuid, entry.value.jobUuid, false);
+		}
+
+                return Promise.allSettled(promises);
             })
             .then(function() {
                 taskQueue
@@ -396,11 +396,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectMoveJobsTask.');
+		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectJobsPermissionsTask.');
                 done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - unpublishProjectMoveJobsTask - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - unpublishProjectJobsPermissionsTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -430,7 +430,7 @@ ProjectQueueManager.processProjects = function() {
 		console.log('VDJ-API INFO: ProjectController.unpublishProject, project ' + projectUuid + ', done unpublishProjectSetMetadataPermissionsTask.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -450,13 +450,13 @@ ProjectQueueManager.processProjects = function() {
 		return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
             })
 	    .then(function(projectMetadata) {
-		projectName = projectMetadata.value.name;
+		projectName = projectMetadata.value.study_title;
 		if (projectMetadata.name == 'projectUnpublishInProcess') {
-		    projectMetadata.name = 'project';
+		    projectMetadata.name = 'private_project';
 		    return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
 		} else {
 		    msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in state: projectUnpublishInProcess.';
-		    return Q.reject(new Error(msg));
+		    return Promise.reject(new Error(msg));
 		}
 	    })
 	    .then(function() {
@@ -467,44 +467,43 @@ ProjectQueueManager.processProjects = function() {
 		var metadataPermissions = new MetadataPermissions();
 		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-		var promises = projectUsernames.map(function(username) {
-                    return function() {
-			return agaveIO.getUserProfile(username)
-			    .then(function(userProfileList) {
-				if (userProfileList.length == 0) return;
-				if (username == agaveSettings.guestAccountKey) return;
-				var userProfile = userProfileList[0];
-				if (!userProfile.value.disablePublishEmail) {
-				    var vdjWebappUrl = agaveSettings.vdjBackbone
-					+ '/project/' + projectUuid;
-				    emailIO.sendGenericEmail(userProfile.value.email,
-							     'VDJServer project has been unpublished',
-							     'The VDJServer project "' + projectName + '" has been unpublished from community data.'
-							     + ' The project now resides among your private projects and can be edited.'
-							     + '<br>'
-							     + 'You can view the project with the link below:'
-							     + '<br>'
-							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
-							     );
-				}
-			    });
-                    };
-		});
+                var promises = [];
+		for (var i = 0; i < projectUsernames.length; i++) {
+                    var username = projectUsernames[i];
+		    promises[i] = agaveIO.getUserProfile(username)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disablePublishEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/project/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
+							 'VDJServer project has been unpublished',
+							 'The VDJServer project "' + projectName + '" has been unpublished from community data.'
+							 + ' The project now resides among your private projects and can be edited.'
+							 + '<br>'
+							 + 'You can view the project with the link below:'
+							 + '<br>'
+							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							);
+			    }
+			});
+                }
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
 	    })
             .then(function() {
 		console.log('VDJ-API INFO: ProjectController.unpublishProject - done, project ' + projectUuid + ' has been unpublished.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
             });
     });
-*/
 
     //
     // Add user to a project by giving them permissions on all of the project objects.
@@ -526,7 +525,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', start addUsernameToProjectTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start addUsernameToProjectTask: ' + username);
 
 	ServiceAccount.getToken()
 	    .then(function() {
@@ -538,38 +537,27 @@ ProjectQueueManager.processProjects = function() {
 		return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid, true);
 		}) */
 		// enumerate file list
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToMetadataPermissions for project ' + projectUuid);
 			
 		return agaveIO.enumerateFileListings(projectUuid);
 	    })
             .then(function(fileListings) {
 		// set permissions
 		//console.log(fileListings);
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - enumerateFileListings for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager.addUsernameToProjectTask - enumerateFileListings for project ' + projectUuid);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, filePath) {
-                    return function() {
-			return agaveIO.setFilePermissions(
-			    token,
-                            username,
-                            'ALL',
-			    false,
-                            filePath
-			);
-                    };
-		}
-
 		for (var i = 0; i < fileListings.length; i++) {
-                    promises[i] = createAgaveCall(
-			username,
+                    promises[i] = agaveIO.setFilePermissions(
 			ServiceAccount.accessToken(),
-			'/projects/' + projectUuid + fileListings[i]
-                    );
+                        username,
+                        'ALL',
+			false,
+                        '/projects/' + projectUuid + fileListings[i]
+		    );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
 		// END HOTFIX
             })
             .then(function() {
@@ -590,11 +578,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done addUsernameToProjectTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.addUsernameToProjectTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -609,43 +597,32 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', start addUsernameToProjectFileMetadataTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start addUsernameToProjectFileMetadataTask: ' + username);
 
 	ServiceAccount.getToken()
 	    .then(function() {
 		// get file metadata pems
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToFullFilePermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToFullFilePermissions for project ' + projectUuid);
 
 		return agaveIO.getProjectFileMetadata(projectUuid);
             })
             .then(function(projectFileMetadataPermissions) {
 		// (loop) add to file metadata pems
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - getProjectFileMetadata for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager.addUsernameToProjectTask - getProjectFileMetadata for project ' + projectUuid);
 
 		var metadata = new MetadataPermissions();
 		var uuids = metadata.getUuidsFromMetadataResponse(projectFileMetadataPermissions);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, metadataUuid) {
-                    return function() {
-			return agaveIO.addUsernameToMetadataPermissions(
-                            username,
-                            token,
-                            metadataUuid
-			);
-                    };
-		}
-
 		for (var i = 0; i < uuids.length; i++) {
-                    promises[i] = createAgaveCall(
-			username,
+                    promises[i] = agaveIO.addUsernameToMetadataPermissions(
+                        username,
 			ServiceAccount.accessToken(),
 			uuids[i]
                     );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
                 taskQueue
@@ -657,11 +634,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectFileMetadataTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done addUsernameToProjectFileMetadataTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.addUsernameToProjectTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -676,44 +653,33 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', start addUsernameToProjectJobsTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start addUsernameToProjectJobsTask: ' + username);
 
 	ServiceAccount.getToken()
 	    .then(function() {
 		// get jobs for project
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToMetadataPermissions for project ' + projectUuid);
 
 		//return agaveIO.getJobMetadataForProject(projectUuid);
 		return agaveIO.getJobsForProject(projectUuid);
             })
             .then(function(jobMetadatas) {
 		// (loop) add to job permissions
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - getJobsForProject for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager.addUsernameToProjectTask - getJobsForProject for project ' + projectUuid);
 
 		var metadata = new MetadataPermissions();
 		var uuids = metadata.getJobUuidsFromProjectResponse(jobMetadatas);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, uuid) {
-                    return function() {
-			return agaveIO.addUsernameToJobPermissions(
-                            username,
-                            token,
-                            uuid
-			);
-                    };
-		}
-
 		for (var i = 0; i < uuids.length; i++) {
-                    promises[i] = createAgaveCall(
+                    promises[i] = agaveIO.addUsernameToJobPermissions(
 			username,
 			ServiceAccount.accessToken(),
 			uuids[i]
                     );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
                 taskQueue
@@ -725,11 +691,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectJobsTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done addUsernameToProjectJobsTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.addUsernameToProjectTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -744,20 +710,20 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', start addUsernameToProjectMetadataTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start addUsernameToProjectMetadataTask: ' + username);
 
 	ServiceAccount.getToken()
 	    .then(function() {
 		// get all project associated metadata
 		// TODO: this technically should be sufficient for all metadata except for the sole project metadata entry
 		// but not currently as many old metadata entries are missing the associationId
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToJobPermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToJobPermissions for project ' + projectUuid);
 
 		return agaveIO.getAllProjectAssociatedMetadata(projectUuid);
             })
             .then(function(allMetadatas) {
 		// (loop) add permissions for user
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - getAllProjectAssociatedMetadata for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToProjectMetadataTask, ' + allMetadatas.length + ' records for project ' + projectUuid);
 
 		var metadata = new MetadataPermissions();
 		var uuids = metadata.getUuidsFromMetadataResponse(allMetadatas);
@@ -766,30 +732,19 @@ ProjectQueueManager.processProjects = function() {
 		//console.log(uuids);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, uuid) {
-                    return function() {
-			return agaveIO.addUsernameToMetadataPermissions(
-                            username,
-                            token,
-                            uuid
-			);
-                    };
-		}
-
 		for (var i = 0; i < uuids.length; i++) {
-                    promises[i] = createAgaveCall(
+                    promises[i] = agaveIO.addUsernameToMetadataPermissions(
 			username,
 			ServiceAccount.accessToken(),
 			uuids[i]
                     );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
 		// Add new username to project metadata pems
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - getMetadataPermissions for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager.addUsernameToProjectMetadataTask - getMetadataPermissions for project ' + projectUuid);
 
 		return agaveIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), projectUuid);
             })
@@ -803,11 +758,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectMetadataTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done addUsernameToProjectMetadataTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.addUsernameToProjectMetadataTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -822,7 +777,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', start addUsernameToProjectSendEmailTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start addUsernameToProjectSendEmailTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function() {
@@ -838,17 +793,18 @@ ProjectQueueManager.processProjects = function() {
 		var metadataPermissions = new MetadataPermissions();
 		var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
-		var promises = projectUsernames.map(function(user) {
-                    return function() {
-			return agaveIO.getUserProfile(user)
-			    .then(function(userProfileList) {
-				if (userProfileList.length == 0) return;
-				if (username == agaveSettings.guestAccountKey) return;
-				var userProfile = userProfileList[0];
-				if (!userProfile.value.disableUserEmail) {
-				    var vdjWebappUrl = agaveSettings.vdjBackbone
-					+ '/project/' + projectUuid;
-				    emailIO.sendGenericEmail(userProfile.value.email,
+                var promises = [];
+		for (var i = 0; i < projectUsernames.length; i++) {
+                    var user = projectUsernames[i];
+		    promises[i] = agaveIO.getUserProfile(user)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disableUserEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/project/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
 							 'VDJServer user added to project',
 							 'VDJServer user "' + username + '" has been added to project "' + projectData.projectName + '".'
 							 + '<br>'
@@ -856,12 +812,11 @@ ProjectQueueManager.processProjects = function() {
 							 + '<br>'
 							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
 							);
-				}
-			    });
-                    };
-		});
+			    }
+			});
+                }
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
 	    })
             .then(function() {
 		// send notification
@@ -874,12 +829,12 @@ ProjectQueueManager.processProjects = function() {
                 );
 	    })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername, project ' + projectUuid + ', done addUsernameToProjectSendEmailTask: ' + username);
-		console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - complete for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done addUsernameToProjectSendEmailTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager.addUsernameToProjectSendEmailTask - complete for project ' + projectUuid);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.addUsernameToProjectSendEmailTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -905,7 +860,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start removeUsernameFromProjectTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function(token) {
@@ -923,11 +878,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done removeUsernameFromProjectTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.removeUsernameFromProjectTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -942,7 +897,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectFilesTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start removeUsernameFromProjectFilesTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function(token) {
@@ -960,11 +915,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectFilesTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done removeUsernameFromProjectFilesTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.removeUsernameFromProjectFilesTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -979,7 +934,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectMetadataTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start removeUsernameFromProjectMetadataTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function(token) {
@@ -992,28 +947,15 @@ ProjectQueueManager.processProjects = function() {
 		var uuids = metadata.getUuidsFromMetadataResponse(projectMetadata);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, uuid) {
-
-                    return function() {
-
-			return agaveIO.removeUsernameFromMetadataPermissions(
-                            username,
-                            token,
-                            uuid
-			);
-                    };
-		}
-
 		for (var i = 0; i < uuids.length; i++) {
-                    promises[i] = createAgaveCall(
+                    promises[i] = agaveIO.removeUsernameFromMetadataPermissions(
 			username,
 			ServiceAccount.accessToken(),
 			uuids[i]
                     );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
 		// next task
@@ -1026,11 +968,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectMetadataTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done removeUsernameFromProjectMetadataTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.removeUsernameFromProjectMetadataTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -1045,7 +987,7 @@ ProjectQueueManager.processProjects = function() {
 	var username = projectData.username;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectJobsTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start removeUsernameFromProjectJobsTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function() {
@@ -1058,28 +1000,15 @@ ProjectQueueManager.processProjects = function() {
 		var uuids = metadata.getJobUuidsFromProjectResponse(jobMetadatas);
 
 		var promises = [];
-
-		function createAgaveCall(username, token, uuid) {
-
-                    return function() {
-
-			return agaveIO.removeUsernameFromJobPermissions(
-                            username,
-                            token,
-                            uuid
-			);
-                    };
-		}
-
 		for (var i = 0; i < uuids.length; i++) {
-                    promises[i] = createAgaveCall(
+                    promises[i] = agaveIO.removeUsernameFromJobPermissions(
 			username,
 			ServiceAccount.accessToken(),
 			uuids[i]
                     );
 		}
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
 		// next task
@@ -1092,11 +1021,11 @@ ProjectQueueManager.processProjects = function() {
                     ;
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectJobsTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done removeUsernameFromProjectJobsTask: ' + username);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.removeUsernameFromProjectJobsTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -1112,44 +1041,43 @@ ProjectQueueManager.processProjects = function() {
 	var projectUsernames = projectData.projectUsernames;
 	var msg;
 
-	console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', start removeUsernameFromProjectEmailTask: ' + username);
+	console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', start removeUsernameFromProjectEmailTask: ' + username);
 
 	ServiceAccount.getToken()
             .then(function() {
 		// send emails
-		var promises = projectUsernames.map(function(user) {
-                    return function() {
-			return agaveIO.getUserProfile(user)
-			    .then(function(userProfileList) {
-				if (userProfileList.length == 0) return;
-				if (username == agaveSettings.guestAccountKey) return;
-				var userProfile = userProfileList[0];
-				if (!userProfile.value.disableUserEmail) {
-				    var vdjWebappUrl = agaveSettings.vdjBackbone
-					+ '/project/' + projectUuid;
-				    emailIO.sendGenericEmail(userProfile.value.email,
-							     'VDJServer user removed from project',
-							     'VDJServer user "' + username + '" has been removed from project ' + projectUuid + '.'
-							     + '<br>'
-							     + 'You can view the project with the link below:'
-							     + '<br>'
-							     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
-							    );
-				}
-			    });
-                    };
-		});
+                var promises = []
+		for (var i = 0; i < projectUsernames.length; i++) {
+                    var user = projectUsernames[i];
+                    promises[i] = agaveIO.getUserProfile(user)
+			.then(function(userProfileList) {
+			    if (userProfileList.length == 0) return;
+			    if (username == agaveSettings.guestAccountKey) return;
+			    var userProfile = userProfileList[0];
+			    if (!userProfile.value.disableUserEmail) {
+				var vdjWebappUrl = agaveSettings.vdjBackbone
+				    + '/project/' + projectUuid;
+				emailIO.sendGenericEmail(userProfile.value.email,
+							 'VDJServer user removed from project',
+							 'VDJServer user "' + username + '" has been removed from project ' + projectUuid + '.'
+							 + '<br>'
+							 + 'You can view the project with the link below:'
+							 + '<br>'
+							 + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+							);
+			    }
+			});
+                }
 
-		return promises.reduce(Q.when, new Q());
+                return Promise.allSettled(promises);
             })
             .then(function() {
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername, project ' + projectUuid + ', done removeUsernameFromProjectEmailTask: ' + username);
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - removeUsernameFromJobPermissions for project ' + projectUuid);
-		console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - complete for project ' + projectUuid);
+		console.log('VDJ-API INFO: ProjectQueueManager, project ' + projectUuid + ', done removeUsernameFromProjectEmailTask: ' + username);
+		console.log('VDJ-API INFO: ProjectQueueManager - removeUsernameFromJobPermissions complete for project ' + projectUuid);
 		done();
             })
-            .fail(function(error) {
-		if (!msg) msg = 'VDJ-API ERROR: PermissionsController.addPermissionsForUsername - project ' + projectUuid + ' error ' + error;
+            .catch(function(error) {
+		if (!msg) msg = 'VDJ-API ERROR: ProjectQueueManager.removeUsernameFromProjectEmailTask - project ' + projectUuid + ' error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
 		done(new Error(msg));
@@ -1173,6 +1101,9 @@ ProjectQueueManager.processProjects = function() {
     // in small steps to allow easier recovery from errors. Most of the
     // complexity of these tasks involves the rearrangement data.
     //
+    // The load records keep track of the rearrangement collection, so
+    // that we can support separate load and query collections.
+    //
     // 1. check if projects to be loaded
     // 2. load repertoire metadata
     // 3. check if rearrangement data to be loaded
@@ -1185,7 +1116,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
                 if (projectList.length > 0) {
@@ -1202,7 +1133,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.checkProjectsToLoadTask, task done.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.checkProjectsToLoadTask - error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -1219,7 +1150,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
                 // look for project that needs repertoire metadata to be loaded
                 for (var i = 0; i < projectList.length; ++i) {
@@ -1245,7 +1176,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, load repertoire metadata for project: ' + projectUuid);
 
                 // gather the repertoire objects
-                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
                     .then(function(repertoireMetadata) {
                         //console.log(JSON.stringify(repertoireMetadata));
 	                console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, gathered ' + repertoireMetadata.length
@@ -1256,7 +1187,7 @@ ProjectQueueManager.processProjects = function() {
                         // insert repertoires into database
                         // TODO: we should use RestHeart meta/v3 API but we are getting errors
                         // TODO: using direct access to MongoDB for now
-                        return mongoIO.loadRepertoireMetadata(repertoireMetadata);
+                        return mongoIO.loadRepertoireMetadata(repertoireMetadata, mongoSettings.loadCollection);
                     })
                     .then(function(result) {
 	                console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, repertoire metadata is loaded for project: ' + projectUuid);
@@ -1286,7 +1217,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, task done.');
 		done();
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.loadRepertoireMetadataTask - error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -1303,7 +1234,7 @@ ProjectQueueManager.processProjects = function() {
 
 	console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, ' + projectList.length + ' project(s) to be loaded.');
 
@@ -1327,7 +1258,7 @@ ProjectQueueManager.processProjects = function() {
 	        console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, setup rearrangement data load for project: ' + projectUuid);
 
                 // gather the repertoire objects
-                return agaveIO.gatherRepertoireMetadataForProject(projectUuid)
+                return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
                     .then(function(_repertoireMetadata) {
                         repertoireMetadata = _repertoireMetadata;
                         //console.log(JSON.stringify(repertoireMetadata));
@@ -1340,7 +1271,7 @@ ProjectQueueManager.processProjects = function() {
                         }
 
                         // check if there are existing rearrangement load records
-                        return agaveIO.getRearrangementsToBeLoaded(projectUuid);
+                        return agaveIO.getRearrangementsToBeLoaded(projectUuid, mongoSettings.loadCollection);
                     })
                     .then(function(rearrangementLoad) {
                         if (!rearrangementLoad) return;
@@ -1350,22 +1281,38 @@ ProjectQueueManager.processProjects = function() {
 	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, create rearrangement load records for project: ' + projectUuid);
 		            var promises = [];
 
-		            function createAgaveCall(projectUuid, repertoire_id) {
-                                return function() {
-			            return agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id);
-                                };
-		            }
-
 		            for (var i = 0; i < repertoireMetadata.length; i++) {
-                                promises[i] = createAgaveCall(projectUuid, repertoireMetadata[i]['repertoire_id']);
+                                var repertoire_id = repertoireMetadata[i]['repertoire_id'];
+			        promises[i] = agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id, mongoSettings.loadCollection);
 		            }
 
-		            return promises.reduce(Q.when, new Q());
+                            return Promise.allSettled(promises);
                         } else if (rearrangementLoad.length != repertoireMetadata.length) {
-                            msg = 'VDJ-API ERROR: projectQueueManager.checkRearrangementsToLoadTask, number of repertoires ('
+                            msg = 'VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, number of repertoires ('
                                 + repertoireMetadata.length + ') is not equal to number of rearrangement load records ('
                                 + rearrangementLoad.length + ') for project: ' + projectUuid;
-                            return;
+                            console.log(msg);
+	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, create missing rearrangement load records for project: ' + projectUuid);
+
+		            var promises = [];
+
+                            var idx = 0;
+		            for (var i = 0; i < repertoireMetadata.length; i++) {
+                                var found = false;
+                                for (var j = 0; j < rearrangementLoad.length; j++) {
+                                    if (rearrangementLoad[j]['value']['repertoire_id'] == repertoireMetadata[i]['repertoire_id']) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (! found) {
+                                    var repertoire_id = repertoireMetadata[i]['repertoire_id'];
+			            promises[idx] = agaveIO.createRearrangementLoadMetadata(projectUuid, repertoire_id, mongoSettings.loadCollection);
+                                    idx++;
+                                }
+		            }
+
+                            return Promise.allSettled(promises);
                         } else {
 	                    console.log('VDJ-API INFO: projectQueueManager.checkRearrangementsToLoadTask, rearrangement load records already created for project: ' + projectUuid);
                             return;
@@ -1385,7 +1332,7 @@ ProjectQueueManager.processProjects = function() {
 		    done();
                 }
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.checkRearrangementsToLoadTask - error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);
@@ -1398,16 +1345,18 @@ ProjectQueueManager.processProjects = function() {
 	var msg = null;
         var projectLoad = null;
         var projectUuid = null;
+        var rearrangementLoad = null;
         var repertoireMetadata = null;
         var repertoire = null;
         var dataLoad = null;
         var primaryDP = null;
         var jobOutput = null;
+        var allProjectsLoaded = false;
         var allRearrangementsLoaded = false;
 
 	console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, task started.');
 
-        agaveIO.getProjectsToBeLoaded()
+        agaveIO.getProjectsToBeLoaded(mongoSettings.loadCollection)
 	    .then(function(projectList) {
 	        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, ' + projectList.length + ' project(s) to be loaded.');
 
@@ -1419,19 +1368,33 @@ ProjectQueueManager.processProjects = function() {
                         break;
                     }
                 }
-                return;
-            })
-            .then(function() {
+                if (projectList.length == 0) allProjectsLoaded = true;
+
                 // we did not find one, so all the rearrangement data is loaded
                 if (! projectLoad) {
 	            console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, all rearrangement data is loaded.');
                     allRearrangementsLoaded = true;
-                    return null;
+
+                    // but the project is to be loaded, check to see if all is done and update
+                    for (var i = 0; i < projectList.length; ++i) {
+                        var proj = projectList[i];
+                        if (proj['value']['repertoireMetadataLoaded'] && proj['value']['rearrangementDataLoaded']) {
+                            console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, project completely loaded: ' + proj.uuid);
+                            proj.value.isLoaded = true;
+                            return agaveIO.updateMetadata(proj.uuid, proj.name, proj.value, proj.associationIds);
+                        }
+                    }
                 }
 
+                return;
+            })
+            .then(function() {
+                if (! projectLoad) return;
+
                 // check if there are existing rearrangement load records
-                return agaveIO.getRearrangementsToBeLoaded(projectUuid)
-                    .then(function(rearrangementLoad) {
+                return agaveIO.getRearrangementsToBeLoaded(projectUuid, mongoSettings.loadCollection)
+                    .then(function(_rearrangementLoad) {
+                        rearrangementLoad = _rearrangementLoad;
                         if (! rearrangementLoad || rearrangementLoad.length == 0) {
                             msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, project has no rearrangement load records: ' + projectUuid;
                             return null;
@@ -1440,6 +1403,11 @@ ProjectQueueManager.processProjects = function() {
                         console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, gathered ' + rearrangementLoad.length
                                     + ' rearrangement load records for project: ' + projectUuid);
 
+                        var loadedCount = 0;
+                        for (var i = 0; i < rearrangementLoad.length; ++i)
+                            if (rearrangementLoad[i]['value']['isLoaded'])
+                                ++loadedCount;
+                                
                         for (var i = 0; i < rearrangementLoad.length; ++i) {
                             if (! rearrangementLoad[i]['value']['isLoaded']) {
                                 dataLoad = rearrangementLoad[i];
@@ -1447,7 +1415,11 @@ ProjectQueueManager.processProjects = function() {
                             }
                         }
 
-                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid);
+                        console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, ' + loadedCount
+                                    + ' of the total ' + rearrangementLoad.length
+                                    + ' rearrangement load records have been loaded.');
+
+                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true);
                     })
             })
             .then(function(_repertoireMetadata) {
@@ -1464,6 +1436,13 @@ ProjectQueueManager.processProjects = function() {
 
                 //console.log(dataLoad);
                 repertoireMetadata = _repertoireMetadata;
+
+                if (repertoireMetadata.length != rearrangementLoad.length) {
+                    msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask, number (' + rearrangementLoad.length
+                        + ') of rearrangement load records is not equal to number (' + repertoireMetadata.length
+                        + ') of repertoires.';
+                    return null;
+                }
 
                 console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, rearrangement data load: '
                             + dataLoad['uuid'] + ' for repertoire: ' + dataLoad['value']['repertoire_id']
@@ -1549,7 +1528,7 @@ ProjectQueueManager.processProjects = function() {
 		    done(new Error(msg));
                 } else {
                     // if not all loaded trigger start at beginning and check for more
-                    if (allRearrangementsLoaded) {
+                    if (allRearrangementsLoaded && allProjectsLoaded) {
                         console.log('VDJ-API INFO: projectQueueManager.rearrangementLoadTask, all loads done, pausing queue.');
                     }
                     else {
@@ -1564,7 +1543,7 @@ ProjectQueueManager.processProjects = function() {
 		    done();
                 }
             })
-            .fail(function(error) {
+            .catch(function(error) {
 		if (!msg) msg = 'VDJ-API ERROR: projectQueueManager.rearrangementLoadTask - error ' + error;
 		console.error(msg);
 		webhookIO.postToSlack(msg);

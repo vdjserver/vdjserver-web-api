@@ -2,8 +2,8 @@
 'use strict';
 
 //
-// telemetryController.js
-// Handle telemetry end point
+// emailSettings.js
+// Settings for sending email with nodemailer
 //
 // VDJServer Analysis Portal
 // VDJ API Service
@@ -27,24 +27,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-var TelemetryController = {};
-module.exports = TelemetryController;
+module.exports = {
 
-// Controllers
-var apiResponseController = require('./apiResponseController');
+    // Email
+    fromAddress: process.env.EMAIL_ADDRESS,
+    replyToAddress: process.env.REPLYTO_EMAIL_ADDRESS,
+    feedbackAddress: process.env.FEEDBACK_EMAIL_ADDRESS,
+    hostname: process.env.POSTFIX_HOSTNAME,
+    relayHost: process.env.POSTFIX_RELAYHOST
 
-var webhookIO = require('../vendor/webhookIO');
-
-// Retrieves a new user token from Agave and returns it to the client
-TelemetryController.recordErrorTelemetry = function(request, response) {
-
-    // the user profile is set from the authorization check
-    var telemetry = request.body.telemetry;
-    telemetry['username'] = request.user.username;
-    telemetry['email'] = request.user.email;
-
-    console.error('TelemetryController.recordErrorTelemetry - error - ' + JSON.stringify(telemetry));
-    webhookIO.postToSlack(JSON.stringify(telemetry, null, 2));
-
-    apiResponseController.sendSuccess('', response);
 };

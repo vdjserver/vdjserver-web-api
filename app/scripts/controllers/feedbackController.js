@@ -83,7 +83,7 @@ FeedbackController.createFeedback = function(request, response) {
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);
 	    return;
         })
-        .fail(function(error) {
+        .catch(function(error) {
 	    var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error occured while processing feedback. Feedback is: ' + JSON.stringify(feedback) + ' error: ' + error;
             console.error(msg);
 	    webhookIO.postToSlack(msg);
@@ -140,7 +140,7 @@ FeedbackController.createPublicFeedback = function(request, response) {
 		    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
 		    return;
 		})
-		.fail(function(error) {
+		.catch(function(error) {
 		    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
 			+ JSON.stringify(feedback) + ' error: ' + error;
 		    console.error(msg);

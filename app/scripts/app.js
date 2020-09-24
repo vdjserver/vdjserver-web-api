@@ -39,11 +39,13 @@ var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
+var airr = require('./vendor/airr');
 
 // Express app
 var app = module.exports = express();
 
 var webhookIO = require('./vendor/webhookIO');
+var mongoSettings = require('./config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
@@ -104,6 +106,9 @@ for (var obj in airr_spec) {
     }
 }
 
+console.log('VDJ-API INFO: Using query collection suffix: ' + mongoSettings.queryCollection);
+console.log('VDJ-API INFO: Using load collection suffix: ' + mongoSettings.loadCollection);
+
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,
 // as it is restricted to the TACC vdj account.
@@ -118,6 +123,10 @@ ServiceAccount.getToken()
     .then(function(serviceToken) {
         console.log('VDJ-API INFO: Successfully acquired service token.');
 
+        // wait for the AIRR spec to be dereferenced
+        return airr.schemaPromise();
+    })
+    .then(function() {
         // dereference the AIRR spec
         return $RefParser.dereference(airr_spec);
     })
@@ -151,6 +160,7 @@ ServiceAccount.getToken()
             errorMiddleware: function(err, req, res, next) {
                 console.log('Got an error!');
                 console.log(JSON.stringify(err));
+                //console.trace("Here I am!");
                 res.status(err.status).json(err.errors);
             },
             securityHandlers: {
@@ -175,6 +185,8 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: projectController.createProject,
+                exportMetadata: projectController.exportMetadata,
+                importMetadata: projectController.importMetadata,
                 publishProject: projectController.publishProject,
                 unpublishProject: projectController.unpublishProject,
                 loadProject: projectController.loadProject,
@@ -200,7 +212,7 @@ ServiceAccount.getToken()
             projectQueueManager.checkRearrangementLoad();
         });
     })
-    .fail(function(error) {
+    .catch(function(error) {
         var msg = 'VDJ-API ERROR: Error occurred while initializing API service.\nSystem may need to be restarted.\n' + error;
         console.error(msg);
         webhookIO.postToSlack(msg);
