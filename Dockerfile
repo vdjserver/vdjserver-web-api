@@ -10,8 +10,7 @@ MAINTAINER VDJServer <vdjserver@utsouthwestern.edu>
 #ENV HTTPS_PROXY 'https://proxy.swmed.edu:3128/'
 
 # Install OS Dependencies
-RUN DEBIAN_FRONTEND='noninteractive' apt-get update
-RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y \
+RUN DEBIAN_FRONTEND='noninteractive' apt-get update && DEBIAN_FRONTEND='noninteractive' apt-get install -y \
     make \
     gcc g++ \
     redis-server \
@@ -20,14 +19,6 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y \
     supervisor \
     wget \
     xz-utils
-
-# node
-RUN wget https://nodejs.org/dist/v8.10.0/node-v8.10.0-linux-x64.tar.xz
-RUN tar xf node-v8.10.0-linux-x64.tar.xz
-RUN cp -rf /node-v8.10.0-linux-x64/bin/* /usr/bin
-RUN cp -rf /node-v8.10.0-linux-x64/lib/* /usr/lib
-RUN cp -rf /node-v8.10.0-linux-x64/include/* /usr/include
-RUN cp -rf /node-v8.10.0-linux-x64/share/* /usr/share
 
 # Setup postfix
 # The postfix install won't respect noninteractivity unless this config is set beforehand.
@@ -39,6 +30,15 @@ COPY docker/scripts/postfix-config-replace.sh /root/postfix-config-replace.sh
 # Debian vociferously complains if you try to install postfix and sendmail at the same time.
 RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q \
     postfix
+
+# node
+ENV NODE_VER v12.18.3
+RUN wget https://nodejs.org/dist/$NODE_VER/node-$NODE_VER-linux-x64.tar.xz
+RUN tar xf node-$NODE_VER-linux-x64.tar.xz
+RUN cp -rf /node-$NODE_VER-linux-x64/bin/* /usr/bin
+RUN cp -rf /node-$NODE_VER-linux-x64/lib/* /usr/lib
+RUN cp -rf /node-$NODE_VER-linux-x64/include/* /usr/include
+RUN cp -rf /node-$NODE_VER-linux-x64/share/* /usr/share
 
 ##################
 ##################
