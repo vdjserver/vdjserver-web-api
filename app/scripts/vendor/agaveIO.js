@@ -3510,7 +3510,7 @@ agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value
             return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, object['uuid']);
 	})
         .then(function() {
-            return object;
+            return Promise.resolve(object);
         });
 };
 

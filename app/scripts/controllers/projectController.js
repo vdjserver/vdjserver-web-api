@@ -629,14 +629,21 @@ ProjectController.importMetadata = function(request, response) {
 
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + samples.length + ' samples');
 
+            // we create a new function for the call so that the entry variable is still
+            // within scope for the then(), otherwise entry has a different value when
+            // the promises are performed in allSettled() below.
+            var agaveCall = function(entry) {
+                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
+                    .then(function(object) {
+                        entry['uuid'] = object['uuid'];
+                    });
+            }
+
             // create samples
             var promises = [];
 	    for (var i = 0; i < samples.length; i++) {
                 var entry = samples[i];
-                promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
-                    .then(function(object) {
-                        entry['uuid'] = object['uuid'];
-                    });
+                promises[i] = agaveCall(entry);
             }
 
             return Promise.allSettled(promises);
@@ -683,14 +690,21 @@ ProjectController.importMetadata = function(request, response) {
 
 	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + data_processes.length + ' data processing');
 
+            // we create a new function for the call so that the entry variable is still
+            // within scope for the then(), otherwise entry has a different value when
+            // the promises are performed in allSettled() below.
+            var agaveCall = function(entry) {
+                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
+                    .then(function(object) {
+                        entry['uuid'] = object['uuid'];
+                    });
+            }
+
             // create records
             var promises = [];
 	    for (var i = 0; i < data_processes.length; i++) {
                 var entry = data_processes[i];
-                promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
-                    .then(function(object) {
-                        entry['uuid'] = object['uuid'];
-                    });
+                promises[i] = agaveCall(entry);
             }
 
             return Promise.allSettled(promises);
