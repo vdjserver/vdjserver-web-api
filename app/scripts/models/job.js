@@ -63,7 +63,8 @@ Job.prototype.getJobNotification = function(projectUuid, jobName) {
 };
 
 Job.prototype.deconstructJobListingUrl = function(jobOutput) {
-    var archivePath = jobOutput._links.archiveData.href;
+    //var archivePath = jobOutput._links.archiveData.href;
+    var archivePath = jobOutput.archivePath;
 
     var splitArchivePath = archivePath.split('/');
 
