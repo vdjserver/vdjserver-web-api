@@ -16,6 +16,7 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
     var mailOptions = {
         to: recipientEmail,
         from: agaveSettings.fromAddress,
+        replyTo: agaveSettings.replyToAddress,
         subject: 'VDJ Password Reset',
         generateTextFromHTML: true,
         html: 'A VDJ password reset request has been submitted to vdjserver.org.'
@@ -40,8 +41,28 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
     var mailOptions = {
         to: recipientEmail,
         from: agaveSettings.fromAddress,
+        replyTo: agaveSettings.replyToAddress,
         subject: 'VDJServer.org Feedback',
         text: feedback,
+    };
+
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending feedback email.', error);
+            }
+        }
+    );
+};
+
+emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
+    var mailOptions = {
+        to: recipientEmail,
+        from: agaveSettings.fromAddress,
+        replyTo: agaveSettings.replyToAddress,
+        subject: 'VDJServer.org Feedback',
+        text: 'Thank you for your feedback! Someone will respond shortly. Your feedback text is shown below\n\n-----\n\n' + feedback,
     };
 
     transporter.sendMail(
@@ -65,6 +86,7 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
     var mailOptions = {
         to: recipientEmail,
         from: agaveSettings.fromAddress,
+        replyTo: agaveSettings.replyToAddress,
         subject: 'VDJServer Account Verification',
         generateTextFromHTML: true,
         html: 'Welcome to VDJServer.'
@@ -81,6 +103,27 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
         function(error /*, info*/) {
             if (error) {
                 console.log('Error sending account verification email.', error);
+            }
+        }
+    );
+};
+
+emailIO.sendGenericEmail = function(recipientEmail, subject, message) {
+
+    var mailOptions = {
+        to: recipientEmail,
+        from: agaveSettings.fromAddress,
+        replyTo: agaveSettings.replyToAddress,
+        subject: subject,
+        generateTextFromHTML: true,
+        html: message
+    };
+
+    transporter.sendMail(
+        mailOptions,
+        function(error /*, info*/) {
+            if (error) {
+                console.log('Error sending email.', error);
             }
         }
     );

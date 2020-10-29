@@ -55,12 +55,15 @@ FeedbackController.createFeedback = function(request, response) {
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
 
+	    // send acknowledgement
+	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);
         })
         .fail(function(error) {
             console.log('FeedbackController.createFeedback - event - failed to retrieve user profile. Feedback is: ' + JSON.stringify(feedback));
 
-            apiResponseController.sendError('Unable to find associated user profile with feedback.', response);
+            apiResponseController.sendError('Unable to find associated user profile with feedback.', 400, response);
         })
         ;
 };
@@ -102,6 +105,9 @@ FeedbackController.createPublicFeedback = function(request, response) {
             var emailFeedbackMessage = feedback.getEmailMessage();
 
             emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+
+	    // send acknowledgement
+	    emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
 
             //send the response
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);

@@ -15,6 +15,9 @@ var redisClient = kue.redis.createClient();
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
 
+// Processing
+var webhookIO = require('../vendor/webhookIO');
+
 // Node Libraries
 var Q = require('q');
 var moment = require('moment');
@@ -41,7 +44,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
     var queue = kue.createQueue();
 
     queue.process('fileUploadPoll', function(fileQueueJob, done) {
-        console.log('fileUploadPoll queue begin for ' + JSON.stringify(fileQueueJob.data));
+        console.log('VDJ-API INFO: fileUploadPoll queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.checkFileAvailability()
@@ -68,40 +71,49 @@ FilePermissionsQueueManager.processFileUploads = function() {
                     ;
             })
             .then(function() {
-                console.log('fileUploadPoll queue done for ' + JSON.stringify(fileQueueJob.data));
+                console.log('VDJ-API INFO: fileUploadPoll queue done for ' + JSON.stringify(fileQueueJob.data));
                 done();
             })
             .fail(function(error) {
-                console.log('fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.log(error.stack);
+		if (error == 'file transformation not complete') {
+                    console.log('VDJ-API INFO: fileUploadPoll queue for ' + JSON.stringify(fileQueueJob.data) + ', file transformation is not complete.');
 
-                // Stop retries after 20 minutes
-                var finishDatetime = moment(fileQueueJob.created_at, 'x').add(20, 'minutes');
-                var currentDatetime = moment();
+                    // Stop retries after 40 minutes
+                    var finishDatetime = moment(fileQueueJob.created_at, 'x').add(40, 'minutes');
+                    var currentDatetime = moment();
 
-                var overTimeLimit = currentDatetime.isAfter(finishDatetime);
+                    var overTimeLimit = currentDatetime.isAfter(finishDatetime);
 
-                if (overTimeLimit === true) {
-                    queue
-                        .create('fileUploadPermissions', fileQueueJob.data)
-                        .removeOnComplete(true)
-                        .attempts(5)
-                        .backoff({delay: 60 * 1000, type: 'fixed'})
-                        .save()
+                    if (overTimeLimit === true) {
+			console.log('VDJ-API INFO: fileUploadPoll queue - exceeded polling limit, continuing.');
+
+			queue
+                            .create('fileUploadPermissions', fileQueueJob.data)
+                            .removeOnComplete(true)
+                            .attempts(5)
+                            .backoff({delay: 60 * 1000, type: 'fixed'})
+                            .save()
                         ;
 
-                    done();
-                }
-                else {
-                    done(new Error('Agave error is: ' + error));
-                }
-
+			done();
+                    }
+                    else {
+			console.log('VDJ-API INFO: fileUploadPoll queue for ' + JSON.stringify(fileQueueJob.data) + ', re-polling.');
+			done(new Error(error));
+                    }
+		} else {
+                    var msg = 'VDJ-API ERROR: fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error;
+		    console.error(msg);
+		    //console.error(error.stack);
+		    webhookIO.postToSlack(msg);
+                    done(); // no retry
+		}
             })
             ;
     });
 
     queue.process('fileUploadPermissions', function(fileQueueJob, done) {
-        console.log('fileUploadPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
+        console.log('VDJ-API INFO: fileUploadPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.setAgaveFilePermissions()
@@ -124,12 +136,12 @@ FilePermissionsQueueManager.processFileUploads = function() {
                     ;
             })
             .then(function() {
-                console.log('fileUploadPermissions queue done for ' + JSON.stringify(fileQueueJob.data));
+                console.log('VDJ-API INFO: fileUploadPermissions queue done for ' + JSON.stringify(fileQueueJob.data));
                 done();
             })
             .fail(function(error) {
-		console.log('fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.log(error.stack);
+		console.error('VDJ-API ERROR: fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.error(error.stack);
 
                 app.emit(
                     'fileImportNotification',
@@ -145,7 +157,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
     });
 
     queue.process('fileUploadMetadata', function(fileQueueJob, done) {
-        console.log('fileUploadMetadata queue begin for ' + JSON.stringify(fileQueueJob.data));
+        console.log('VDJ-API INFO: fileUploadMetadata queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.createAgaveFileMetadata()
@@ -171,12 +183,12 @@ FilePermissionsQueueManager.processFileUploads = function() {
                     ;
             })
             .then(function() {
-                console.log('fileUploadMetadata queue done for ' + JSON.stringify(fileQueueJob.data));
+                console.log('VDJ-API INFO: fileUploadMetadata queue done for ' + JSON.stringify(fileQueueJob.data));
                 done();
             })
             .fail(function(error) {
-                console.log('fileUploadMetadata queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.log(error.stack);
+                console.error('VDJ-API ERROR: fileUploadMetadata queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.error(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })
@@ -185,7 +197,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
     });
 
     queue.process('fileUploadMetadataPermissions', function(fileQueueJob, done) {
-        console.log('fileUploadMetadataPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
+        console.log('VDJ-API INFO: fileUploadMetadataPermissions queue begin for ' + JSON.stringify(fileQueueJob.data));
 
         var fileUploadJob = new FileUploadJob(fileQueueJob.data);
         fileUploadJob.setMetadataPermissions()
@@ -208,12 +220,12 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 );
             })
             .then(function() {
-                console.log('fileUploadMetadataPermissions queue done for ' + JSON.stringify(fileQueueJob.data));
+                console.log('VDJ-API INFO: fileUploadMetadataPermissions queue done for ' + JSON.stringify(fileQueueJob.data));
                 done();
             })
             .fail(function(error) {
-                console.log('fileUploadMetadataPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.log(error.stack);
+                console.error('VDJ-API ERROR: fileUploadMetadataPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+		console.error(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })

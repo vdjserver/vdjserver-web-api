@@ -59,6 +59,9 @@ Job.prototype.getJobNotification = function(projectUuid, jobName) {
                ,
         'event': '*',
         'persistent': true,
+	'policy': {
+	    'saveOnFailure': true
+	}
     };
 };
 
@@ -77,25 +80,20 @@ Job.prototype.deconstructJobListingUrl = function(jobOutput) {
     };
 };
 
+// files we can ignore
 Job.prototype.isWhitelistedFiletype = function(filename) {
     var filenameSplit = filename.split('.');
     var fileExtension = filenameSplit[filenameSplit.length - 1];
     var doubleFileExtension = filenameSplit[filenameSplit.length - 2] + '.' + filenameSplit[filenameSplit.length - 1];
 
     // Whitelisted files
-    if (fileExtension === 'fasta'
-        ||
-        fileExtension === 'fastq'
-        ||
-        fileExtension === 'vdjml'
-        ||
-        doubleFileExtension === 'rc_out.tsv'
-    ) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    if (filename === '.') return true;
+    if (filename === '..') return true;
+    if (fileExtension === 'pid') return true;
+    if (filename === '.agave.archive') return true;
+    // if (doubleFileExtension === 'rc_out.tsv') return true;
+
+    return false;
 };
 
 module.exports = Job;

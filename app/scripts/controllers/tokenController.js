@@ -6,6 +6,7 @@ var apiResponseController = require('./apiResponseController');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
+var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Q = require('q');
@@ -16,11 +17,11 @@ module.exports = TokenController;
 // Retrieves a new user token from Agave and returns it to the client
 TokenController.getToken = function(request, response) {
 
-    console.log('TokenController.getToken - event - begin for ' + request.user.username);
+    console.log('VDJ-API INFO: TokenController.getToken - begin for ' + request.user.username);
 
     agaveIO.getUserVerificationMetadata(request.user.username)
         .then(function(userVerificationMetadata) {
-            console.log('TokenController.getToken - event - verification metadata for ' + request.user.username);
+            console.log('VDJ-API INFO: TokenController.getToken - verification metadata for ' + request.user.username);
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
                 return agaveIO.getToken(request.user);
             }
@@ -29,12 +30,14 @@ TokenController.getToken = function(request, response) {
             }
         })
         .then(function(agaveToken) {
-            console.log('TokenController.getToken - event - verification metadata for ' + request.user.username);
+            console.log('VDJ-API INFO: TokenController.getToken - verification metadata successful for ' + request.user.username);
+	    webhookIO.postToSlack('VDJ-API INFO: TokenController.getToken - successful for ' + request.user.username);
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
-            console.error('TokenController.getToken - error - username ' + request.user.username + ', error ' + error);
-
+            var msg = 'VDJ-API ERROR: TokenController.getToken - error - username ' + request.user.username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 401, response);
         });
 };
@@ -42,15 +45,17 @@ TokenController.getToken = function(request, response) {
 // Refreshes a user token from Agave and returns it to the client
 TokenController.refreshToken = function(request, response) {
 
-    console.log('TokenController.refreshToken - event - begin for ' + request.user.username);
+    console.log('VDJ-API INFO: TokenController.refreshToken - begin for ' + request.user.username);
 
     agaveIO.refreshToken(request.user)
         .then(function(agaveToken) {
-            console.log('TokenController.refreshToken - event - complete for ' + request.user.username);
+            console.log('VDJ-API INFO: TokenController.refreshToken - complete for ' + request.user.username);
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .fail(function(error) {
-            console.error('TokenController.refreshToken - error - username ' + request.user.username + ', error ' + error);
+            var msg = 'VDJ-API ERROR: TokenController.refreshToken - error - username ' + request.user.username + ', error ' + error;
+	    console.error(msg);
+	    webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 500, response);
         });
 };
