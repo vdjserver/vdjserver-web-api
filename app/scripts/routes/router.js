@@ -50,7 +50,7 @@ module.exports = function(app) {
     app.post(
         '/feedback',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
+        authController.authUser,
         feedbackController.createFeedback
     );
 
@@ -62,8 +62,8 @@ module.exports = function(app) {
     app.get(
         '/jobs/queue/pending',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromQuery,
+        authController.authUser,
+        authController.authForProjectFromQuery,
         jobsController.getPendingJobs
     );
 
@@ -71,8 +71,8 @@ module.exports = function(app) {
     app.post(
         '/jobs/queue',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromBody,
+        authController.authUser,
+        authController.authForProjectFromBody,
         jobsController.queueJob
     );
 
@@ -80,14 +80,14 @@ module.exports = function(app) {
     app.post(
         '/jobs/archive/:jobId',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
+        authController.authUser,
         jobsController.archiveJob
     );
 
     app.post(
         '/jobs/unarchive/:jobId',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
+        authController.authUser,
         jobsController.unarchiveJob
     );
 
@@ -95,8 +95,8 @@ module.exports = function(app) {
     app.post(
         '/notifications/files/import',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromQuery,
+        authController.authUser,
+        authController.authForProjectFromQuery,
         notificationsController.processFileImportNotifications
     );
 
@@ -126,9 +126,9 @@ module.exports = function(app) {
     app.post(
         '/permissions/metadata',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromBody,
-	authController.authForMetadataFromBody,
+        authController.authUser,
+        authController.authForProjectFromBody,
+        authController.authForMetadataFromBody,
         permissionsController.syncMetadataPermissionsWithProject
     );
 
@@ -136,9 +136,9 @@ module.exports = function(app) {
     app.post(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.verifyUserFromBody,
-	authController.authForProjectFromBody,
+        authController.authUser,
+        authController.verifyUserFromBody,
+        authController.authForProjectFromBody,
         permissionsController.addPermissionsForUsername
     );
 
@@ -146,9 +146,9 @@ module.exports = function(app) {
     app.delete(
         '/permissions/username',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.verifyUserFromBody,
-	authController.authForProjectFromBody,
+        authController.authUser,
+        authController.verifyUserFromBody,
+        authController.authForProjectFromBody,
         permissionsController.removePermissionsForUsername
     );
 
@@ -156,8 +156,8 @@ module.exports = function(app) {
     app.post(
         '/projects',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.verifyUserFromBody,
+        authController.authUser,
+        authController.verifyUserFromBody,
         projectController.createProject
     );
 
@@ -166,15 +166,15 @@ module.exports = function(app) {
     app.get(
         '/projects/:projectUuid/metadata/export',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
+        authController.authUser,
+        authController.authForProjectFromParams,
         projectController.exportMetadata
     );
     app.post(
         '/projects/:projectUuid/metadata/import',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
+        authController.authUser,
+        authController.authForProjectFromParams,
         projectController.importMetadata
     );
 
@@ -182,8 +182,8 @@ module.exports = function(app) {
     app.put(
         '/projects/:projectUuid/publish',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForProjectFromParams,
+        authController.authUser,
+        authController.authForProjectFromParams,
         projectController.publishProject
     );
 
@@ -191,8 +191,8 @@ module.exports = function(app) {
     app.put(
         '/projects/:projectUuid/unpublish',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
-	authController.authForUnpublishProjectFromParams,
+        authController.authUser,
+        authController.authForUnpublishProjectFromParams,
         projectController.unpublishProject
     );
 
@@ -206,7 +206,7 @@ module.exports = function(app) {
     app.post(
         '/telemetry',
         passport.authenticate('basic', {session: false}),
-	authController.authUser,
+        authController.authUser,
         telemetryController.recordErrorTelemetry
     );
 
