@@ -1,5 +1,31 @@
 'use strict';
 
+//
+// emailIO.js
+// Sending emails to users
+//
+// VDJServer Analysis Portal
+// VDJ API Service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
 var emailSettings = require('../config/emailSettings');
 var agaveSettings = require('../config/agaveSettings');
 var nodemailer    = require('nodemailer');
@@ -18,9 +44,9 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
         to: recipientEmail,
         from: emailSettings.fromAddress,
         replyTo: emailSettings.replyToAddress,
-        subject: 'VDJ Password Reset',
+        subject: 'VDJServer Password Reset',
         generateTextFromHTML: true,
-        html: 'A VDJ password reset request has been submitted to vdjserver.org.'
+        html: 'A password reset request has been submitted to vdjserver.org.'
               + '<br>'
               + 'Please go to <a href="' + passwordResetUrl + '">' + passwordResetUrl + '</a> to reset your password.'
               + '<br>'
@@ -90,13 +116,13 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
         replyTo: emailSettings.replyToAddress,
         subject: 'VDJServer Account Verification',
         generateTextFromHTML: true,
-        html: 'Welcome to VDJServer.'
+        html: 'Welcome to VDJServer!'
               + '<br>'
-              + 'Please verify your account "' + username + '" by clicking on the link below:'
+              + '<br>'
+              + 'Please verify your account "' + username + '" with verification code: ' + verificationId + ', or by clicking on the link below:'
+              + '<br>'
               + '<br>'
               + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
-              ,
-
     };
 
     transporter.sendMail(

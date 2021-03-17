@@ -31,6 +31,13 @@ var config = {};
 
 module.exports = config;
 
+function parseBoolean(value)
+{
+    if (value == 'true') return true;
+    else if (value == 1) return true;
+    else return false;
+}
+
 // General
 config.port = process.env.VDJ_API_PORT;
 config.sessionSecret = process.env.SESSION_SECRET;
@@ -42,17 +49,17 @@ config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
 config.recaptchaPublic = process.env.RECAPTCHA_PUBLIC;
-config.allowRecaptchaSkip = process.env.ALLOW_RECAPTCHA_SKIP;
+config.allowRecaptchaSkip = parseBoolean(process.env.ALLOW_RECAPTCHA_SKIP);
+if (config.allowRecaptchaSkip) console.log('VDJ-API WARNING: Recaptcha check is being skipped.');
 
 // Test settings
-config.useTestAccount = process.env.USE_TEST_ACCOUNT;
+config.useTestAccount = parseBoolean(process.env.USE_TEST_ACCOUNT);
 config.testAccountUsername = process.env.TEST_ACCOUNT_USERNAME;
+if (config.useTestAccount) console.log('VDJ-API WARNING: Test account (' + config.testAccountUsername + ') is enabled.');
 
 // Feedback Email address
 config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
 
 // Error/debug reporting
-config.debug = process.env.DEBUG_CONSOLE;
-if (config.debug == 'true') config.debug = true;
-else if (config.debug == 1) config.debug = true;
-else config.debug = false;
+config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
+if (config.debug) console.log('VDJ-API WARNING: Debug console messages are enabled.');

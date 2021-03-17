@@ -68,6 +68,9 @@ components:
       discriminator:
         propertyName: VDJServer
       type: object
+      required:
+        - g-recaptcha-response
+        - remoteip
       properties:
         g-recaptcha-response:
           type: string
@@ -105,6 +108,14 @@ components:
           type: string
         affiliation:
           type: string
+
+    UserAccountCreation:
+      description: Account creation with user and recaptcha objects
+      discriminator:
+        propertyName: VDJServer
+      allOf:
+        - $ref: '#/components/schemas/UserAccount'
+        - $ref: '#/components/schemas/Recaptcha'
 
     MetadataFile:
       description: AIRR metadata file.
@@ -731,11 +742,8 @@ paths:
         content:
           'application/json':
             schema:
-              required:
-                - user
-              properties:
-                user:
-                  $ref: '#/components/schemas/UserAccount'
+              $ref: '#/components/schemas/UserAccountCreation'
+
       responses:
         '200':
           description: Success.
@@ -743,6 +751,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserAccount'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/duplicate/{username}:
+    get:
+      description: check for duplicate username
+      operationId: duplicateUsername
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':
