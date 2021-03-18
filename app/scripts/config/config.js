@@ -2,7 +2,7 @@
 'use strict';
 
 //
-// configu.js
+// config.js
 // General configuration settings
 //
 // VDJServer Analysis Portal
@@ -56,6 +56,8 @@ if (config.allowRecaptchaSkip) console.log('VDJ-API WARNING: Recaptcha check is 
 config.useTestAccount = parseBoolean(process.env.USE_TEST_ACCOUNT);
 config.testAccountUsername = process.env.TEST_ACCOUNT_USERNAME;
 if (config.useTestAccount) console.log('VDJ-API WARNING: Test account (' + config.testAccountUsername + ') is enabled.');
+config.errorInjection = parseBoolean(process.env.ERROR_INJECTION);
+if (config.errorInjection) console.log('VDJ-API WARNING: Error injection is enabled.');
 
 // Feedback Email address
 config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
@@ -63,3 +65,19 @@ config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
 // Error/debug reporting
 config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
 if (config.debug) console.log('VDJ-API WARNING: Debug console messages are enabled.');
+
+// Error injection enabled
+if (config.errorInjection) {
+    global.errorInjection = require('../../../test/errorInjection');
+    config.performInjectError = function() {
+        return global.errorInjection.performInjectError();
+    };
+}
+config.injectError = function(error) {
+    if (config.errorInjection) return global.errorInjection.setCurrentError(error);
+    else return null;
+};
+config.shouldInjectError = function(value) {
+    if (config.errorInjection) return global.errorInjection.shouldInjectError(value);
+    else return false;
+};

@@ -83,6 +83,7 @@ var verifyRecaptcha = function(recaptchaData) {
 // 6. create user verification metadata record
 // 7. send user verification email
 UserController.createUser = async function(request, response) {
+    config.injectError(request.body.inject_error);
 
     // The API middleware verifies these are present
     var user = new User(request.body);
