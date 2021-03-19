@@ -32,6 +32,7 @@ module.exports = agaveIO;
 
 // Settings
 var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
 // Models
 var ServiceAccount = require('../models/serviceAccount');
@@ -269,6 +270,7 @@ agaveIO.sendCheckRequest = function(requestSettings, postData) {
 // Fetches a user token based on the supplied auth object
 // and returns the auth object with token data on success
 agaveIO.getToken = function(auth) {
+    if (config.shouldInjectError("agaveIO.getToken")) return config.performInjectError();
 
     var postData = 'grant_type=password&scope=PRODUCTION&username=' + auth.username + '&password=' + auth.password;
 
@@ -289,6 +291,8 @@ agaveIO.getToken = function(auth) {
 
 // Refreshes a token and returns it on success
 agaveIO.refreshToken = function(auth) {
+    if (config.shouldInjectError("agaveIO.refreshToken")) return config.performInjectError();
+
     var postData = 'grant_type=refresh_token&scope=PRODUCTION&refresh_token=' + auth.refresh_token;
 
     var requestSettings = {
@@ -307,6 +311,7 @@ agaveIO.refreshToken = function(auth) {
 };
 
 agaveIO.createUser = function(user) {
+    if (config.shouldInjectError("agaveIO.createUser")) return config.performInjectError();
 
     var postData = 'username='  + user.username
                  + '&password=' + user.password
@@ -337,6 +342,7 @@ agaveIO.createUser = function(user) {
 };
 
 agaveIO.getAgaveUserProfile = function(accessToken, username) {
+    if (config.shouldInjectError("agaveIO.getAgaveUserProfile")) return config.performInjectError();
 
     return ServiceAccount.getToken()
 	.then(function(token) {
@@ -361,6 +367,7 @@ agaveIO.getAgaveUserProfile = function(accessToken, username) {
 };
 
 agaveIO.createUserProfile = function(user, userAccessToken) {
+    if (config.shouldInjectError("agaveIO.createUserProfile")) return config.performInjectError();
 
     var postData = {
         name: 'profile',
@@ -391,6 +398,7 @@ agaveIO.createUserProfile = function(user, userAccessToken) {
 };
 
 agaveIO.getUserProfile = function(username) {
+    if (config.shouldInjectError("agaveIO.getUserProfile")) return config.performInjectError();
 
     return ServiceAccount.getToken()
 	.then(function(token) {
@@ -420,6 +428,7 @@ agaveIO.getUserProfile = function(username) {
 
 // generic metadata query
 agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
+    if (config.shouldInjectError("agaveIO.getMetadataForType")) return config.performInjectError();
 
     var models = [];
 
@@ -462,6 +471,7 @@ agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
 
 // generic metadata creation
 agaveIO.createMetadataForType = function(projectUuid, type, value) {
+    if (config.shouldInjectError("agaveIO.createMetadataForType")) return config.performInjectError();
 
     var postData = {
 	associationIds: [ projectUuid ],
@@ -497,6 +507,7 @@ agaveIO.createMetadataForType = function(projectUuid, type, value) {
 
 // create metadata record for a private project
 agaveIO.createProjectMetadata = function(project) {
+    if (config.shouldInjectError("agaveIO.createProjectMetadata")) return config.performInjectError();
 
     var postData = {
         name: 'private_project',
@@ -530,6 +541,7 @@ agaveIO.createProjectMetadata = function(project) {
 };
 
 agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
+    if (config.shouldInjectError("agaveIO.getProjectMetadata")) return config.performInjectError();
 
     var requestSettings = {
 	host:     agaveSettings.hostname,
@@ -1208,6 +1220,7 @@ agaveIO.removeAllFilePermissions = function(accessToken, filePath, recursive) {
 };
 
 agaveIO.createUserVerificationMetadata = function(username) {
+    if (config.shouldInjectError("agaveIO.createUserVerificationMetadata")) return config.performInjectError();
 
     var postData = {
         name: 'userVerification',
@@ -2282,6 +2295,7 @@ agaveIO.validateToken = function(token) {
 };
 
 agaveIO.isDuplicateUsername = function(username) {
+    if (config.shouldInjectError("agaveIO.isDuplicateUsername")) return config.performInjectError();
 
     return ServiceAccount.getToken()
 	.then(function(token) {

@@ -177,6 +177,7 @@ ServiceAccount.getToken()
 
                 // user
                 createUser: userController.createUser,
+                duplicateUsername: userController.duplicateUsername,
                 verifyUser: userController.verifyUser,
                 resendVerifyEmail: userController.resendVerificationEmail,
                 changePassword: userController.changePassword,

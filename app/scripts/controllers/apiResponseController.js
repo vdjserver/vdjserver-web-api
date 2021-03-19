@@ -19,12 +19,25 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
     }
 };
 
-// Sends a response with an error message to the client
+// Sends an error response with a message to the client
 ApiResponseController.sendError = function(errorMessage, errorCode, response) {
 
     var apiResponse = new ApiResponse();
     apiResponse.setError();
     apiResponse.message = errorMessage;
+
+    if (response) {
+        response.status(errorCode).json(apiResponse);
+    }
+};
+
+// Sends an error response with a message and message code to the client
+ApiResponseController.sendErrorWithCode = function(errorMessage, messageCode, errorCode, response) {
+
+    var apiResponse = new ApiResponse();
+    apiResponse.setError();
+    apiResponse.message = errorMessage;
+    apiResponse.messageCode = messageCode;
 
     if (response) {
         response.status(errorCode).json(apiResponse);
