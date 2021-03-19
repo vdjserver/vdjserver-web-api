@@ -1,0 +1,8 @@
+{
+  "username":"vdj-test1",
+  "password":"abc123",
+  "email":"vdjserver@utsouthwestern.edu",
+  "g-recaptcha-response": "skip_recaptcha",
+  "remoteip": "192.168.1.1",
+  "inject_error": "agaveIO.createUserVerificationMetadata"
+}

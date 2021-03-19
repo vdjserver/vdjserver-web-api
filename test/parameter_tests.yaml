@@ -1,0 +1,425 @@
+- name: fail_create_user_duplicate_username.json
+  data: fail_create_user_duplicate_username.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: duplicate username
+    status: error
+
+- name: fail_create_user_missing_email.json
+  data: fail_create_user_missing_email.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: email
+    errorCode: required.openapi.requestValidation
+    message: email
+    location: body
+
+- name: fail_create_user_missing_grecaptcha.json
+  data: fail_create_user_missing_grecaptcha.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: g-recaptcha-response
+    errorCode: required.openapi.requestValidation
+    message: g-recaptcha-response
+    location: body
+
+- name: fail_create_user_missing_password.json
+  data: fail_create_user_missing_password.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: password
+    errorCode: required.openapi.requestValidation
+    message: password
+    location: body
+
+- name: fail_create_user_missing_remoteip.json
+  data: fail_create_user_missing_remoteip.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: remoteip
+    errorCode: required.openapi.requestValidation
+    message: remoteip
+    location: body
+
+- name: fail_create_user_missing_username.json
+  data: fail_create_user_missing_username.json
+  endpoint: /user
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: username
+    errorCode: required.openapi.requestValidation
+    message: username
+    location: body
+
+- name: fail_verify_user_bad_uuid
+  data: foobar.json
+  endpoint: /user/verify/bogus4335
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: bogus4335
+    status: error
+
+- name: fail_verify_user_nonverify_uuid
+  data: foobar.json
+  endpoint: /user/verify/2034535426280329706-242ac113-0001-012
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: not a userVerification
+    status: error
+
+- name: fail_verify_user_nonsystem_uuid
+  data: foobar.json
+  endpoint: /user/verify/2186724052062310891-242ac113-0001-012
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: not owned by service account
+    status: error
+
+- name: fail_email_verify_bad_username
+  data: foobar.json
+  endpoint: /user/verify/email/bogus4335
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: bogus4335
+    status: error
+
+- name: fail_email_verify_already_verified
+  data: foobar.json
+  endpoint: /user/verify/email/schristley
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: user is already verified
+    status: error
+
+- name: fail_reset_password_missing_username
+  data: foobar.json
+  endpoint: /user/reset-password
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: username
+    errorCode: required.openapi.requestValidation
+    message: username
+    location: body
+
+- name: fail_reset_password_bad_username
+  data: fail_reset_password_bad_username.json
+  endpoint: /user/reset-password
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: bogus478
+    messageCode: invalid username
+    status: error
+
+- name: fail_reset_password_verify_bad_uuid
+  data: fail_reset_password_verify_bad_uuid.json
+  endpoint: /user/reset-password/verify
+  code: 400
+  auth: false
+  response_type: dict
+  response:
+    message: bogus478
+    status: error
+
+- name: fail_reset_password_verify_missing_uuid
+  data: fail_reset_password_verify_missing_uuid.json
+  endpoint: /user/reset-password/verify
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: reset_code
+    errorCode: required.openapi.requestValidation
+    message: reset_code
+    location: body
+
+- name: fail_reset_password_verify_missing_username
+  data: fail_reset_password_verify_missing_username.json
+  endpoint: /user/reset-password/verify
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: username
+    errorCode: required.openapi.requestValidation
+    message: username
+    location: body
+
+- name: fail_reset_password_verify_missing_password
+  data: fail_reset_password_verify_missing_password.json
+  endpoint: /user/reset-password/verify
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: new_password
+    errorCode: required.openapi.requestValidation
+    message: new_password
+    location: body
+
+- name: fail_reset_password_verify_no_user_profile
+  TODO: create scenario where user profile metadata does not exist
+  skip: true
+
+- name: fail_reset_password_verify_wrong_profile
+  TODO: create scenario where reset password metadata is for wrong user
+  skip: true
+
+- name: fail_change_password_missing_password
+  data: fail_change_password_missing_password.json
+  endpoint: /user/change-password
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: password
+    errorCode: required.openapi.requestValidation
+    message: password
+    location: body
+
+- name: fail_change_password_missing_new_password
+  data: fail_change_password_missing_new_password.json
+  endpoint: /user/change-password
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: new_password
+    errorCode: required.openapi.requestValidation
+    message: new_password
+    location: body
+
+- name: fail_change_password_wrong_password
+  data: fail_change_password_wrong_password.json
+  endpoint: /user/change-password
+  code: 400
+  auth: true
+  response_type: dict
+  response:
+    message: invalid_grant
+    messageCode: incorrect password
+    status: error
+
+- name: fail_change_password_no_user_profile
+  TODO: create scenario where user profile metadata does not exist
+  skip: true
+
+- name: fail_change_password_user_profile_missing_email
+  TODO: create scenario where user profile metadata does not exist
+  skip: true
+
+- name: fail_project_missing_collected_by.json
+  data: fail_project_missing_collected_by.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: collected_by
+    errorCode: required.openapi.requestValidation
+    message: collected_by
+    location: body
+
+- name: fail_project_missing_criteria.json
+  data: fail_project_missing_criteria.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: inclusion_exclusion_criteria
+    errorCode: required.openapi.requestValidation
+    message: inclusion_exclusion_criteria
+    location: body
+
+- name: fail_project_missing_grants.json
+  data: fail_project_missing_grants.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: grants
+    errorCode: required.openapi.requestValidation
+    message: grants
+    location: body
+
+- name: fail_project_missing_keywords.json
+  data: fail_project_missing_keywords.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: keywords_study
+    errorCode: required.openapi.requestValidation
+    message: keywords_study
+    location: body
+
+- name: fail_project_missing_lab_address.json
+  data: fail_project_missing_lab_address.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: lab_address
+    errorCode: required.openapi.requestValidation
+    message: lab_address
+    location: body
+
+- name: fail_project_missing_lab_name.json
+  data: fail_project_missing_lab_name.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: lab_name
+    errorCode: required.openapi.requestValidation
+    message: lab_name
+    location: body
+
+- name: fail_project_missing_pubs.json
+  data: fail_project_missing_pubs.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: pub_ids
+    errorCode: required.openapi.requestValidation
+    message: pub_ids
+    location: body
+
+- name: fail_project_missing_study_id.json
+  data: fail_project_missing_study_id.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: study_id
+    errorCode: required.openapi.requestValidation
+    message: study_id
+    location: body
+
+- name: fail_project_missing_study_title.json
+  data: fail_project_missing_study_title.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: study_title
+    errorCode: required.openapi.requestValidation
+    message: study_title
+    location: body
+
+- name: fail_project_missing_study_type.json
+  data: fail_project_missing_study_type.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: study_type
+    errorCode: required.openapi.requestValidation
+    message: study_type
+    location: body
+
+- name: fail_project_missing_submitted_by.json
+  data: fail_project_missing_submitted_by.json
+  endpoint: /project
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: submitted_by
+    errorCode: required.openapi.requestValidation
+    message: submitted_by
+    location: body
+
+- name: fail_user_pems_bad_project.json
+  data: fail_user_pems_bad_project.json
+  endpoint: /permission/user
+  code: 401
+  auth: true
+
+- name: fail_user_pems_bad_username.json
+  data: fail_user_pems_bad_username.json
+  endpoint: /permission/user
+  code: 400
+  auth: true
+  response_type: dict
+  response:
+    message: invalid user
+    status: error
+
+- name: fail_user_pems_missing_project.json
+  data: fail_user_pems_missing_project.json
+  endpoint: /permission/user
+  code: 401
+  auth: true
+
+- name: fail_user_pems_missing_username.json
+  data: fail_user_pems_missing_username.json
+  endpoint: /permission/user
+  code: 400
+  auth: true
+  response_type: list
+  response:
+    path: username
+    errorCode: required.openapi.requestValidation
+    message: username
+    location: body
+
+- name: is_duplicate_false
+  method: GET
+  endpoint: /user/duplicate/bogus5478
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    status: success
+    result: not duplicate
+
+- name: is_duplicate_true
+  method: GET
+  endpoint: /user/duplicate/vdj-test1
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    status: success
+    result: duplicate
