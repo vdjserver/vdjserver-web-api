@@ -243,60 +243,70 @@ UserController.duplicateUsername = async function(request, response) {
 
 // Change user password
 // Only for authenticated user, plus have to send original password
-UserController.changePassword = function(request, response) {
-/*
+//
+// 0.  Verify old password
+// 1.  Get user profile
+// 2.  Reset password
+// 3.  Response
+// 3a. Success
+// 3b. Fail
+UserController.changePassword = async function(request, response) {
+
     var username = request.user.username;
     var password = request.body.password;
     var newPassword = request.body.new_password;
+    var msg = null;
 
     console.log('VDJ-API INFO: UserController.changePassword - begin for ' + username);
 
-    // 0.  Verify old password
-    // 1.  Get user profile
-    // 2.  Reset password
-    // 3.  Response
-    // 3a. Success
-    // 3b. Fail
     var auth = {
         username: username,
         password: password,
     };
 
-    agaveIO.getToken(auth) // 0.
-        .then(function() {
-            console.log('VDJ-API INFO: UserController.changePassword - token verify success for ' + username);
+    // verify old password
+    await agaveIO.getToken(auth)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
+        });
+    if (msg) {
+	console.error(msg);
+	webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'incorrect password', 400, response);
+    }
 
-            // current password verified
-            return agaveIO.getUserProfile(username); // 1.
-        })
-        .then(function(profile) {
-            console.log('VDJ-API INFO: UserController.changePassword - profile fetch success for ' + username);
+    console.log('VDJ-API INFO: UserController.changePassword - token verify success for ' + username);
 
-            if (profile && profile[0] && profile[0].value && profile[0].value.email) {
-                return agaveIO.updateUserPassword({ // 2.
-                    'username': username,
-                    'email': profile[0].value.email,
-                    'password': newPassword,
-                });
-            }
-            else {
-                return Q.reject(
-                    new Error('UserController.changePassword - error - password change fail for ' + username + '. User profile not found.')
-                );
-            }
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: UserController.changePassword - change password complete for ' + username);
-            apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error);
-            apiResponseController.sendError('Invalid authorization', 401, response); // 3b.
-        })
-        ;
-*/
+    // get user profile
+    var profile = await agaveIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
+        });
+    if (msg) {
+	console.error(msg);
+	webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 
-    apiResponseController.sendError("Not implemented", 500, response);
+    console.log('VDJ-API INFO: UserController.changePassword - profile fetch success for ' + username);
+
+    // change password
+    if (profile && profile[0] && profile[0].value && profile[0].value.email) {
+        await agaveIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + ', error ' + error;
+            });
+    } else {
+        msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + '. User profile is not valid.';
+    }
+    if (msg) {
+	console.error(msg);
+	webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.changePassword - change password complete for ' + username);
+    apiResponseController.sendSuccess('Password changed successfully.', response);
 };
 
 // verify the user given the verification code sent by email
@@ -318,6 +328,13 @@ UserController.verifyUser = async function(request, response) {
 
     if (userVerificationMetadata.name != 'userVerification') {
         msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId;
+	console.error(msg);
+	webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    if (userVerificationMetadata.owner != ServiceAccount.username) {
+        msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not owned by service account: ' + verificationId;
 	console.error(msg);
 	webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
@@ -418,7 +435,7 @@ UserController.resendVerificationEmail = async function(request, response) {
 // 4.  Send response success
 // TODO: this should be protected by a recaptcha
 UserController.createResetPasswordRequest = async function(request, response) {
-try {
+
     var username = request.body.username;
     var msg = null;
 
@@ -458,50 +475,6 @@ try {
     await emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid)
 
     apiResponseController.sendSuccess('Password reset email sent.', response);
-} catch (e) { console.error(e); }
-/*
-    var username = request.body.username;
-
-    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
-
-    var userProfile;
-
-    // 1.  Get confirm username, email address from user profile
-    // 2.  Generate random key by posting to metadata
-    // 3.  Send email
-    // 4a. Send response success
-    // 4b. Send response error
-    agaveIO.getUserProfile(username) // 1.
-        .then(function(profile) {
-            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
-
-            if (profile[0]) {
-                userProfile = profile[0];
-                return agaveIO.createPasswordResetMetadata(username); // 2.
-            }
-            else {
-                return Q.reject(new Error('PasswordResetController.createResetPasswordRequest - error - username unknown for ' + username));
-            }
-        })
-        .then(function(passwordReset) {
-            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - createPasswordResetMetadata for user ' + username);
-
-            return emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid); // 3.
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
-
-            apiResponseController.sendSuccess('Password reset email sent.', response); // 4a.
-        })
-        .fail(function(error) {
-            var msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - username ' + username + ', error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-            apiResponseController.sendError(error.message, 500, response); // 4b.
-        })
-        ;
-*/
-
 };
 
 // 1.  Get password reset metadata for given uuid
@@ -512,7 +485,7 @@ try {
 // 5a. Report error if delete fails
 // 6.  Response
 UserController.processResetPasswordRequest = async function(request, response) {
-try {
+
     var username = request.body.username;
     var uuid = request.body.reset_code;
     var newPassword = request.body.new_password;
@@ -549,7 +522,7 @@ try {
     var passwordReset = passwordResetMetadata[0];
     var profile = await agaveIO.getUserProfile(username)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - getUserProfile for user ' + username + ', error: ' + error;
         });
     if (msg) {
 	console.error(msg);
@@ -560,7 +533,7 @@ try {
     console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
     await agaveIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - updateUserPassword for user ' + username + ', error: ' + error;
         });
     if (msg) {
 	console.error(msg);
@@ -573,83 +546,10 @@ try {
     console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
     await agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - deleteMetadata for user ' + username + ', error: ' + error;
 	    console.error(msg);
 	    webhookIO.postToSlack(msg);
         });
 
-    apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
-} catch (e) { console.error(e); }
-
-
-/*
-    var username = request.body.username;
-    var uuid = request.body.reset_code;
-    var newPassword = request.body.new_password;
-
-    console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - begin for user ' + username);
-
-    var passwordReset;
-
-    // 1.  Get password reset metadata for given uuid
-    // 2.  Verify password reset uuid and matching username
-    // 3.  Get user profile
-    // 4.  Update user with new password
-    // 5.  Delete password reset metadata
-    // 5a. Report error if delete fails
-    // 6.  Response
-    // 6a. Success
-    // 6b. Error
-    agaveIO.getPasswordResetMetadata(uuid) // 1.
-        .then(function(passwordResetMetadata) {
-            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
-
-	    //console.log(passwordResetMetadata);
-	    //console.log(passwordResetMetadata[0]);
-	    if (passwordResetMetadata.length == 0)
-		return Q.reject(new Error('Invalid metadata id: ' + uuid));
-
-            if (username === passwordResetMetadata[0].value.username) { // 2.
-                passwordReset = passwordResetMetadata[0];
-                return agaveIO.getUserProfile(username); // 3.
-            }
-            else {
-                return Q.reject(new Error('PasswordResetController.processResetPasswordRequest - error - reset metadata uuid does not match.'));
-            }
-        })
-        .then(function(profile) {
-            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - getUserProfile for user ' + username);
-
-            return agaveIO.updateUserPassword({
-                'username': username,
-                'email': profile[0].value.email,
-                'password': newPassword
-            }); // 4.
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
-
-            //
-            //    while metadata is deleted, service returns 500 error;
-            //    don't let this short-circuit the process
-            //
-            agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid) // 5.
-                .fail(function(error) { // 5a.
-                    console.error(error.message, error);
-                });
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
-
-            apiResponseController.sendSuccess('Password reset successfully.', response); // 6a.
-        })
-        .fail(function(error) {
-            var msg = 'VDJ-API ERROR: PasswordResetController.processResetPasswordRequest - error - username ' + username + ', error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-            apiResponseController.sendError(error.message, 500, response); // 6b.
-        })
-        ;
-*/
-
+    apiResponseController.sendSuccess('Password reset successfully.', response);
 };
