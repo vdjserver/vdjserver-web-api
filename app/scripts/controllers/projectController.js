@@ -73,9 +73,9 @@ ProjectController.createProject = function(request, response) {
     console.log('VDJ-API INFO: ProjectController.createProject - event - begin for username: ' + username + ', project name: ' + projectName);
 
     ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.createProjectMetadata(project);
-	})
+        .then(function(token) {
+            return agaveIO.createProjectMetadata(project);
+        })
         .then(function(_projectMetadata) {
             console.log('VDJ-API INFO: ProjectController.createProject - event - metadata for username: ' + username + ', project name: ' + projectName);
 
@@ -118,7 +118,7 @@ ProjectController.createProject = function(request, response) {
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);            
+            webhookIO.postToSlack(msg);            
             apiResponseController.sendError(msg, 500, response);
         });
 };
@@ -156,40 +156,40 @@ ProjectController.publishProject = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
-	.then(function(projectMetadata) {
-	    if (projectMetadata.name == 'private_project') {
-		projectMetadata.name = 'projectPublishInProcess';
-		//console.log(projectMetadata);
-		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-	    } else if (projectMetadata.name == 'projectPublishInProcess') {
-		console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
-		return null;
-	    } else {
-		msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
-		return Promise.reject(new Error(msg));
-	    }
-	})
+        .then(function(projectMetadata) {
+            if (projectMetadata.name == 'private_project') {
+                projectMetadata.name = 'projectPublishInProcess';
+                //console.log(projectMetadata);
+                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+            } else if (projectMetadata.name == 'projectPublishInProcess') {
+                console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
+                return null;
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
+                return Promise.reject(new Error(msg));
+            }
+        })
         .then(function(responseObject) {
             console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' publishing in process.');
-	    //console.log(responseObject);
+            //console.log(responseObject);
 
-	    taskQueue
-		.create('publishProjectFilesPermissionsTask', projectUuid)
-		.removeOnComplete(true)
-		.attempts(5)
-		.backoff({delay: 60 * 1000, type: 'fixed'})
-		.save()
+            taskQueue
+                .create('publishProjectFilesPermissionsTask', projectUuid)
+                .removeOnComplete(true)
+                .attempts(5)
+                .backoff({delay: 60 * 1000, type: 'fixed'})
+                .save()
             ;
 
-	    return apiResponseController.sendSuccess('ok', response);
+            return apiResponseController.sendSuccess('ok', response);
         })
         .catch(function(error) {
-	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.sendError(msg, 500, response);
+            if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
         })
         ;
 };
@@ -214,38 +214,38 @@ ProjectController.unpublishProject = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
-	.then(function(projectMetadata) {
-	    if (projectMetadata.name == 'public_project') {
-		projectMetadata.name = 'projectUnpublishInProcess';
-		return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-	    } else if (projectMetadata.name == 'projectUnpublishInProcess') {
-		console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' - restarting unpublish.');
-		return null;
-	    } else {
-		msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
-		return Promise.reject(new Error(msg));
-	    }
-	})
+        .then(function(projectMetadata) {
+            if (projectMetadata.name == 'public_project') {
+                projectMetadata.name = 'projectUnpublishInProcess';
+                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+            } else if (projectMetadata.name == 'projectUnpublishInProcess') {
+                console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' - restarting unpublish.');
+                return null;
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
+                return Promise.reject(new Error(msg));
+            }
+        })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' unpublishing in process.');
 
-	    taskQueue
-		.create('unpublishProjectFilesPermissionsTask', projectUuid)
-		.removeOnComplete(true)
-		.attempts(5)
-		.backoff({delay: 60 * 1000, type: 'fixed'})
-		.save()
+            taskQueue
+                .create('unpublishProjectFilesPermissionsTask', projectUuid)
+                .removeOnComplete(true)
+                .attempts(5)
+                .backoff({delay: 60 * 1000, type: 'fixed'})
+                .save()
             ;
 
-	    return apiResponseController.sendSuccess('ok', response);
+            return apiResponseController.sendSuccess('ok', response);
         })
         .catch(function(error) {
-	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.sendError(msg, 500, response);
+            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
         })
         ;
 };
@@ -276,7 +276,7 @@ ProjectController.loadProject = function(request, response) {
                 var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: project already flagged for repository load'
                     + ', metadata: ' + loadMetadata[0].uuid;
                 console.error(msg);
-	        webhookIO.postToSlack(msg);            
+                webhookIO.postToSlack(msg);            
                 apiResponseController.sendError(msg, 400, response);
                 return null;
             } else {
@@ -288,12 +288,12 @@ ProjectController.loadProject = function(request, response) {
                             + ', metadata: ' + loadMetadata.uuid;
                         console.log(msg);
 
-	                taskQueue
-		            .create('checkProjectsToLoadTask', null)
-		            .removeOnComplete(true)
-		            .attempts(5)
-		            .backoff({delay: 60 * 1000, type: 'fixed'})
-		            .save();
+                        taskQueue
+                            .create('checkProjectsToLoadTask', null)
+                            .removeOnComplete(true)
+                            .attempts(5)
+                            .backoff({delay: 60 * 1000, type: 'fixed'})
+                            .save();
 
                         apiResponseController.sendSuccess(msg, response);
                     });
@@ -302,7 +302,7 @@ ProjectController.loadProject = function(request, response) {
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);            
+            webhookIO.postToSlack(msg);            
             apiResponseController.sendError(msg, 500, response);
         });
 };
@@ -347,13 +347,13 @@ ProjectController.importMetadata = function(request, response) {
     var data_processes = [];
 
     ServiceAccount.getToken()
-	.then(function(token) {
+        .then(function(token) {
             // get metadata to import
             return agaveIO.getProjectFileContents(projectUuid, fileName)
         })
-	.then(function(fileData) {
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - parse file contents');
-	    if (fileData) {
+        .then(function(fileData) {
+            console.log('VDJ-API INFO: ProjectController.importMetadata - parse file contents');
+            if (fileData) {
                 // try to parse as JSON
                 try {
                     var doc = JSON.parse(fileData);
@@ -374,22 +374,22 @@ ProjectController.importMetadata = function(request, response) {
                 }
 
                 if (! data) {
-	            console.error('VDJ-API ERROR: ProjectController.importMetadata, could not parse file: ' + fileName
+                    console.error('VDJ-API ERROR: ProjectController.importMetadata, could not parse file: ' + fileName
                                 + ' JSON parse error: ' + json_parse_msg + ', YAML parse error: ' + yaml_parse_msg);
                 }
 
-		return data;
-	    }
-	})
-	.then(function() {
+                return data;
+            }
+        })
+        .then(function() {
             if (! data) return null;
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - parsed file');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - parsed file');
 
             // get existing repertoires
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
-	})
-	.then(function(_reps) {
+        })
+        .then(function(_reps) {
             if (! data) return null;
 
             for (var r in _reps) {
@@ -398,8 +398,8 @@ ProjectController.importMetadata = function(request, response) {
 
             // get existing jobs
             return agaveIO.getJobsForProject(projectUuid);
-	})
-	.then(function(_jobs) {
+        })
+        .then(function(_jobs) {
             if (! data) return null;
 
             for (var r in _jobs) {
@@ -408,8 +408,8 @@ ProjectController.importMetadata = function(request, response) {
 
             // get existing data processing objects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
-	})
-	.then(function(_dps) {
+        })
+        .then(function(_dps) {
             if (! data) return null;
 
             for (var r in _dps) {
@@ -421,12 +421,12 @@ ProjectController.importMetadata = function(request, response) {
 
             repList = data['Repertoire'];
             if (! repList) {
-	        console.error('VDJ-API ERROR: ProjectController.importMetadata, file is not valid AIRR repertoire metadata, missing Repertoire key');
+                console.error('VDJ-API ERROR: ProjectController.importMetadata, file is not valid AIRR repertoire metadata, missing Repertoire key');
                 data = null;
                 return;
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - file contains ' + repList.length + ' repertoires');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - file contains ' + repList.length + ' repertoires');
 
             // check no existing repertoire ids for append
             if (operation == 'append') {
@@ -498,10 +498,10 @@ ProjectController.importMetadata = function(request, response) {
             // get existing subjects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
-	.then(function(_subjects) {
+        .then(function(_subjects) {
             if (! data) return null;
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' existing subjects');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' existing subjects');
 
             for (var r in _subjects) {
                 existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
@@ -526,21 +526,21 @@ ProjectController.importMetadata = function(request, response) {
                 subjectList.push(subjects[r]);
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + subjectList.length + ' subjects');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + subjectList.length + ' subjects');
 
             // create/update subject data
             var promises = [];
-	    for (var i = 0; i < subjectList.length; i++) {
+            for (var i = 0; i < subjectList.length; i++) {
                 var entry = subjectList[i];
                 if (existingSubjects[entry['subject_id']])
-		    promises[i] = agaveIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
+                    promises[i] = agaveIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
                 else
                     promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
             }
 
             return Promise.allSettled(promises);
-	})
-	.then(function() {
+        })
+        .then(function() {
             if (! data) return null;
 
             // do we need to delete any subjects
@@ -552,31 +552,31 @@ ProjectController.importMetadata = function(request, response) {
                 }
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old subjects');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old subjects');
 
             // delete subjects
             var promises = [];
-	    for (var i = 0; i < deleteList.length; i++) {
+            for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             // get existing subjects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
-	.then(function(_subjects) {
+        .then(function(_subjects) {
             if (! data) return null;
 
             for (var r in _subjects) {
                 existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' total subjects');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' total subjects');
 
             // normalize the subjects
             for (var r in repList) {
@@ -592,10 +592,10 @@ ProjectController.importMetadata = function(request, response) {
             // get existing samples
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
         })
-	.then(function(_samples) {
+        .then(function(_samples) {
             if (! data) return null;
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _samples.length + ' existing samples');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _samples.length + ' existing samples');
 
             // find any samples to be deleted
             // if replace operation, delete all and create new records
@@ -606,18 +606,18 @@ ProjectController.importMetadata = function(request, response) {
                 for (var r in _samples) deleteList.push(_samples[r]['uuid']);
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old samples');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old samples');
 
             // delete samples
             var promises = [];
-	    for (var i = 0; i < deleteList.length; i++) {
+            for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             samples = [];
@@ -627,7 +627,7 @@ ProjectController.importMetadata = function(request, response) {
                 }
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + samples.length + ' samples');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + samples.length + ' samples');
 
             // we create a new function for the call so that the entry variable is still
             // within scope for the then(), otherwise entry has a different value when
@@ -641,14 +641,14 @@ ProjectController.importMetadata = function(request, response) {
 
             // create samples
             var promises = [];
-	    for (var i = 0; i < samples.length; i++) {
+            for (var i = 0; i < samples.length; i++) {
                 var entry = samples[i];
                 promises[i] = agaveCall(entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             // normalize the samples
@@ -667,18 +667,18 @@ ProjectController.importMetadata = function(request, response) {
                 for (var r in existingDPs) deleteList.push(r);
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old data processing');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old data processing');
 
             // delete data processing
             var promises = [];
-	    for (var i = 0; i < deleteList.length; i++) {
+            for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             data_processes = [];
@@ -688,7 +688,7 @@ ProjectController.importMetadata = function(request, response) {
                 }
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + data_processes.length + ' data processing');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + data_processes.length + ' data processing');
 
             // we create a new function for the call so that the entry variable is still
             // within scope for the then(), otherwise entry has a different value when
@@ -702,14 +702,14 @@ ProjectController.importMetadata = function(request, response) {
 
             // create records
             var promises = [];
-	    for (var i = 0; i < data_processes.length; i++) {
+            for (var i = 0; i < data_processes.length; i++) {
                 var entry = data_processes[i];
                 promises[i] = agaveCall(entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             // normalize the data processing
@@ -737,74 +737,74 @@ ProjectController.importMetadata = function(request, response) {
                 for (var r in existingRepertoires) deleteList.push(r);
             }
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old repertoires');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old repertoires');
 
             // delete repertoires
             var promises = [];
-	    for (var i = 0; i < deleteList.length; i++) {
+            for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-		promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + repList.length + ' repertoires');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + repList.length + ' repertoires');
 
             // create/update repertoires
             var promises = [];
-	    for (var i = 0; i < repList.length; i++) {
+            for (var i = 0; i < repList.length; i++) {
                 var entry = repList[i];
                 if (entry['repertoire_id'])
-		    promises[i] = agaveIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
+                    promises[i] = agaveIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
                 else
                     promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
             }
 
             return Promise.allSettled(promises);
         })
-	.then(function() {
+        .then(function() {
             if (! data) return null;
 
             // get existing repertoires
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
-	})
-	.then(function(_reps) {
+        })
+        .then(function(_reps) {
             if (! data) return null;
 
-	    console.log('VDJ-API INFO: ProjectController.importMetadata - updating repertoire_ids');
+            console.log('VDJ-API INFO: ProjectController.importMetadata - updating repertoire_ids');
 
             // need to make sure each has repertoire_id
             for (var r in _reps) _reps[r]['value']['repertoire_id'] = _reps[r]['uuid'];
 
             // create/update repertoires
             var promises = [];
-	    for (var i = 0; i < _reps.length; i++) {
+            for (var i = 0; i < _reps.length; i++) {
                 var entry = _reps[i];
-		promises[i] = agaveIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
+                promises[i] = agaveIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
             }
 
             return Promise.allSettled(promises);
-	})
-	.then(function() {
+        })
+        .then(function() {
             if (! data) {
                 var error_msg = 'VDJ-API ERROR: ProjectController.importMetadata - error - project: ' + projectUuid + ', error: ';
                 if (msg) msg = 'Failed to import metadata: ' + msg;
                 else msg = 'Failed to import metadata';
                 console.error(error_msg + msg);
-	        webhookIO.postToSlack(error_msg + msg);
+                webhookIO.postToSlack(error_msg + msg);
                 apiResponseController.sendError(msg, 400, response);
             } else {
-	        console.log('VDJ-API INFO: ProjectController.importMetadata - successfully imported metadata');
+                console.log('VDJ-API INFO: ProjectController.importMetadata - successfully imported metadata');
                 apiResponseController.sendSuccess('Successfully imported metadata', response);
             }
         })
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ProjectController.importMetadata - error - project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);            
+            webhookIO.postToSlack(msg);            
             apiResponseController.sendError(msg, 500, response);
         });
 };
@@ -822,7 +822,7 @@ ProjectController.exportMetadata = function(request, response) {
     // gather the repertoire objects
     return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
         .then(function(repertoireMetadata) {
-	    console.log('VDJ-API INFO: ProjectController.exportMetadata, gathered ' + repertoireMetadata.length
+            console.log('VDJ-API INFO: ProjectController.exportMetadata, gathered ' + repertoireMetadata.length
                         + ' repertoire metadata for project: ' + projectUuid);
 
             // Not the normal response format
@@ -833,7 +833,7 @@ ProjectController.exportMetadata = function(request, response) {
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: ProjectController.exportMetadata - error - project: ' + projectUuid + ', error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);            
+            webhookIO.postToSlack(msg);            
             apiResponseController.sendError(msg, 500, response);
         });
 };
@@ -867,42 +867,42 @@ ProjectController.createPublicPostit = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
-	.then(function(projectMetadata) {
-	    // Verify it is a public project
-	    if (projectMetadata.name == 'publicProject') {
-		return agaveIO.getMetadata(fileUuid);
-	    } else {
-		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' is not a public project.';
-		return Q.reject(new Error(msg));
-	    }
-	})
+        .then(function(projectMetadata) {
+            // Verify it is a public project
+            if (projectMetadata.name == 'publicProject') {
+                return agaveIO.getMetadata(fileUuid);
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' is not a public project.';
+                return Q.reject(new Error(msg));
+            }
+        })
         .then(function(fileMetadata) {
-	    if (fileMetadata.value.projectUuid != projectUuid) {
-		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
-		return Q.reject(new Error(msg));
-	    } else if (fileMetadata.name == 'projectFile') {
-		// if project data file
-		return agaveIO.createCommunityFilePostit(projectUuid, 'files/' + fileMetadata.value.name);
-	    } else if (fileMetadata.name == 'projectJobFile') {
-		// if project job file
-		return agaveIO.createCommunityFilePostit(projectUuid, 'analyses/' + fileMetadata.value.relativeArchivePath + '/' + fileMetadata.value.name);
-	    } else {
-		msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
-		return Q.reject(new Error(msg));
-	    }
-	})
+            if (fileMetadata.value.projectUuid != projectUuid) {
+                msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
+                return Q.reject(new Error(msg));
+            } else if (fileMetadata.name == 'projectFile') {
+                // if project data file
+                return agaveIO.createCommunityFilePostit(projectUuid, 'files/' + fileMetadata.value.name);
+            } else if (fileMetadata.name == 'projectJobFile') {
+                // if project job file
+                return agaveIO.createCommunityFilePostit(projectUuid, 'analyses/' + fileMetadata.value.relativeArchivePath + '/' + fileMetadata.value.name);
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
+                return Q.reject(new Error(msg));
+            }
+        })
         .then(function(targetUrl) {
-	    console.log('VDJ-API INFO: ProjectController.createPublicPostit - done, project: ' + projectUuid + ' file: ' + fileUuid);
+            console.log('VDJ-API INFO: ProjectController.createPublicPostit - done, project: ' + projectUuid + ' file: ' + fileUuid);
 
-	    return apiResponseController.sendSuccess(targetUrl, response);
+            return apiResponseController.sendSuccess(targetUrl, response);
         })
         .catch(function(error) {
-	    if (!msg) msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.sendError(msg, 500, response);
+            if (!msg) msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' error ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
         })
         ;
 };

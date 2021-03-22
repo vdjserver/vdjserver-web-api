@@ -46,8 +46,8 @@ NotificationsController.processFileImportNotifications = function(request, respo
     var fileUploadJob = new FileUploadJob(fileNotification);
 
     fileUploadJob.verifyFileNotification()
-	.then(function() {
-	    // queue file upload task
+        .then(function() {
+            // queue file upload task
             taskQueue
                 .create('fileUploadPoll', fileNotification)
                 .removeOnComplete(true)
@@ -55,16 +55,16 @@ NotificationsController.processFileImportNotifications = function(request, respo
                 .backoff({delay: 30 * 1000, type: 'fixed'})
                 .save()
                 ;
-	})
-	.then(function() {
+        })
+        .then(function() {
             console.log('VDJ-API INFO: NotificationsController.processFileImportNotifications - event - queued for file uuid ' + fileNotification.fileUuid);
-	    return apiResponseController.sendSuccess('', response);
-	})
+            return apiResponseController.sendSuccess('', response);
+        })
         .fail(function(error) {
-	    var msg = 'VDJ-API ERROR: NotificationsController.processFileImportNotifications - fileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.sendError(msg, 500, response);
+            var msg = 'VDJ-API ERROR: NotificationsController.processFileImportNotifications - fileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
         })
         ;
 };
@@ -123,78 +123,78 @@ NotificationsController.processJobNotifications = function(request, response) {
 
     // valid job?
     agaveIO.getJobOutput(jobId)
-	.then(function(jobOutput) {
-	    message = '';
+        .then(function(jobOutput) {
+            message = '';
 
-	    // match project id
-	    var split = jobOutput.archivePath.split('/');
-	    if (split[2] != projectUuid) {
-		message = 'Project uuid does not match job.';
-		return Q.reject(new Error('Project uuid: ' + projectUuid + ' != ' + split[2] + ' project uuid on job'));
-	    }
+            // match project id
+            var split = jobOutput.archivePath.split('/');
+            if (split[2] != projectUuid) {
+                message = 'Project uuid does not match job.';
+                return Q.reject(new Error('Project uuid: ' + projectUuid + ' != ' + split[2] + ' project uuid on job'));
+            }
 
-	    console.log('VDJ-API INFO: NotificationsController.processJobNotifications - event - received notification for job id ' + jobId + ', new status is: ' + jobStatus);
+            console.log('VDJ-API INFO: NotificationsController.processJobNotifications - event - received notification for job id ' + jobId + ', new status is: ' + jobStatus);
 
-	    // we do not want to emit finished notification until permissions
-	    // for all project users have been updated
-	    if (jobStatus === 'FINISHED') {
-		var jobData = {
-		    jobId: jobId,
-		    jobEvent: jobEvent,
-		    jobStatus: jobStatus,
-		    jobMessage: jobMessage,
-		    projectUuid: projectUuid,
-		    jobName: jobName,
-		    jobOutput: jobOutput,
-		};
+            // we do not want to emit finished notification until permissions
+            // for all project users have been updated
+            if (jobStatus === 'FINISHED') {
+                var jobData = {
+                    jobId: jobId,
+                    jobEvent: jobEvent,
+                    jobStatus: jobStatus,
+                    jobMessage: jobMessage,
+                    projectUuid: projectUuid,
+                    jobName: jobName,
+                    jobOutput: jobOutput,
+                };
 
-		// guard against multiple FINISHED notifications coming at same time
-		// not perfect semaphore
-		var guardKey = 'guard-' + jobId;
-		var redisClient = kue.redis.createClient();
+                // guard against multiple FINISHED notifications coming at same time
+                // not perfect semaphore
+                var guardKey = 'guard-' + jobId;
+                var redisClient = kue.redis.createClient();
 
-		Q.ninvoke(redisClient, 'exists', guardKey)
-		    .then(function(isMember) {
-			if (isMember === 1) {
-			    // error out
-			    msg = 'VDJ-API WARNING: NotificationsController.processJobNotifications - received duplicate FINISHED notification for job ' + jobId + ', caught by guard';
-			    return Q.reject(new Error(msg));
-			} else {
-			    return Q.ninvoke(redisClient, 'set', guardKey, 'ok');
-			}
-		    })
-		    .then(function() {
-			return Q.ninvoke(redisClient, 'expire', guardKey, 600);
-		    })
-		    .then(function() {
-			taskQueue
-			    .create('checkJobTask', jobData)
-			    .removeOnComplete(true)
-			    .attempts(1)
-			//.backoff({delay: 60 * 1000, type: 'fixed'})
-			    .save()
-			;
-		    })
-	    } else {
-		app.emit(
-		    'jobNotification',
-		    {
-			jobId: jobId,
-			jobEvent: jobEvent,
-			jobStatus: jobStatus,
-			jobMessage: jobMessage,
-			projectUuid: projectUuid,
-			jobName: decodeURIComponent(jobName),
-		    }
-		);
-	    }
+                Q.ninvoke(redisClient, 'exists', guardKey)
+                    .then(function(isMember) {
+                        if (isMember === 1) {
+                            // error out
+                            msg = 'VDJ-API WARNING: NotificationsController.processJobNotifications - received duplicate FINISHED notification for job ' + jobId + ', caught by guard';
+                            return Q.reject(new Error(msg));
+                        } else {
+                            return Q.ninvoke(redisClient, 'set', guardKey, 'ok');
+                        }
+                    })
+                    .then(function() {
+                        return Q.ninvoke(redisClient, 'expire', guardKey, 600);
+                    })
+                    .then(function() {
+                        taskQueue
+                            .create('checkJobTask', jobData)
+                            .removeOnComplete(true)
+                            .attempts(1)
+                        //.backoff({delay: 60 * 1000, type: 'fixed'})
+                            .save()
+                        ;
+                    })
+            } else {
+                app.emit(
+                    'jobNotification',
+                    {
+                        jobId: jobId,
+                        jobEvent: jobEvent,
+                        jobStatus: jobStatus,
+                        jobMessage: jobMessage,
+                        projectUuid: projectUuid,
+                        jobName: decodeURIComponent(jobName),
+                    }
+                );
+            }
 
-	    return apiResponseController.sendSuccess('ok', response);
-	})
+            return apiResponseController.sendSuccess('ok', response);
+        })
         .fail(function(error) {
-	    if (!msg) msg = 'VDJ-API ERROR: NotificationsController.processJobNotifications - ' + message + ' - job ' + jobId + ', error ' + error;
+            if (!msg) msg = 'VDJ-API ERROR: NotificationsController.processJobNotifications - ' + message + ' - job ' + jobId + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
+            webhookIO.postToSlack(msg);
             return apiResponseController.sendError(message, 400, response);
         });
 

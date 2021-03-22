@@ -198,8 +198,8 @@ agaveIO.sendFileRequest = function(requestSettings, postData) {
 
             response.on('end', function() {
 
-	        // do not attempt to parse
-	        resolve(output);
+                // do not attempt to parse
+                resolve(output);
 
             });
         });
@@ -243,14 +243,14 @@ agaveIO.sendCheckRequest = function(requestSettings, postData) {
                 }
 
                 if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-		    resolve(responseObject);
+                    resolve(responseObject);
                 } else {
-		    if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
-		        resolve(responseObject);
-		    } else {
+                    if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
+                        resolve(responseObject);
+                    } else {
                         reject(new Error('Agave response returned an error: ' + JSON.stringify(responseObject)));
-		    }
-	        }	    
+                    }
+                }           
             });
         });
 
@@ -318,21 +318,21 @@ agaveIO.createUser = function(user) {
                  + '&email='    + user.email;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/profiles/v2/',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/x-www-form-urlencoded',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/profiles/v2/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -345,19 +345,19 @@ agaveIO.getAgaveUserProfile = function(accessToken, username) {
     if (config.shouldInjectError("agaveIO.getAgaveUserProfile")) return config.performInjectError();
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/profiles/v2/' + username,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + accessToken
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/profiles/v2/' + username,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -401,19 +401,19 @@ agaveIO.getUserProfile = function(username) {
     if (config.shouldInjectError("agaveIO.getUserProfile")) return config.performInjectError();
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=1',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q=' + encodeURIComponent('{"name":"profile","owner":"' + username + '"}') + '&limit=1',
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -433,36 +433,36 @@ agaveIO.getMetadataForType = function(accessToken, projectUuid, type) {
     var models = [];
 
     var doFetch = function(offset) {
-	var requestSettings = {
-	    host:     agaveSettings.hostname,
-	    method:   'GET',
-	    path:   '/meta/v2/data?q='
-		+ encodeURIComponent('{'
-				     + '"name": "' + type + '",'
-				     + '"associationIds": "' + projectUuid + '"'
-				     + '}')
-		+ '&limit=50&offset=' + offset,
-	    rejectUnauthorized: false,
-	    headers: {
-		'Authorization': 'Bearer ' + accessToken
-	    }
-	};
+        var requestSettings = {
+            host:     agaveSettings.hostname,
+            method:   'GET',
+            path:   '/meta/v2/data?q='
+                + encodeURIComponent('{'
+                                     + '"name": "' + type + '",'
+                                     + '"associationIds": "' + projectUuid + '"'
+                                     + '}')
+                + '&limit=50&offset=' + offset,
+            rejectUnauthorized: false,
+            headers: {
+                'Authorization': 'Bearer ' + accessToken
+            }
+        };
 
-	return agaveIO.sendRequest(requestSettings, null)
+        return agaveIO.sendRequest(requestSettings, null)
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -474,7 +474,7 @@ agaveIO.createMetadataForType = function(projectUuid, type, value) {
     if (config.shouldInjectError("agaveIO.createMetadataForType")) return config.performInjectError();
 
     var postData = {
-	associationIds: [ projectUuid ],
+        associationIds: [ projectUuid ],
         name: type,
         value: value,
     };
@@ -482,21 +482,21 @@ agaveIO.createMetadataForType = function(projectUuid, type, value) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -517,21 +517,21 @@ agaveIO.createProjectMetadata = function(project) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -544,13 +544,13 @@ agaveIO.getProjectMetadata = function(accessToken, projectUuid) {
     if (config.shouldInjectError("agaveIO.getProjectMetadata")) return config.performInjectError();
 
     var requestSettings = {
-	host:     agaveSettings.hostname,
-	method:   'GET',
-	path:     '/meta/v2/data/' + projectUuid,
-	rejectUnauthorized: false,
-	headers: {
-	    'Authorization': 'Bearer ' + accessToken
-	}
+        host:     agaveSettings.hostname,
+        method:   'GET',
+        path:     '/meta/v2/data/' + projectUuid,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
     };
 
     return agaveIO.sendRequest(requestSettings, null)
@@ -567,20 +567,20 @@ agaveIO.createProjectDirectory = function(directory) {
     var postData = 'action=mkdir&path=' + directory;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'PUT',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'PUT',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//projects/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -681,40 +681,40 @@ agaveIO.getProjectFileMetadata = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent('{'
-					     + '"name": { $in: ["projectFile", "projectJobFile"] },'
-					     + '"value.projectUuid":"' + projectUuid + '"'
-					     + '}')
-			+ '&limit=50&offset=' + offset
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent('{'
+                                             + '"name": { $in: ["projectFile", "projectJobFile"] },'
+                                             + '"value.projectUuid":"' + projectUuid + '"'
+                                             + '}')
+                        + '&limit=50&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -726,40 +726,40 @@ agaveIO.getProjectFiles = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent('{'
-					     + '"name": { $in: ["projectFile"] },'
-					     + '"associationIds":"' + projectUuid + '"'
-					     + '}')
-			+ '&limit=50&offset=' + offset
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent('{'
+                                             + '"name": { $in: ["projectFile"] },'
+                                             + '"associationIds":"' + projectUuid + '"'
+                                             + '}')
+                        + '&limit=50&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -776,39 +776,39 @@ agaveIO.getAllProjectAssociatedMetadata = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent('{'
-					     + '"associationIds":"' + projectUuid + '"'
-					     + '}')
-			+ '&limit=100&offset=' + offset
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent('{'
+                                             + '"associationIds":"' + projectUuid + '"'
+                                             + '}')
+                        + '&limit=100&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -863,56 +863,56 @@ agaveIO.enumerateFileListings = function(projectUuid) {
     var dirStack = [];
 
     var doFetch = function(offset, filePath) {
-	//console.log(dirStack);
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'GET',
-		    path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + projectUuid + filePath
-			+ '?limit=100&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
-		//console.log(requestSettings);
+        //console.log(dirStack);
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + projectUuid + filePath
+                        + '?limit=100&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+                //console.log(requestSettings);
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // parse results between directories and files
-		    for (var i = 0; i < result.length; ++i) {
-			var obj = result[i];
-			if (obj.name == '.') continue;
-			if (obj.type == 'dir') {
-			    var path = obj.path.replace('/projects/' + projectUuid, '');
-			    //console.log(path);
-			    // don't recurse down into the job files
-			    if (filePath != 'analyses') dirStack.push(path);
-			    pathList.push(path);
-			} else if (obj.type == 'file') {
-			    var path = obj.path.replace('/projects/' + projectUuid, '');
-			    pathList.push(path);
-			} else {
-			    console.error('VDJ-API ERROR: Unknown file type: ' + obj);
-			}
-		    }
-		    // maybe more data
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset, filePath);
-		} else {
-		    // nothing left to enumerate
-		    if (dirStack.length == 0)
-			return Promise.resolve(pathList);
-		    else
-			return doFetch(0, dirStack.pop());
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // parse results between directories and files
+                    for (var i = 0; i < result.length; ++i) {
+                        var obj = result[i];
+                        if (obj.name == '.') continue;
+                        if (obj.type == 'dir') {
+                            var path = obj.path.replace('/projects/' + projectUuid, '');
+                            //console.log(path);
+                            // don't recurse down into the job files
+                            if (filePath != 'analyses') dirStack.push(path);
+                            pathList.push(path);
+                        } else if (obj.type == 'file') {
+                            var path = obj.path.replace('/projects/' + projectUuid, '');
+                            pathList.push(path);
+                        } else {
+                            console.error('VDJ-API ERROR: Unknown file type: ' + obj);
+                        }
+                    }
+                    // maybe more data
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset, filePath);
+                } else {
+                    // nothing left to enumerate
+                    if (dirStack.length == 0)
+                        return Promise.resolve(pathList);
+                    else
+                        return doFetch(0, dirStack.pop());
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -923,19 +923,19 @@ agaveIO.enumerateFileListings = function(projectUuid) {
 agaveIO.getFileHistory = function(relativePath) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/history/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/history/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -947,23 +947,23 @@ agaveIO.getFileHistory = function(relativePath) {
 agaveIO.getProjectFileContents = function(projectUuid, fileName) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/media/system'
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/media/system'
                     + '/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid
                     + '/files'
                     + '/' + fileName,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendFileRequest(requestSettings, null);
-	})
+            return agaveIO.sendFileRequest(requestSettings, null);
+        })
         .then(function(fileData) {
             return Promise.resolve(fileData);
         })
@@ -1096,28 +1096,28 @@ agaveIO.addUsernameToFullFilePermissions = function(username, accessToken, fileP
 agaveIO.setFilePermissionsForProjectUsers = function(projectUuid, filePath, recursive) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    // get list of users from project metadata permissions
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
-	})
+        .then(function(token) {
+            // get list of users from project metadata permissions
+            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+        })
         .then(function(projectPermissions) {
             var metadataPermissions = new MetadataPermissions();
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
-	    for (var i = 0; i < projectUsernames.length; i++) {
+            for (var i = 0; i < projectUsernames.length; i++) {
                 var username = projectUsernames[i];
                 promises[i] = agaveIO.addUsernameToFullFilePermissions(
                     username,
                     ServiceAccount.accessToken(),
                     filePath,
-		    recursive
+                    recursive
                 );
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -1233,21 +1233,21 @@ agaveIO.createUserVerificationMetadata = function(username) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1259,11 +1259,11 @@ agaveIO.createUserVerificationMetadata = function(username) {
 agaveIO.getUserVerificationMetadata = function(username) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{"name":"userVerification",'
                             + ' "value.username":"' + username + '",'
@@ -1272,14 +1272,14 @@ agaveIO.getUserVerificationMetadata = function(username) {
                     )
                     + '&limit=1'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1301,21 +1301,21 @@ agaveIO.verifyUser = function(username, verificationId) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data/' + verificationId,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		},
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data/' + verificationId,
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1336,21 +1336,21 @@ agaveIO.createPasswordResetMetadata = function(username) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1362,7 +1362,7 @@ agaveIO.createPasswordResetMetadata = function(username) {
 agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 
     var postData = {
-	associationIds: [ projectUuid, jobUuid ],
+        associationIds: [ projectUuid, jobUuid ],
         name: 'projectJob',
         value: {
             projectUuid: projectUuid,
@@ -1374,21 +1374,21 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1400,7 +1400,7 @@ agaveIO.createJobMetadata = function(projectUuid, jobUuid, secondaryInputs) {
 agaveIO.updateJobMetadata = function(uuid, name, value) {
 
     var postData = {
-	associationIds: [ value.projectUuid, value.jobUuid ],
+        associationIds: [ value.projectUuid, value.jobUuid ],
         name: name,
         value: value
     };
@@ -1408,21 +1408,21 @@ agaveIO.updateJobMetadata = function(uuid, name, value) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data/' + uuid,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data/' + uuid,
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1434,11 +1434,11 @@ agaveIO.updateJobMetadata = function(uuid, name, value) {
 agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJob",'
@@ -1448,14 +1448,14 @@ agaveIO.getJobMetadata = function(projectUuid, jobUuid) {
                     )
                     + '&limit=1'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1469,42 +1469,42 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent(
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent(
                             '{'
-				+ '"name":"projectJob",'
-				+ '"value.projectUuid":"' + projectUuid + '"'
-				+ '}'
-			)
-			+ '&limit=50&offset=' + offset
+                                + '"name":"projectJob",'
+                                + '"value.projectUuid":"' + projectUuid + '"'
+                                + '}'
+                        )
+                        + '&limit=50&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -1514,11 +1514,11 @@ agaveIO.getJobMetadataForProject = function(projectUuid) {
 agaveIO.getJobMetadataForJob = function(jobUuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJob",'
@@ -1527,14 +1527,14 @@ agaveIO.getJobMetadataForJob = function(jobUuid) {
                     )
                     + '&limit=1'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1546,11 +1546,11 @@ agaveIO.getJobMetadataForJob = function(jobUuid) {
 agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectJobArchive",'
@@ -1559,14 +1559,14 @@ agaveIO.getJobMetadataForArchivedJob = function(jobUuid) {
                     )
                     + '&limit=1'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1580,35 +1580,35 @@ agaveIO.getJobsForProject = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
-			+ '&limit=50&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/jobs/v2/?archivePath.like=/projects/' + projectUuid + '*'
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -1618,11 +1618,11 @@ agaveIO.getJobsForProject = function(projectUuid) {
 agaveIO.getPasswordResetMetadata = function(uuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{"name":"passwordReset",'
                             + ' "uuid":"' + uuid + '",'
@@ -1630,14 +1630,14 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
                     )
                     + '&limit=1'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1649,19 +1649,19 @@ agaveIO.getPasswordResetMetadata = function(uuid) {
 agaveIO.getMetadata = function(uuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data/' + uuid,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data/' + uuid,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1681,20 +1681,20 @@ agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data/' + uuid,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data/' + uuid,
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1707,13 +1707,13 @@ agaveIO.updateMetadata = function(uuid, name, value, associationIds) {
 agaveIO.deleteMetadata = function(accessToken, uuid) {
 
     var requestSettings = {
-	host:     agaveSettings.hostname,
-	method:   'DELETE',
-	path:     '/meta/v2/data/' + uuid,
-	rejectUnauthorized: false,
-	headers: {
-	    'Authorization': 'Bearer ' + accessToken
-	}
+        host:     agaveSettings.hostname,
+        method:   'DELETE',
+        path:     '/meta/v2/data/' + uuid,
+        rejectUnauthorized: false,
+        headers: {
+            'Authorization': 'Bearer ' + accessToken
+        }
     };
 
     return agaveIO.sendRequest(requestSettings, null)
@@ -1732,21 +1732,21 @@ agaveIO.updateUserPassword = function(user) {
                  + '&email='    + user.email;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'PUT',
-		path:     '/profiles/v2/' + user.username + '/',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/x-www-form-urlencoded',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'PUT',
+                path:     '/profiles/v2/' + user.username + '/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1758,19 +1758,19 @@ agaveIO.updateUserPassword = function(user) {
 agaveIO.getJobOutput = function(jobId) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/jobs/v2/' + jobId,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/jobs/v2/' + jobId,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1782,19 +1782,19 @@ agaveIO.getJobOutput = function(jobId) {
 agaveIO.getJobPermissions = function(jobId) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/jobs/v2/' + jobId + '/pems',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/jobs/v2/' + jobId + '/pems',
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1808,39 +1808,39 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'GET',
-		    path:     '/files/v2/listings/system'
-			+ '/' + agaveSettings.storageSystem
-			+ '//projects/' + projectUuid
-			+ '/analyses'
-			+ '/' + relativeArchivePath
-			+ '?limit=50&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    },
-		};
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/files/v2/listings/system'
+                        + '/' + agaveSettings.storageSystem
+                        + '//projects/' + projectUuid
+                        + '/analyses'
+                        + '/' + relativeArchivePath
+                        + '?limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    },
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -1850,23 +1850,23 @@ agaveIO.getJobOutputFileListings = function(projectUuid, relativeArchivePath) {
 agaveIO.getJobProcessMetadataFileListing = function(projectUuid, relativeArchivePath) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system'
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system'
                     + '/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid
                     + '/analyses'
                     + '/' + relativeArchivePath + '/process_metadata.json',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1878,23 +1878,23 @@ agaveIO.getJobProcessMetadataFileListing = function(projectUuid, relativeArchive
 agaveIO.getJobProcessMetadataFileContents = function(projectUuid, relativeArchivePath) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/media/system'
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/media/system'
                     + '/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid
                     + '/analyses'
                     + '/' + relativeArchivePath + '/process_metadata.json',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendFileRequest(requestSettings, null);
-	})
+            return agaveIO.sendFileRequest(requestSettings, null);
+        })
         .then(function(fileData) {
             return Promise.resolve(fileData);
         })
@@ -1907,28 +1907,28 @@ agaveIO.createProcessMetadata = function(projectUuid, jobUuid, data) {
 
     var postData = {
         name: 'processMetadata',
-	associationIds: [ projectUuid, jobUuid ],
+        associationIds: [ projectUuid, jobUuid ],
         value: data
     };
 
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -1942,41 +1942,41 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'GET',
-		    path:     '/meta/v2/data?q='
-			+ encodeURIComponent(
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(
                             '{'
-				+ '"name":"processMetadata",'
-				+ '"associationIds":"' + projectUuid + '"'
-				+ '}'
-			)
-			+ '&limit=50&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                                + '"name":"processMetadata",'
+                                + '"associationIds":"' + projectUuid + '"'
+                                + '}'
+                        )
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -1986,11 +1986,11 @@ agaveIO.getProcessMetadataForProject = function(projectUuid) {
 agaveIO.getProcessMetadataForJob = function(jobUuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"processMetadata",'
@@ -1998,14 +1998,14 @@ agaveIO.getProcessMetadataForJob = function(jobUuid) {
                             + '}'
                     )
                     + '&limit=1',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2018,7 +2018,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
 
     var postData = {
         name: 'projectJobFile',
-	associationIds: [ projectUuid, jobUuid ],
+        associationIds: [ projectUuid, jobUuid ],
         value: {
             projectUuid: projectUuid,
             jobUuid: jobUuid,
@@ -2026,7 +2026,7 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
             name: jobFileListingName,
             length: jobFileListingLength,
             isDeleted: false,
-	    showInProjectData: false,
+            showInProjectData: false,
             readDirection: '',
             relativeArchivePath: relativeArchivePath,
             jobName: jobName,
@@ -2039,21 +2039,21 @@ agaveIO.createProjectJobFileMetadata = function(projectUuid, jobUuid, jobFileLis
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2067,43 +2067,43 @@ agaveIO.getProjectJobFileMetadatas = function(projectUuid, jobId) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent(
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent(
                             '{'
-				+ '"name":"projectJobFile",'
-				+ '"value.projectUuid":"' + projectUuid + '",'
-				+ '"value.jobUuid":"' + jobId + '"'
-				+ '}'
-			)
-			+ '&limit=50&offset=' + offset
+                                + '"name":"projectJobFile",'
+                                + '"value.projectUuid":"' + projectUuid + '",'
+                                + '"value.jobUuid":"' + jobId + '"'
+                                + '}'
+                        )
+                        + '&limit=50&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -2115,7 +2115,7 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
     var postData = {
         associationIds: [
             fileUuid,
-	    projectUuid,
+            projectUuid,
         ],
         name: 'projectFile',
         owner: '',
@@ -2135,21 +2135,21 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2161,19 +2161,19 @@ agaveIO.createFileMetadata = function(fileUuid, projectUuid, fileType, name, len
 agaveIO.getFileDetail = function(relativePath) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//projects/' + relativePath,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2187,41 +2187,41 @@ agaveIO.getProjectFileMetadataByFilename = function(projectUuid, fileUuid) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:   agaveSettings.hostname,
-		    method: 'GET',
-		    path:   '/meta/v2/data?q='
-			+ encodeURIComponent('{'
-					     + '"name": "projectFile",'
-					     + '"value.projectUuid": "' + projectUuid + '",'
-					     + '"associationIds": { $in: ["' + fileUuid + '"] }'
-					     + '}')
-			+ '&limit=50&offset=' + offset
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:   agaveSettings.hostname,
+                    method: 'GET',
+                    path:   '/meta/v2/data?q='
+                        + encodeURIComponent('{'
+                                             + '"name": "projectFile",'
+                                             + '"value.projectUuid": "' + projectUuid + '",'
+                                             + '"associationIds": { $in: ["' + fileUuid + '"] }'
+                                             + '}')
+                        + '&limit=50&offset=' + offset
                     ,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -2250,21 +2250,21 @@ agaveIO.createFeedbackMetadata = function(feedback, username, email) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization':  'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2298,19 +2298,19 @@ agaveIO.isDuplicateUsername = function(username) {
     if (config.shouldInjectError("agaveIO.isDuplicateUsername")) return config.performInjectError();
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/profiles/v2/' + username,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/profiles/v2/' + username,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(true);
         })
@@ -2324,24 +2324,24 @@ agaveIO.createJobArchiveDirectory = function(projectUuid, relativeArchivePath) {
     var postData = 'action=mkdir&path=' + relativeArchivePath;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'PUT',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'PUT',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '//projects/'
                     + '/' + projectUuid
                     + '/analyses'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2358,21 +2358,21 @@ agaveIO.uploadFileToJobArchiveDirectory = function(archivePath, filename, fileda
     form.append('filename', filename);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var formHeaders = form.getHeaders();
-	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		protocol: 'https:',
-		method:   'POST',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+        .then(function(token) {
+            var formHeaders = form.getHeaders();
+            formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                protocol: 'https:',
+                method:   'POST',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '/' + archivePath,
-		rejectUnauthorized: false,
-		headers: formHeaders
-	    };
+                rejectUnauthorized: false,
+                headers: formHeaders
+            };
 
-	    return agaveIO.sendFormRequest(requestSettings, form);
-	})
+            return agaveIO.sendFormRequest(requestSettings, form);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2389,21 +2389,21 @@ agaveIO.uploadFileToProjectDirectory = function(projectUuid, filename, filedata)
     form.append('filename', filename);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var formHeaders = form.getHeaders();
-	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		protocol: 'https:',
-		method:   'POST',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+        .then(function(token) {
+            var formHeaders = form.getHeaders();
+            formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                protocol: 'https:',
+                method:   'POST',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid + '/files',
-		rejectUnauthorized: false,
-		headers: formHeaders
-	    };
+                rejectUnauthorized: false,
+                headers: formHeaders
+            };
 
-	    return agaveIO.sendFormRequest(requestSettings, form);
-	})
+            return agaveIO.sendFormRequest(requestSettings, form);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2420,21 +2420,21 @@ agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filed
     form.append('filename', filename);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var formHeaders = form.getHeaders();
-	    formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		protocol: 'https:',
-		method:   'POST',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem
+        .then(function(token) {
+            var formHeaders = form.getHeaders();
+            formHeaders.Authorization = 'Bearer ' + ServiceAccount.accessToken();
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                protocol: 'https:',
+                method:   'POST',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem
                     + '//projects/' + projectUuid + '/deleted',
-		rejectUnauthorized: false,
-		headers: formHeaders
-	    };
+                rejectUnauthorized: false,
+                headers: formHeaders
+            };
 
-	    return agaveIO.sendFormRequest(requestSettings, form);
-	})
+            return agaveIO.sendFormRequest(requestSettings, form);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2446,22 +2446,22 @@ agaveIO.uploadFileToProjectTempDirectory = function(projectUuid, filename, filed
 agaveIO.launchJob = function(jobDataString) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/jobs/v2/'
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/jobs/v2/'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(jobDataString),
-		    'Content-Type': 'application/json',
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		},
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Length': Buffer.byteLength(jobDataString),
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, jobDataString);
-	})
+            return agaveIO.sendRequest(requestSettings, jobDataString);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2479,55 +2479,55 @@ agaveIO.launchJob = function(jobDataString) {
 agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunity) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    // get all user permissions
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            // get all user permissions
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-	.then(function(requestObject) {
-	    var permissionsList = requestObject.result;
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(requestObject) {
+            var permissionsList = requestObject.result;
 
-	    // remove permissions
+            // remove permissions
             var promises = [];
-	    for (var i = 0; i < permissionsList.length; i++) {
+            for (var i = 0; i < permissionsList.length; i++) {
                 var entry = permissionsList[i];
-		if (entry.username != agaveSettings.serviceAccountKey)
-		    promises[i] = agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/projects/' + filePath);
+                if (entry.username != agaveSettings.serviceAccountKey)
+                    promises[i] = agaveIO.setFilePermissions(ServiceAccount.accessToken(), entry.username, 'NONE', false, '/projects/' + filePath);
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function(responseObject) {
             if (toCommunity) {
-	        // guest account READ only
-	        var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ&recursive=false';
+                // guest account READ only
+                var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ&recursive=false';
 
-	        var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'POST',
-		    path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
-		    rejectUnauthorized: false,
-		    headers: {
-		        'Content-Length': Buffer.byteLength(postData),
-		        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		    }
-	        };
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'POST',
+                    path:     '/files/v2/pems/system/' + agaveSettings.storageSystem + '//projects/' + filePath,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Content-Length': Buffer.byteLength(postData),
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                    }
+                };
 
-	        return agaveIO.sendRequest(requestSettings, postData);
+                return agaveIO.sendRequest(requestSettings, postData);
             } else {
-	        return agaveIO.setFilePermissionsForProjectUsers(projectUuid, filePath, false);
+                return agaveIO.setFilePermissionsForProjectUsers(projectUuid, filePath, false);
             }
-	})
-	.then(function(responseObject) {
+        })
+        .then(function(responseObject) {
             return Promise.resolve(responseObject);
         })
         .catch(function(errorObject) {
@@ -2543,23 +2543,23 @@ agaveIO.createCommunityDirectory = function(directory) {
     var postData = 'action=mkdir&path=' + directory;
 
     ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'PUT',
-		path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'PUT',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function() {
-	    return agaveIO.setCommunityFilePermissions(directory);
-	})
+            return agaveIO.setCommunityFilePermissions(directory);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -2579,86 +2579,86 @@ agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity
     var fromPath;
     var toPath;
     if (toCommunity) {
-	fromPath = 'projects';
-	toPath = 'community';
+        fromPath = 'projects';
+        toPath = 'community';
     } else {
-	fromPath = 'community';
-	toPath = 'projects';
+        fromPath = 'community';
+        toPath = 'projects';
     }
     var performMove = false;
 
     ServiceAccount.getToken()
-	.then(function(token) {
-	    // check that file is there
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/files/' + filename,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            // check that file is there
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/files/' + filename,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendCheckRequest(requestSettings, null);
-	})
-	.then(function(responseObject) {
-	    if (responseObject.status === 'success') {
-		performMove = true;
-		return null;
-	    }
+            return agaveIO.sendCheckRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            if (responseObject.status === 'success') {
+                performMove = true;
+                return null;
+            }
 
-	    // if file does not exist in from directory, see if already moved
-	    console.log('VDJ-API INFO: File ' + filename + ' does not exist in ' + fromPath + ' directory, looking to see if already moved.');
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + toPath + '/' + projectUuid + '/files/' + filename,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+            // if file does not exist in from directory, see if already moved
+            console.log('VDJ-API INFO: File ' + filename + ' does not exist in ' + fromPath + ' directory, looking to see if already moved.');
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + toPath + '/' + projectUuid + '/files/' + filename,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendCheckRequest(requestSettings, null);
-	})
-	.then(function(responseObject) {
-	    if (performMove) return;
+            return agaveIO.sendCheckRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            if (performMove) return;
 
-	    if (responseObject.status === 'success') {
-		performMove = false;
-		console.log('VDJ-API INFO: File ' + filename + ' was already moved.');
-		return;
-	    } else {
-		// do not abort the process if cannot find file
-		performMove = false;
-		var msg = 'VDJ-API ERROR: project publish/unpublish: ' + projectUuid + ', File ' + filename + ' does not exist in either the project or community directory, trying to continue...';
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return Promise.resolve();
-	    }
-	})
-	.then(function() {
-	    if (performMove) {
-		var postData = 'action=move&path=/' + toPath + '/' + projectUuid + '/files/' + filename;
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'PUT',
-		    path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/files/' + filename,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Content-Length': Buffer.byteLength(postData),
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		    }
-		};
-
-		return agaveIO.sendRequest(requestSettings, postData);
-	    }
-	})
+            if (responseObject.status === 'success') {
+                performMove = false;
+                console.log('VDJ-API INFO: File ' + filename + ' was already moved.');
+                return;
+            } else {
+                // do not abort the process if cannot find file
+                performMove = false;
+                var msg = 'VDJ-API ERROR: project publish/unpublish: ' + projectUuid + ', File ' + filename + ' does not exist in either the project or community directory, trying to continue...';
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+        })
         .then(function() {
-	    if (toCommunity) return agaveIO.setCommunityFilePermissions(projectUuid + '/files/' + filename);
-	    else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/files/' + filename, false);
-	})
+            if (performMove) {
+                var postData = 'action=move&path=/' + toPath + '/' + projectUuid + '/files/' + filename;
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'PUT',
+                    path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/files/' + filename,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Content-Length': Buffer.byteLength(postData),
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, postData);
+            }
+        })
+        .then(function() {
+            if (toCommunity) return agaveIO.setCommunityFilePermissions(projectUuid + '/files/' + filename);
+            else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/files/' + filename, false);
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -2678,87 +2678,87 @@ agaveIO.moveJobFileToCommunity = function(projectUuid, jobPath, filename, toComm
     var fromPath;
     var toPath;
     if (toCommunity) {
-	fromPath = 'projects';
-	toPath = 'community';
+        fromPath = 'projects';
+        toPath = 'community';
     } else {
-	fromPath = 'community';
-	toPath = 'projects';
+        fromPath = 'community';
+        toPath = 'projects';
     }
     var performMove = false;
 
     ServiceAccount.getToken()
-	.then(function(token) {
-	    // check that file is there
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            // check that file is there
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendCheckRequest(requestSettings, null);
-	})
-	.then(function(responseObject) {
-	    if (responseObject.status === 'success') {
-		performMove = true;
-		return null;
-	    }
+            return agaveIO.sendCheckRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            if (responseObject.status === 'success') {
+                performMove = true;
+                return null;
+            }
 
-	    // if file does not exist in from directory, see if already moved
-	    console.log('VDJ-API INFO: File ' + filename + ' does not exist in ' + fromPath + ' job directory ' + jobPath + ', looking to see if already moved.');
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + toPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+            // if file does not exist in from directory, see if already moved
+            console.log('VDJ-API INFO: File ' + filename + ' does not exist in ' + fromPath + ' job directory ' + jobPath + ', looking to see if already moved.');
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/files/v2/listings/system/' + agaveSettings.storageSystem + '//' + toPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendCheckRequest(requestSettings, null);
-	})
-	.then(function(responseObject) {
-	    if (performMove) return;
+            return agaveIO.sendCheckRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            if (performMove) return;
 
-	    if (responseObject.status === 'success') {
-		performMove = false;
-		console.log('VDJ-API INFO: File ' + filename + ' was already moved.');
-		return;
-	    } else {
-		// do not abort the process if cannot find file
-		performMove = false;
-		var msg = 'VDJ-API ERROR: project publish/unpublish: ' + projectUuid + ', File ' + filename
-		    + ' does not exist in either the project or community jobs directory' + jobPath + ', trying to continue...';
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return Promise.resolve();
-	    }
-	})
-	.then(function() {
-	    if (performMove) {
-		var postData = 'action=move&path=/' + toPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename;
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'PUT',
-		    path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Content-Length': Buffer.byteLength(postData),
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		    }
-		};
-
-		return agaveIO.sendRequest(requestSettings, postData);
-	    }
-	})
+            if (responseObject.status === 'success') {
+                performMove = false;
+                console.log('VDJ-API INFO: File ' + filename + ' was already moved.');
+                return;
+            } else {
+                // do not abort the process if cannot find file
+                performMove = false;
+                var msg = 'VDJ-API ERROR: project publish/unpublish: ' + projectUuid + ', File ' + filename
+                    + ' does not exist in either the project or community jobs directory' + jobPath + ', trying to continue...';
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+        })
         .then(function() {
-	    if (toCommunity) return agaveIO.setCommunityFilePermissions(projectUuid + '/analyses/' + jobPath + '/' + filename);
-	    else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/analyses/' + jobPath + '/' + filename, false);
-	})
+            if (performMove) {
+                var postData = 'action=move&path=/' + toPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename;
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'PUT',
+                    path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//' + fromPath + '/' + projectUuid + '/analyses/' + jobPath + '/' + filename,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Content-Length': Buffer.byteLength(postData),
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, postData);
+            }
+        })
+        .then(function() {
+            if (toCommunity) return agaveIO.setCommunityFilePermissions(projectUuid + '/analyses/' + jobPath + '/' + filename);
+            else return agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/analyses/' + jobPath + '/' + filename, false);
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -2774,51 +2774,51 @@ agaveIO.setCommunityJobPermissions = function(projectUuid, jobId, toCommunity) {
 
     var jobFiles = [];
     return ServiceAccount.getToken()
-	.then(function(token) {
+        .then(function(token) {
             return agaveIO.getProjectJobFileMetadatas(projectUuid, jobId);
-	})
+        })
         .then(function(_jobFiles) {
-	    jobFiles = _jobFiles;
+            jobFiles = _jobFiles;
 
             // permissions on the job archive path directory
             if (jobFiles.length > 0) {
-	        return agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + jobFiles[0].value.relativeArchivePath, toCommunity);
+                return agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + jobFiles[0].value.relativeArchivePath, toCommunity);
             }
-	})
-	.then(function() {
+        })
+        .then(function() {
             // permissions on each job file
             var promises = [];
-	    for (var i = 0; i < jobFiles.length; i++) {
+            for (var i = 0; i < jobFiles.length; i++) {
                 var file = jobFiles[i];
-	        promises[i] = agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + file.value.relativeArchivePath + '/' + file.value.name, toCommunity);
+                promises[i] = agaveIO.setCommunityFilePermissions(projectUuid, projectUuid + '/analyses/' + file.value.relativeArchivePath + '/' + file.value.name, toCommunity);
             }
 
             return Promise.allSettled(promises);
-	})
-	.then(function() {
+        })
+        .then(function() {
             // permissions for the job itself
-	    return agaveIO.getJobPermissions(jobId);
-	})
-	.then(function(permissionsList) {
-	    // remove permissions
+            return agaveIO.getJobPermissions(jobId);
+        })
+        .then(function(permissionsList) {
+            // remove permissions
             var promises = [];
-	    for (var i = 0; i < permissionsList.length; i++) {
+            for (var i = 0; i < permissionsList.length; i++) {
                 var entry = permissionsList[i];
-		if (entry.username != agaveSettings.serviceAccountKey)
-		    promises[i] = agaveIO.removeUsernameFromJobPermissions(entry.username, ServiceAccount.accessToken(), jobId);
+                if (entry.username != agaveSettings.serviceAccountKey)
+                    promises[i] = agaveIO.removeUsernameFromJobPermissions(entry.username, ServiceAccount.accessToken(), jobId);
             }
  
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
-	    if (toCommunity) {
-		// guest account READ only
-		return agaveIO.setJobPermissions(agaveSettings.guestAccountKey, 'READ', ServiceAccount.accessToken(), jobId);
-	    } else {
-		// add permisions for project users
-		return agaveIO.addJobPermissionsForProjectUsers(projectUuid, jobId);
-	    }
-	})
+            if (toCommunity) {
+                // guest account READ only
+                return agaveIO.setJobPermissions(agaveSettings.guestAccountKey, 'READ', ServiceAccount.accessToken(), jobId);
+            } else {
+                // add permisions for project users
+                return agaveIO.addJobPermissionsForProjectUsers(projectUuid, jobId);
+            }
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -2835,11 +2835,11 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
     var jobFiles = [];
     agaveIO.getProjectJobFileMetadatas(projectUuid, jobId)
         .then(function(_jobFiles) {
-	    jobFiles = _jobFiles;
-	    if (!toCommunity) return;
-	    if (jobFiles.length > 0) return agaveIO.createCommunityDirectory(projectUuid + '/analyses/' + jobFiles[0].value.relativeArchivePath);
-	})
-	.then(function() {
+            jobFiles = _jobFiles;
+            if (!toCommunity) return;
+            if (jobFiles.length > 0) return agaveIO.createCommunityDirectory(projectUuid + '/analyses/' + jobFiles[0].value.relativeArchivePath);
+        })
+        .then(function() {
             var promises = jobFiles.map(function(file) {
                 return function() {
                     return agaveIO.moveJobFileToCommunity(projectUuid, file.value.relativeArchivePath, file.value.name, toCommunity);
@@ -2847,11 +2847,11 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
             });
 
             return promises.reduce(Q.when, new Q());
-	})
+        })
         .then(function() {
-	    // set permission on the job
-	    return agaveIO.setCommunityJobPermissions(projectUuid, jobId, toCommunity);
-	})
+            // set permission on the job
+            return agaveIO.setCommunityJobPermissions(projectUuid, jobId, toCommunity);
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -2866,34 +2866,34 @@ agaveIO.moveJobToCommunity = function(projectUuid, jobId, toCommunity) {
 agaveIO.clearCommunityMetadataPermissions = function(uuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    // get all user permissions
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data/' + uuid + '/pems',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+        .then(function(token) {
+            // get all user permissions
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data/' + uuid + '/pems',
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-	.then(function(requestObject) {
-	    var permissionsList = requestObject.result;
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(requestObject) {
+            var permissionsList = requestObject.result;
 
-	    // remove permissions
+            // remove permissions
             var promises = [];
-	    for (var i = 0; i < permissionsList.length; i++) {
+            for (var i = 0; i < permissionsList.length; i++) {
                 var entry = permissionsList[i];
-		if (entry.username != agaveSettings.serviceAccountKey)
-		    promises[i] = agaveIO.removeUsernameFromMetadataPermissions(entry.username, ServiceAccount.accessToken(), uuid);
+                if (entry.username != agaveSettings.serviceAccountKey)
+                    promises[i] = agaveIO.removeUsernameFromMetadataPermissions(entry.username, ServiceAccount.accessToken(), uuid);
             }
 
             return Promise.allSettled(promises);
-	})
-	.then(function() {
+        })
+        .then(function() {
             return Promise.resolve();
         })
         .catch(function(errorObject) {
@@ -2904,27 +2904,27 @@ agaveIO.clearCommunityMetadataPermissions = function(uuid) {
 agaveIO.setMetadataPermissionsForCommunity = function(uuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.clearCommunityMetadataPermissions(uuid);
-	})
+        .then(function(token) {
+            return agaveIO.clearCommunityMetadataPermissions(uuid);
+        })
         .then(function() {
-	    // guest account READ only
-	    var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ';
+            // guest account READ only
+            var postData = 'username=' + agaveSettings.guestAccountKey + '&permission=READ';
 
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data/' + uuid + '/pems',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		},
-	    };
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data/' + uuid + '/pems',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                },
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
-	.then(function() {
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function() {
             return Promise.resolve();
         })
         .catch(function(errorObject) {
@@ -2935,13 +2935,13 @@ agaveIO.setMetadataPermissionsForCommunity = function(uuid) {
 agaveIO.setMetadataPermissionsForProject = function(projectUuid, uuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.clearCommunityMetadataPermissions(uuid);
-	})
+        .then(function(token) {
+            return agaveIO.clearCommunityMetadataPermissions(uuid);
+        })
         .then(function() {
-	    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, uuid);
-	})
-	.then(function() {
+            return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, uuid);
+        })
+        .then(function() {
             return Promise.resolve();
         })
         .catch(function(errorObject) {
@@ -2954,99 +2954,99 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
     return agaveIO.getAllProjectAssociatedMetadata(projectUuid)
         .then(function(metadataList) {
             var promises = [];
-	    for (var i = 0; i < metadataList.length; i++) {
+            for (var i = 0; i < metadataList.length; i++) {
                 var entry = metadataList[i];
-		if (toCommunity) promises[i] = agaveIO.setMetadataPermissionsForCommunity(entry.uuid);
-		else promises[i] = agaveIO.setMetadataPermissionsForProject(projectUuid, entry.uuid);
+                if (toCommunity) promises[i] = agaveIO.setMetadataPermissionsForCommunity(entry.uuid);
+                else promises[i] = agaveIO.setMetadataPermissionsForProject(projectUuid, entry.uuid);
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
-	    if (toCommunity) {
-		// guest account READ only
-		var postData = 'permission=READ';
+            if (toCommunity) {
+                // guest account READ only
+                var postData = 'permission=READ';
 
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'POST',
-		    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Content-Length': Buffer.byteLength(postData),
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		    },
-		};
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'POST',
+                    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Content-Length': Buffer.byteLength(postData),
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                    },
+                };
 
-		return agaveIO.sendRequest(requestSettings, postData);
-	    } else {
-		// remove guest account access
-		var postData = 'permission=NONE';
+                return agaveIO.sendRequest(requestSettings, postData);
+            } else {
+                // remove guest account access
+                var postData = 'permission=NONE';
 
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'POST',
-		    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Content-Length': Buffer.byteLength(postData),
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		    },
-		};
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'POST',
+                    path:     '/meta/v2/data/' + projectUuid + '/pems/' + agaveSettings.guestAccountKey,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Content-Length': Buffer.byteLength(postData),
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                    },
+                };
 
-		return agaveIO.sendRequest(requestSettings, postData);
-	    }
-	})
+                return agaveIO.sendRequest(requestSettings, postData);
+            }
+        })
         .then(function() {
-	    // get all user permissions
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data/' + projectUuid + '/pems',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-		}
-	    };
+            // get all user permissions
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data/' + projectUuid + '/pems',
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
-	.then(function(requestObject) {
-	    console.log(requestObject);
-	    var permissionsList = requestObject.result;
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(requestObject) {
+            console.log(requestObject);
+            var permissionsList = requestObject.result;
 
-	    if (toCommunity) {
-		// change user permissions to READ only on project metadata
+            if (toCommunity) {
+                // change user permissions to READ only on project metadata
                 var promises = [];
-	        for (var i = 0; i < permissionsList.length; i++) {
+                for (var i = 0; i < permissionsList.length; i++) {
                     var entry = permissionsList[i];
-		    if (entry.username == agaveSettings.serviceAccountKey) continue;
-		    else if (entry.username == agaveSettings.guestAccountKey) continue;
-		    else {
-			var postData = 'permission=READ';
+                    if (entry.username == agaveSettings.serviceAccountKey) continue;
+                    else if (entry.username == agaveSettings.guestAccountKey) continue;
+                    else {
+                        var postData = 'permission=READ';
 
-			var requestSettings = {
-			    host:     agaveSettings.hostname,
-			    method:   'POST',
-			    path:     '/meta/v2/data/' + projectUuid + '/pems/' + entry.username,
-			    rejectUnauthorized: false,
-			    headers: {
-				'Content-Length': Buffer.byteLength(postData),
-				'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
-			    },
-			};
+                        var requestSettings = {
+                            host:     agaveSettings.hostname,
+                            method:   'POST',
+                            path:     '/meta/v2/data/' + projectUuid + '/pems/' + entry.username,
+                            rejectUnauthorized: false,
+                            headers: {
+                                'Content-Length': Buffer.byteLength(postData),
+                                'Authorization': 'Bearer ' + ServiceAccount.accessToken(),
+                            },
+                        };
 
-			console.log(requestSettings);
-			promises[i] = agaveIO.sendRequest(requestSettings, postData);
-		    }
+                        console.log(requestSettings);
+                        promises[i] = agaveIO.sendRequest(requestSettings, postData);
+                    }
                 }
 
                 return Promise.allSettled(promises);
-	    } else {
-		// give users full permissions on project metadata
-		return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, projectUuid);
-	    }
-	})
+            } else {
+                // give users full permissions on project metadata
+                return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, projectUuid);
+            }
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -3058,24 +3058,24 @@ agaveIO.setCommunityMetadataPermissions = function(projectUuid, toCommunity) {
 agaveIO.getCommunityDataMetadata = function() {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:   agaveSettings.hostname,
-		method: 'GET',
-		path:   '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:   agaveSettings.hostname,
+                method: 'GET',
+                path:   '/meta/v2/data?q='
                     + encodeURIComponent('{'
-					 + '"name": "communityDataSRA"'
-					 + '}')
+                                         + '"name": "communityDataSRA"'
+                                         + '}')
                     + '&limit=5000'
                 ,
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -3087,38 +3087,38 @@ agaveIO.getCommunityDataMetadata = function() {
 agaveIO.createCommunityFilePostit = function(projectUuid, path) {
 
     var url = 'https://' + agaveSettings.hostname
-	+ '/files/v2/media/system/'
-	+ agaveSettings.storageSystem
-	+ '//community/' + projectUuid
-	+ '/' + path
-	+ '?force=true';
+        + '/files/v2/media/system/'
+        + agaveSettings.storageSystem
+        + '//community/' + projectUuid
+        + '/' + path
+        + '?force=true';
 
     var postData = {
-	url: url,
-	method: 'GET',
-	maxUses: 1,
-	lifetime: 3600,
-	noauth: false
+        url: url,
+        method: 'GET',
+        maxUses: 1,
+        lifetime: 3600,
+        noauth: false
     };
 
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/postits/v2/',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/postits/v2/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -3142,7 +3142,7 @@ agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 
     var postData = {
         name: 'projectLoad',
-	associationIds: [ projectUuid ],
+        associationIds: [ projectUuid ],
         value: {
             collection: collection,
             shouldLoad: true,
@@ -3155,21 +3155,21 @@ agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -3182,11 +3182,11 @@ agaveIO.createProjectLoadMetadata = function(projectUuid, collection) {
 agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'GET',
-		path:     '/meta/v2/data?q='
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{'
                             + '"name":"projectLoad",'
@@ -3195,14 +3195,14 @@ agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
                             + '}'
                     )
                     + '&limit=1',
-		rejectUnauthorized: false,
-		headers: {
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, null);
-	})
+            return agaveIO.sendRequest(requestSettings, null);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -3217,36 +3217,36 @@ agaveIO.getProjectsToBeLoaded = function(collection) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'GET',
-		    path:     '/meta/v2/data?q='
-			+ encodeURIComponent('{"name":"projectLoad","value.collection":"' + collection +  '","value.shouldLoad":true,"value.isLoaded":false}')
-			+ '&limit=50&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent('{"name":"projectLoad","value.collection":"' + collection +  '","value.shouldLoad":true,"value.isLoaded":false}')
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -3258,7 +3258,7 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, c
 
     var postData = {
         name: 'rearrangementLoad',
-	associationIds: [ projectUuid ],
+        associationIds: [ projectUuid ],
         value: {
             repertoire_id: repertoire_id,
             collection: collection,
@@ -3270,21 +3270,21 @@ agaveIO.createRearrangementLoadMetadata = function(projectUuid, repertoire_id, c
     postData = JSON.stringify(postData);
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    var requestSettings = {
-		host:     agaveSettings.hostname,
-		method:   'POST',
-		path:     '/meta/v2/data',
-		rejectUnauthorized: false,
-		headers: {
-		    'Content-Type':   'application/json',
-		    'Content-Length': Buffer.byteLength(postData),
-		    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		}
-	    };
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
 
-	    return agaveIO.sendRequest(requestSettings, postData);
-	})
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
@@ -3299,12 +3299,12 @@ agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
     var models = [];
 
     var doFetch = function(offset) {
-	return ServiceAccount.getToken()
-	    .then(function(token) {
-		var requestSettings = {
-		    host:     agaveSettings.hostname,
-		    method:   'GET',
-		    path:     '/meta/v2/data?q='
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
                         + encodeURIComponent(
                             '{'
                                 + '"name":"rearrangementLoad",'
@@ -3312,29 +3312,29 @@ agaveIO.getRearrangementsToBeLoaded = function(projectUuid, collection) {
                                 + '"associationIds":"' + projectUuid + '"'
                                 + '}'
                         )
-			+ '&limit=50&offset=' + offset,
-		    rejectUnauthorized: false,
-		    headers: {
-			'Authorization': 'Bearer ' + ServiceAccount.accessToken()
-		    }
-		};
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
 
-		return agaveIO.sendRequest(requestSettings, null)
-	    })
+                return agaveIO.sendRequest(requestSettings, null)
+            })
             .then(function(responseObject) {
-		var result = responseObject.result;
-		if (result.length > 0) {
-		    // maybe more data
-		    models = models.concat(result);
-		    var newOffset = offset + result.length;
-		    return doFetch(newOffset);
-		} else {
-		    // no more data
-		    return Promise.resolve(models);
-		}
-	    })
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
             .catch(function(errorObject) {
-		return Promise.reject(errorObject);
+                return Promise.reject(errorObject);
             });
     }
 
@@ -3354,17 +3354,17 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
     var projectMetadata = null;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
+        .then(function(token) {
             // get the project metadata
-	    return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
-	.then(function(_projectMetadata) {
+        .then(function(_projectMetadata) {
             projectMetadata = _projectMetadata;
 
             // get repertoire objects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
         })
-	.then(function(models) {
+        .then(function(models) {
             // put into AIRR format
             var study = projectMetadata.value;
             var blank = airr.repertoireTemplate();
@@ -3385,7 +3385,7 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
             // get subject objects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
-	.then(function(models) {
+        .then(function(models) {
             for (var i in models) {
                 subjectMetadata[models[i].uuid] = models[i].value;
             }
@@ -3393,7 +3393,7 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
             // get sample objects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
         })
-	.then(function(models) {
+        .then(function(models) {
             for (var i in models) {
                 sampleMetadata[models[i].uuid] = models[i].value;
             }
@@ -3401,12 +3401,12 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
             // get data processing objects
             return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
         })
-	.then(function(models) {
+        .then(function(models) {
             for (var i in models) {
                 dpMetadata[models[i].uuid] = models[i].value;
             }
         })
-	.then(function() {
+        .then(function() {
             // put into AIRR format
             for (var i in repertoireMetadata) {
                 var rep = repertoireMetadata[i];
@@ -3456,16 +3456,16 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
-	})
+        .then(function(token) {
+            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+        })
         .then(function(projectPermissions) {
             var metadataPermissions = new MetadataPermissions();
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
-	    for (var i = 0; i < projectUsernames.length; i++) {
+            for (var i = 0; i < projectUsernames.length; i++) {
                 var username = projectUsernames[i];
                 promises[i] = agaveIO.addUsernameToJobPermissions(
                     username,
@@ -3475,7 +3475,7 @@ agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -3488,16 +3488,16 @@ agaveIO.addJobPermissionsForProjectUsers = function(projectUuid, jobId) {
 agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUuid) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
-	})
+        .then(function(token) {
+            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+        })
         .then(function(projectPermissions) {
             var metadataPermissions = new MetadataPermissions();
 
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
-	    for (var i = 0; i < projectUsernames.length; i++) {
+            for (var i = 0; i < projectUsernames.length; i++) {
                 var username = projectUsernames[i];
                 promises[i] = agaveIO.addUsernameToMetadataPermissions(
                     username,
@@ -3507,7 +3507,7 @@ agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUu
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
             return Promise.resolve();
         })
@@ -3519,10 +3519,10 @@ agaveIO.addMetadataPermissionsForProjectUsers = function(projectUuid, metadataUu
 agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value) {
     var object = null;
     return agaveIO.createMetadataForType(projectUuid, type, value)
-	.then(function(_obj) {
+        .then(function(_obj) {
             object = _obj;
             return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, object['uuid']);
-	})
+        })
         .then(function() {
             return Promise.resolve(object);
         });
@@ -3532,20 +3532,20 @@ agaveIO.createMetadataForTypeWithPermissions = function(projectUuid, type, value
 agaveIO.deleteAllMetadataForType = function(projectUuid, type) {
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
-	})
+        .then(function(token) {
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
+        })
         .then(function(metadataList) {
 
-	    console.log('VDJ-API INFO: agaveIO.deleteAllMetadataForType - deleting ' + metadataList.length + ' metadata entries for type: ' + type);
+            console.log('VDJ-API INFO: agaveIO.deleteAllMetadataForType - deleting ' + metadataList.length + ' metadata entries for type: ' + type);
             var promises = [];
-	    for (var i = 0; i < metadataList.length; i++) {
+            for (var i = 0; i < metadataList.length; i++) {
                 var metadata = metadataList[i];
                 promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), metadata.uuid);
             }
 
             return Promise.allSettled(promises);
-	})
+        })
         .then(function() {
             return Promise.resolve();
         })

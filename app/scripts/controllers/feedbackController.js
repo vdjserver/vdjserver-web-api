@@ -51,9 +51,9 @@ var _ = require('underscore');
 FeedbackController.createFeedback = function(request, response) {
 
     if (_.isString(request.body.feedback) === false || request.body.feedback.length <= 0) {
-	var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error - missing feedback parameter';
+        var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error - missing feedback parameter';
         console.error(msg);
-	webhookIO.postToSlack(msg);
+        webhookIO.postToSlack(msg);
         apiResponseController.sendError(msg, 400, response);
         return;
     }
@@ -76,17 +76,17 @@ FeedbackController.createFeedback = function(request, response) {
             return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
         })
         .then(function() {
-	    // send acknowledgement
-	    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+            // send acknowledgement
+            return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
         })
         .then(function() {
             apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-	    return;
+            return;
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error occured while processing feedback. Feedback is: ' + JSON.stringify(feedback) + ' error: ' + error;
+            var msg = 'VDJ-API ERROR: FeedbackController.createFeedback - error occured while processing feedback. Feedback is: ' + JSON.stringify(feedback) + ' error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
+            webhookIO.postToSlack(msg);
             apiResponseController.sendError(msg, 400, response);
         })
         ;
@@ -116,37 +116,37 @@ FeedbackController.createPublicFeedback = function(request, response) {
 
     recaptcha.verify(function(success, errorCode) {
         if (!success) {
-	    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - Recaptcha response invalid - error code is: ' + errorCode;
+            var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - Recaptcha response invalid - error code is: ' + errorCode;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
+            webhookIO.postToSlack(msg);
             apiResponseController.sendError(msg, 400, response);
             return;
         }
         else {
             console.log('VDJ-API INFO: FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
 
-	    // store in metadata
-	    var emailFeedbackMessage = feedback.getEmailMessage();
-	    feedback.storeFeedbackInMetadata()
-		.then(function() {
-		    // send as email
-		    return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
-		})
-		.then(function() {
-		    // send acknowledgement
-		    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
-		})
-		.then(function() {
-		    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-		    return;
-		})
-		.catch(function(error) {
-		    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
-			+ JSON.stringify(feedback) + ' error: ' + error;
-		    console.error(msg);
-		    webhookIO.postToSlack(msg);
-		    apiResponseController.sendError(msg, 400, response);
-		});
+            // store in metadata
+            var emailFeedbackMessage = feedback.getEmailMessage();
+            feedback.storeFeedbackInMetadata()
+                .then(function() {
+                    // send as email
+                    return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+                })
+                .then(function() {
+                    // send acknowledgement
+                    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+                })
+                .then(function() {
+                    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+                    return;
+                })
+                .catch(function(error) {
+                    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
+                        + JSON.stringify(feedback) + ' error: ' + error;
+                    console.error(msg);
+                    webhookIO.postToSlack(msg);
+                    apiResponseController.sendError(msg, 400, response);
+                });
         }
     });
 };

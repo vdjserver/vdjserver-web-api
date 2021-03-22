@@ -21,10 +21,10 @@ GuestAccount.getToken = function() {
 
     return agaveIO.getToken(this)
         .then(function(responseObject) {
-	    that.agaveToken = new AgaveToken(responseObject);
+            that.agaveToken = new AgaveToken(responseObject);
         })
         .catch(function(errorObject) {
-	    console.log('VDJ-GUEST ERROR: Unable to login with guest account. ' + errorObject);
+            console.log('VDJ-GUEST ERROR: Unable to login with guest account. ' + errorObject);
             return Promise.reject(errorObject);
         });
 }

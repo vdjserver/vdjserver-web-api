@@ -28,11 +28,11 @@ ServiceAccount.getToken = function() {
 
     return agaveIO.getToken(this)
         .then(function(responseObject) {
-	    that.agaveToken = new AgaveToken(responseObject);
+            that.agaveToken = new AgaveToken(responseObject);
             return Promise.resolve(that.agaveToken);
         })
         .catch(function(errorObject) {
-	    console.log('VDJ-API ERROR: Unable to login with service account. ' + errorObject);
+            console.log('VDJ-API ERROR: Unable to login with service account. ' + errorObject);
             return Promise.reject(errorObject);
         });
 }

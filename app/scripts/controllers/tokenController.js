@@ -54,13 +54,13 @@ TokenController.getToken = function(request, response) {
         })
         .then(function(agaveToken) {
             console.log('VDJ-API INFO: TokenController.getToken - verification metadata successful for ' + request.body.username);
-	    webhookIO.postToSlack('VDJ-API INFO: TokenController.getToken - successful for ' + request.body.username);
+            webhookIO.postToSlack('VDJ-API INFO: TokenController.getToken - successful for ' + request.body.username);
             apiResponseController.sendSuccess(agaveToken, response);
         })
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: TokenController.getToken - error - username ' + request.body.username + ', error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 401, response);
         });
 };
@@ -77,8 +77,8 @@ TokenController.refreshToken = function(request, response) {
         })
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: TokenController.refreshToken - error - username ' + request.body.username + ', error ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
             apiResponseController.sendError(error.message, 401, response);
         });
 };

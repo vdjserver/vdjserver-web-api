@@ -69,4 +69,7 @@ RUN cd /vdjserver-web-api && npm install
 # Copy project source
 COPY . /vdjserver-web-api
 
+# ESLint
+RUN cd /vdjserver-web-api && npm run eslint app/scripts
+
 CMD ["/root/postfix-config-replace.sh"]

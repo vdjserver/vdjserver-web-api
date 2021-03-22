@@ -68,7 +68,7 @@ mongoIO.cleanObject = function(obj) {
                 continue;
             }
         }
-        if ((typeof obj[key]) == 'array')
+        if (Array.isArray(obj[key]))
             for (var entry in obj[key])
                 mongoIO.cleanObject(obj[key][entry]);
         if ((typeof obj[key]) == 'object')
@@ -322,7 +322,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .catch(function(error) {
-	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                            var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
                             retry = true;
                         });
@@ -330,7 +330,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
                         await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                             .catch(function(error) {
-	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                                var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
                                 return reject(msg);
                             });
@@ -366,7 +366,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     dataLoad['value']['load_set'] = load_set + 1;
                     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .catch(function(error) {
-	                    var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                            var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
                             retry = true;
                         });
@@ -374,7 +374,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
                         await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                             .catch(function(error) {
-	                        var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
+                                var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
                                 return reject(msg);
                             });
@@ -535,12 +535,12 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
     // loop through files and load
     for (var i = 0; i < files.length; ++i) {
         var filename = filePath + '/' + files[i];
-	console.log('VDJ-API INFO: mongoIO.loadRearrangementData, processing file: ' + filename + ' load set start: ' + load_set_start);
+        console.log('VDJ-API INFO: mongoIO.loadRearrangementData, processing file: ' + filename + ' load set start: ' + load_set_start);
 
         var result = await mongoIO.processFile(filename, repertoire, dp_id, dataLoad, load_set, load_set_start, loadCollection)
             .catch(function(error) {
                 // pass reject to next level
-	        return Promise.reject(error);
+                return Promise.reject(error);
             });
         load_set = result;
         //console.log(result);
@@ -550,7 +550,7 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
     dataLoad['value']['isLoaded'] = true;
     await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
-	    return Promise.reject(msg);
+            var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
+            return Promise.reject(msg);
         });
 }

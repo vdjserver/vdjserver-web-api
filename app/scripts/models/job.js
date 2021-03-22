@@ -59,9 +59,9 @@ Job.prototype.getJobNotification = function(projectUuid, jobName) {
                ,
         'event': '*',
         'persistent': true,
-	'policy': {
-	    'saveOnFailure': true
-	}
+        'policy': {
+            'saveOnFailure': true
+        }
     };
 };
 

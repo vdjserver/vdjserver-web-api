@@ -54,20 +54,20 @@ var Q = require('q');
 AuthController.extractToken = function(req) {
     // extract the token from the authorization header
     if (! req['headers']['authorization']) {
-	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - missing authorization header';
+        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - missing authorization header';
         console.error(msg);
         webhookIO.postToSlack(msg);
         return false;
     }
     var fields = req['headers']['authorization'].split(' ');
     if (fields.length != 2) {
-	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
+        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
         console.error(msg);
         webhookIO.postToSlack(msg);
         return false;
     }
     if (fields[0].toLowerCase() != 'bearer') {
-	var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
+        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
         console.error(msg);
         webhookIO.postToSlack(msg);
         return false;
@@ -94,7 +94,7 @@ AuthController.userAuthorization = function(req, scopes, definition) {
     // get my profile and username from the token
     // return a promise
     return agaveIO.getAgaveUserProfile(token, 'me')
-    	.then(function(userProfile) {
+        .then(function(userProfile) {
             // save the user profile
             req['user'] = userProfile;
 
@@ -103,20 +103,20 @@ AuthController.userAuthorization = function(req, scopes, definition) {
         })
         .then(function(userVerificationMetadata) {
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
-		// valid
+                // valid
                 return true;
             }
             else {
-	        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - access by unverified user: ' + req['user']['username'];
+                var msg = 'VDJ-API ERROR: AuthController.userAuthorization - access by unverified user: ' + req['user']['username'];
                 console.error(msg);
-	        webhookIO.postToSlack(msg);
+                webhookIO.postToSlack(msg);
                 return false;
             }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid token: ' + token + ', error: ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid token: ' + token + ', error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
+            webhookIO.postToSlack(msg);
             return false;
         });
 }
@@ -134,45 +134,45 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
     if (project_uuid == undefined)
         if (req.params) project_uuid = req.params.project_uuid;
     if (project_uuid == undefined) {
-	var msg = 'VDJ-API ERROR: AuthController.authForProject - missing project uuid, route ' + JSON.stringify(req.route.path);
+        var msg = 'VDJ-API ERROR: AuthController.authForProject - missing project uuid, route ' + JSON.stringify(req.route.path);
         console.error(msg);
-	webhookIO.postToSlack(msg);
-	return false;
+        webhookIO.postToSlack(msg);
+        return false;
     }
 
     // verify the user token
     // return a promise
     return AuthController.userAuthorization(req, scopes, definition)
-	.then(function(result) {
-	    if (!result) return result;
+        .then(function(result) {
+            if (!result) return result;
 
-	    // verify the user has access to project
-	    return agaveIO.getProjectMetadata(token, project_uuid);
-	})
+            // verify the user has access to project
+            return agaveIO.getProjectMetadata(token, project_uuid);
+        })
         .then(function(projectMetadata) {
-	    // make sure its project metadata and not some random uuid
+            // make sure its project metadata and not some random uuid
             // TODO: should disallow old VDJServer V1 projects at some point
             if (projectMetadata && (projectMetadata.name == 'private_project') || (projectMetadata.name == 'public_project') || (projectMetadata.name == 'project')) {
-		return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
+                return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
             }
             else {
                 return Promise.reject(new Error('invalid project metadata'));
             }
         })
         .then(function(projectPermissions) {
-	    // we can read the project metadata, but do we have write permission?
-	    if (projectPermissions && projectPermissions.permission.write)
-		return true;
-	    else {
+            // we can read the project metadata, but do we have write permission?
+            if (projectPermissions && projectPermissions.permission.write)
+                return true;
+            else {
                 return Promise.reject(new Error('user does not have write permission for project'));
-	    }
+            }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route: '
-		+ JSON.stringify(req.route.path) + ', error: ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route: '
+                + JSON.stringify(req.route.path) + ', error: ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return false;
+            webhookIO.postToSlack(msg);
+            return false;
         });
 }
 
@@ -187,17 +187,17 @@ AuthController.verifyUser = function(username) {
     return agaveIO.getUserVerificationMetadata(username)
         .then(function(userVerificationMetadata) {
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
-		// valid
+                // valid
                 return true;
             }
             else {
-		return false;
+                return false;
             }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
+            webhookIO.postToSlack(msg);
             return false;
         })
         ;
@@ -214,19 +214,19 @@ AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
 
     return agaveIO.getMetadataPermissionsForUser(accessToken, uuid, username)
         .then(function(metadataPermissions) {
-	    // we can read the metadata, but do we have write permission?
-	    if (metadataPermissions && metadataPermissions.permission.write)
-		return true;
-	    else {
-		return false;
-	    }
+            // we can read the metadata, but do we have write permission?
+            if (metadataPermissions && metadataPermissions.permission.write)
+                return true;
+            else {
+                return false;
+            }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.verifyMetadataAccess - uuid: ' + uuid
-		+ ', error validating user: ' + username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.verifyMetadataAccess - uuid: ' + uuid
+                + ', error validating user: ' + username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return false;
+            webhookIO.postToSlack(msg);
+            return false;
         });
 }
 
@@ -245,25 +245,25 @@ AuthController.verifyUserFromBody = function(request, response, next) {
 AuthController.authUser = function(request, response, next) {
     // get my profile and verify same username
     agaveIO.getAgaveUserProfile(request.user.password, 'me')
-	.then(function(userProfile) {
-	    if (userProfile && userProfile.username == request.user.username)
-		return next();
-	    else {
-		//console.log(userProfile);
-		var msg = 'VDJ-API ERROR: AuthController.authUser - route '
-		    + JSON.stringify(request.route) + ', authentication token ' + request.user.password + ' provided with non-matching username: '
-		    + userProfile.username + ' != ' + request.user.username;
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return apiResponseController.send401(request, response);
-	    }
-	})
+        .then(function(userProfile) {
+            if (userProfile && userProfile.username == request.user.username)
+                return next();
+            else {
+                //console.log(userProfile);
+                var msg = 'VDJ-API ERROR: AuthController.authUser - route '
+                    + JSON.stringify(request.route) + ', authentication token ' + request.user.password + ' provided with non-matching username: '
+                    + userProfile.username + ' != ' + request.user.username;
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return apiResponseController.send401(request, response);
+            }
+        })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authUser - route '
-		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.authUser - route '
+                + JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.send401(request, response);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.send401(request, response);
         });
 }
 
@@ -278,28 +278,28 @@ AuthController.authForProject = function(request, response, next, projectUuid) {
 
     agaveIO.getProjectMetadata(request.user.password, projectUuid)
         .then(function(projectMetadata) {
-	    // make sure its project metadata and not some random uuid
+            // make sure its project metadata and not some random uuid
             if (projectMetadata && projectMetadata.name == 'project') {
-		return agaveIO.getMetadataPermissionsForUser(request.user.password, projectUuid, request.user.username);
+                return agaveIO.getMetadataPermissionsForUser(request.user.password, projectUuid, request.user.username);
             }
             else {
-		return apiResponseController.send401(request, response);
+                return apiResponseController.send401(request, response);
             }
         })
         .then(function(projectPermissions) {
-	    // we can read the project metadata, but do we have write permission?
-	    if (projectPermissions && projectPermissions.permission.write)
-		return next();
-	    else {
-		return apiResponseController.send401(request, response);
-	    }
+            // we can read the project metadata, but do we have write permission?
+            if (projectPermissions && projectPermissions.permission.write)
+                return next();
+            else {
+                return apiResponseController.send401(request, response);
+            }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + projectUuid + ', route '
-		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + projectUuid + ', route '
+                + JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.send401(request, response);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.send401(request, response);
         });
 }
 
@@ -327,28 +327,28 @@ AuthController.authForUnpublishProject = function(request, response, next, proje
 
     agaveIO.getProjectMetadata(request.user.password, projectUuid)
         .then(function(projectMetadata) {
-	    // make sure its project metadata and not some random uuid
+            // make sure its project metadata and not some random uuid
             if (projectMetadata && projectMetadata.name == 'publicProject') {
-		return agaveIO.getMetadataPermissionsForUser(request.user.password, projectUuid, request.user.username);
+                return agaveIO.getMetadataPermissionsForUser(request.user.password, projectUuid, request.user.username);
             }
             else {
-		return apiResponseController.send401(request, response);
+                return apiResponseController.send401(request, response);
             }
         })
         .then(function(projectPermissions) {
-	    // verify read permission for specific user
-	    if (projectPermissions && projectPermissions.permission.read)
-		return next();
-	    else {
-		return apiResponseController.send401(request, response);
-	    }
+            // verify read permission for specific user
+            if (projectPermissions && projectPermissions.permission.read)
+                return next();
+            else {
+                return apiResponseController.send401(request, response);
+            }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authForUnpublishProject - project: ' + projectUuid + ', route '
-		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.authForUnpublishProject - project: ' + projectUuid + ', route '
+                + JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.send401(request, response);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.send401(request, response);
         });
 }
 
@@ -367,19 +367,19 @@ AuthController.authForMetadata = function(request, response, next, uuid) {
 
     agaveIO.getMetadataPermissionsForUser(request.user.password, uuid, request.user.username)
         .then(function(metadataPermissions) {
-	    // we can read the metadata, but do we have write permission?
-	    if (metadataPermissions && metadataPermissions.permission.write)
-		return next();
-	    else {
-		return apiResponseController.send401(request, response);
-	    }
+            // we can read the metadata, but do we have write permission?
+            if (metadataPermissions && metadataPermissions.permission.write)
+                return next();
+            else {
+                return apiResponseController.send401(request, response);
+            }
         })
         .catch(function(error) {
-	    var msg = 'VDJ-API ERROR: AuthController.authForMetadata - uuid: ' + uuid + ', route '
-		+ JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
+            var msg = 'VDJ-API ERROR: AuthController.authForMetadata - uuid: ' + uuid + ', route '
+                + JSON.stringify(request.route) + ', error validating user: ' + request.user.username + ', error ' + error;
             console.error(msg);
-	    webhookIO.postToSlack(msg);
-	    return apiResponseController.send401(request, response);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.send401(request, response);
         });
 }
 

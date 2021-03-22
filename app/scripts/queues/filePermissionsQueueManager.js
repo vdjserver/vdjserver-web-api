@@ -75,7 +75,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
-		if (error == 'file transformation not complete') {
+                if (error == 'file transformation not complete') {
                     console.log('VDJ-API INFO: fileUploadPoll queue for ' + JSON.stringify(fileQueueJob.data) + ', file transformation is not complete.');
 
                     // Stop retries after 40 minutes
@@ -85,9 +85,9 @@ FilePermissionsQueueManager.processFileUploads = function() {
                     var overTimeLimit = currentDatetime.isAfter(finishDatetime);
 
                     if (overTimeLimit === true) {
-			console.log('VDJ-API INFO: fileUploadPoll queue - exceeded polling limit, continuing.');
+                        console.log('VDJ-API INFO: fileUploadPoll queue - exceeded polling limit, continuing.');
 
-			queue
+                        queue
                             .create('fileUploadPermissions', fileQueueJob.data)
                             .removeOnComplete(true)
                             .attempts(5)
@@ -95,19 +95,19 @@ FilePermissionsQueueManager.processFileUploads = function() {
                             .save()
                         ;
 
-			done();
+                        done();
                     }
                     else {
-			console.log('VDJ-API INFO: fileUploadPoll queue for ' + JSON.stringify(fileQueueJob.data) + ', re-polling.');
-			done(new Error(error));
+                        console.log('VDJ-API INFO: fileUploadPoll queue for ' + JSON.stringify(fileQueueJob.data) + ', re-polling.');
+                        done(new Error(error));
                     }
-		} else {
+                } else {
                     var msg = 'VDJ-API ERROR: fileUploadPoll queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error;
-		    console.error(msg);
-		    //console.error(error.stack);
-		    webhookIO.postToSlack(msg);
+                    console.error(msg);
+                    //console.error(error.stack);
+                    webhookIO.postToSlack(msg);
                     done(); // no retry
-		}
+                }
             })
             ;
     });
@@ -140,8 +140,8 @@ FilePermissionsQueueManager.processFileUploads = function() {
                 done();
             })
             .fail(function(error) {
-		console.error('VDJ-API ERROR: fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.error(error.stack);
+                console.error('VDJ-API ERROR: fileUploadPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
+                console.error(error.stack);
 
                 app.emit(
                     'fileImportNotification',
@@ -188,7 +188,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
             })
             .fail(function(error) {
                 console.error('VDJ-API ERROR: fileUploadMetadata queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.error(error.stack);
+                console.error(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })
@@ -225,7 +225,7 @@ FilePermissionsQueueManager.processFileUploads = function() {
             })
             .fail(function(error) {
                 console.error('VDJ-API ERROR: fileUploadMetadataPermissions queue error for ' + JSON.stringify(fileQueueJob.data) + ', error is ' + error);
-		console.error(error.stack);
+                console.error(error.stack);
 
                 done(new Error('Agave error is: ' + error));
             })

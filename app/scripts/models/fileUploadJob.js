@@ -73,9 +73,9 @@ FileUploadJob.prototype.setMetadataPermissions = function() {
     var that = this;
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid);
-	})
+        .then(function(token) {
+            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid);
+        })
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
@@ -120,55 +120,55 @@ FileUploadJob.prototype.createAgaveFileMetadata = function() {
 
     return agaveIO.getProjectFileMetadataByFilename(this.projectUuid, this.fileUuid)
         .then(function(fileMetadata) {
-	    if (fileMetadata.length != 0) {
-		console.log('VDJ-API INFO: FileUploadJob.createAgaveFileMetadata - metadata already exists, skipping creation.');
-		return;
-	    } else {
-		return agaveIO.getFileDetail(that.getRelativeFilePath())
-		    .then(function(fileDetail) {
-			var length = fileDetail[0].length;
-			var name = fileDetail[0].name;
+            if (fileMetadata.length != 0) {
+                console.log('VDJ-API INFO: FileUploadJob.createAgaveFileMetadata - metadata already exists, skipping creation.');
+                return;
+            } else {
+                return agaveIO.getFileDetail(that.getRelativeFilePath())
+                    .then(function(fileDetail) {
+                        var length = fileDetail[0].length;
+                        var name = fileDetail[0].name;
 
-			const defaultVdjFileType = 4;
+                        const defaultVdjFileType = 4;
 
-			// VDJ File Type
-			if (_.isEmpty(that.vdjFileType) === false) {
+                        // VDJ File Type
+                        if (_.isEmpty(that.vdjFileType) === false) {
 
-			    try {
-				that.vdjFileType = parseInt(that.vdjFileType);
-			    }
-			    catch (e) {
-				that.vdjFileType = defaultVdjFileType;
-			    }
-			}
-			else {
-			    that.vdjFileType = defaultVdjFileType;
-			}
+                            try {
+                                that.vdjFileType = parseInt(that.vdjFileType);
+                            }
+                            catch (e) {
+                                that.vdjFileType = defaultVdjFileType;
+                            }
+                        }
+                        else {
+                            that.vdjFileType = defaultVdjFileType;
+                        }
 
-			// Read Direction
-			if (_.isEmpty(that.readDirection) === true) {
-			    that.readDirection = '';
-			}
+                        // Read Direction
+                        if (_.isEmpty(that.readDirection) === true) {
+                            that.readDirection = '';
+                        }
 
-			// Tags
-			if (_.isEmpty(that.tags) === true) {
-			    that.tags = [];
-			}
-			else {
+                        // Tags
+                        if (_.isEmpty(that.tags) === true) {
+                            that.tags = [];
+                        }
+                        else {
 
-			    var splitTags = that.tags.split(',');
+                            var splitTags = that.tags.split(',');
 
-			    var tags = splitTags.map(function(tag) {
+                            var tags = splitTags.map(function(tag) {
 
-				return tag.trim();
-			    });
+                                return tag.trim();
+                            });
 
-			    that.tags = tags;
-			}
+                            that.tags = tags;
+                        }
 
-			return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, that.vdjFileType, name, length, that.readDirection, that.tags);
-		    });
-	    }
+                        return agaveIO.createFileMetadata(that.fileUuid, that.projectUuid, that.vdjFileType, name, length, that.readDirection, that.tags);
+                    });
+            }
         })
         ;
 };
@@ -192,9 +192,9 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
     }
 
     return ServiceAccount.getToken()
-	.then(function(token) {
-	    return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid)
-	})
+        .then(function(token) {
+            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), that.projectUuid)
+        })
         .then(function(projectPermissions) {
 
             var filePermissions = new FilePermissions();
@@ -213,7 +213,7 @@ FileUploadJob.prototype.setAgaveFilePermissions = function() {
                         username,
                         ServiceAccount.accessToken(),
                         that.getRelativeFilePath(),
-			true
+                        true
                     );
                 };
             }
@@ -248,43 +248,43 @@ FileUploadJob.prototype.checkFileAvailability = function() {
                 let history = fileHistory[i];
 
                 let historyDatetime = moment(history.created);
-		//console.log(availabilityTime);
-		//console.log(historyDatetime.isAfter(availabilityTime));
-		//console.log(history.status);
+                //console.log(availabilityTime);
+                //console.log(historyDatetime.isAfter(availabilityTime));
+                //console.log(history.status);
 
                 //if (history.hasOwnProperty('status') && history.status === 'TRANSFORMING_COMPLETED' && historyDatetime.isAfter(availabilityTime)) {
                 if (history.hasOwnProperty('status') && history.status === 'STAGING_COMPLETED') {
                     isAvailable = true;
-		    return agaveIO.getFileDetail(path);
+                    return agaveIO.getFileDetail(path);
                 }
 
-		// this is a drop through for directories
+                // this is a drop through for directories
                 if (history.hasOwnProperty('status') && history.status === 'CREATED') {
-		    return agaveIO.getFileDetail(path);
+                    return agaveIO.getFileDetail(path);
                 }
 
-            };
-	    
-	    return null;
+            }
+            
+            return null;
         })
         .then(function(fileHistory) {
-	    if (!fileHistory) return isAvailable;
+            if (!fileHistory) return isAvailable;
 
-	    if (fileHistory.length > 1) {
-		return Q.reject(new Error('file path: ' + path + ' returned more than one detail records, maybe a directory?'))
-	    } else {
-		if (fileHistory[0].format == 'folder') {
-		    return Q.reject(new Error('file path: ' + path + ' is a directory.'))
-		} else {
-		    var metadataString = fileHistory[0]._links.metadata.href;
-		    var split = metadataString.split('%22');
-		    //console.log(split);
-		    if (split[3] != that.fileUuid) return Q.reject(new Error('fileUuid: ' + that.fileUuid + ' does not match uuid ' + split[3] + ' for filePath: ' + path));
+            if (fileHistory.length > 1) {
+                return Q.reject(new Error('file path: ' + path + ' returned more than one detail records, maybe a directory?'))
+            } else {
+                if (fileHistory[0].format == 'folder') {
+                    return Q.reject(new Error('file path: ' + path + ' is a directory.'))
+                } else {
+                    var metadataString = fileHistory[0]._links.metadata.href;
+                    var split = metadataString.split('%22');
+                    //console.log(split);
+                    if (split[3] != that.fileUuid) return Q.reject(new Error('fileUuid: ' + that.fileUuid + ' does not match uuid ' + split[3] + ' for filePath: ' + path));
 
-		    return isAvailable;
-		}
-	    }
-	})
+                    return isAvailable;
+                }
+            }
+        })
         ;
 };
 

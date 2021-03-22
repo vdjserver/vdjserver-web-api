@@ -59,38 +59,38 @@ module.exports = {
     metadataTypes: [ 'subject', 'diagnosis', 'sample', 'cellProcessing', 'nucleicAcidProcessing'],
 
     metadataColumns: {
-	subject: 'subjectColumns',
-	diagnosis: 'diagnosisColumns',
-	sample: 'sampleColumns',
-	cellProcessing: 'cellProcessingColumns',
-	nucleicAcidProcessing: 'nucleicAcidProcessingColumns'
+        subject: 'subjectColumns',
+        diagnosis: 'diagnosisColumns',
+        sample: 'sampleColumns',
+        cellProcessing: 'cellProcessingColumns',
+        nucleicAcidProcessing: 'nucleicAcidProcessingColumns'
     },
 
     defaultColumns: {
-	subject: ['subject_id', 'synthetic', 'organism', 'sex', 'age', 'age_event',
-		  'ancestry_population', 'ethnicity', 'race', 'strain_name',
-		  'linked_subjects', 'link_type'],
+        subject: ['subject_id', 'synthetic', 'organism', 'sex', 'age', 'age_event',
+                  'ancestry_population', 'ethnicity', 'race', 'strain_name',
+                  'linked_subjects', 'link_type'],
 
-	diagnosis: ['subject_uuid', 'study_group_description', 'disease_diagnosis',
-		    'disease_length', 'disease_stage', 'prior_therapies', 'immunogen',
-		    'intervention', 'medical_history'],
+        diagnosis: ['subject_uuid', 'study_group_description', 'disease_diagnosis',
+                    'disease_length', 'disease_stage', 'prior_therapies', 'immunogen',
+                    'intervention', 'medical_history'],
 
-	sample: ['sample_id', 'subject_uuid',
-		 'sample_type', 'tissue', 'anatomic_site', 'disease_state_sample',
-		 'collection_time_point_relative', 'collection_time_point_reference', 'biomaterial_provider'],
+        sample: ['sample_id', 'subject_uuid',
+                 'sample_type', 'tissue', 'anatomic_site', 'disease_state_sample',
+                 'collection_time_point_relative', 'collection_time_point_reference', 'biomaterial_provider'],
 
-	cellProcessing: ['cell_processing_id', 'sample_uuid', 'tissue_processing', 'cell_subset', 'cell_phenotype',
-			 'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage',
-			 'cell_quality', 'cell_isolation', 'cell_processing_protocol'],
+        cellProcessing: ['cell_processing_id', 'sample_uuid', 'tissue_processing', 'cell_subset', 'cell_phenotype',
+                         'single_cell', 'cell_number', 'cells_per_reaction', 'cell_storage',
+                         'cell_quality', 'cell_isolation', 'cell_processing_protocol'],
 
-	nucleicAcidProcessing: ['nucleic_acid_processing_id', 'cell_processing_uuid', 'filename_uuid',
-				'template_class', 'template_quality', 'template_amount', 'library_generation_method',
-				'library_generation_protocol', 'library_generation_kit_version',
-				'pcr_target_locus', 'forward_pcr_primer_target_location',
-				'reverse_pcr_primer_target_location', 'complete_sequences',
-				'physical_linkage', 'total_reads_passing_qc_filter',
-				'sequencing_platform', 'read_length', 'sequencing_facility',
-				'sequencing_run_id', 'sequencing_run_date', 'sequencing_kit'],
+        nucleicAcidProcessing: ['nucleic_acid_processing_id', 'cell_processing_uuid', 'filename_uuid',
+                                'template_class', 'template_quality', 'template_amount', 'library_generation_method',
+                                'library_generation_protocol', 'library_generation_kit_version',
+                                'pcr_target_locus', 'forward_pcr_primer_target_location',
+                                'reverse_pcr_primer_target_location', 'complete_sequences',
+                                'physical_linkage', 'total_reads_passing_qc_filter',
+                                'sequencing_platform', 'read_length', 'sequencing_facility',
+                                'sequencing_run_id', 'sequencing_run_date', 'sequencing_kit'],
     }
 
 };

@@ -66,10 +66,10 @@ var verifyRecaptcha = function(recaptchaData) {
     return new Promise(function(resolve, reject) {
         recaptcha.verify(function(success, errorCode) {
             if (!success) {
-	        reject(errorCode);
+                reject(errorCode);
             } else {
-	        resolve();
-	    }
+                resolve();
+            }
         });
     });
 };
@@ -88,9 +88,9 @@ UserController.createUser = async function(request, response) {
     // The API middleware verifies these are present
     var user = new User(request.body);
     var recaptchaData = {
-	remoteip:  request.body['remoteip'],
-	response: request.body['g-recaptcha-response'],
-	secret: config.recaptchaSecret,
+        remoteip:  request.body['remoteip'],
+        response: request.body['g-recaptcha-response'],
+        secret: config.recaptchaSecret,
     };
     var msg = null;
 
@@ -104,11 +104,11 @@ UserController.createUser = async function(request, response) {
     if (config.allowRecaptchaSkip && (recaptchaData['response'] == 'skip_recaptcha')) {
         console.log('VDJ-API INFO: UserController.createUser - WARNING - Recaptcha check is being skipped.');
     } else {
-	await verifyRecaptcha(recaptchaData)
-	    .catch(function(errorCode) {
+        await verifyRecaptcha(recaptchaData)
+            .catch(function(errorCode) {
                 msg = 'VDJ-API ERROR: UserController.createUser - recaptcha error for '
-		    + JSON.stringify(user.getSanitizedAttributes())
-		    + ' and error code is: ' + errorCode;
+                    + JSON.stringify(user.getSanitizedAttributes())
+                    + ' and error code is: ' + errorCode;
             });
 
         if (msg) {
@@ -121,8 +121,8 @@ UserController.createUser = async function(request, response) {
     // check for duplicate username
     var isDuplicate = false;
     if (config.useTestAccount && user.username == config.testAccountUsername) {
-	// skip for test account
-	console.log('VDJ-API INFO: UserController.createUser - WARNING - Duplicate username check is being bypassed.');
+        // skip for test account
+        console.log('VDJ-API INFO: UserController.createUser - WARNING - Duplicate username check is being bypassed.');
     } else {
         isDuplicate = await agaveIO.isDuplicateUsername(user.username)
             .catch(function(error) {
@@ -146,18 +146,18 @@ UserController.createUser = async function(request, response) {
 
     // create agave user
     if (config.useTestAccount && user.username == config.testAccountUsername) {
-	// skip for test account
-	console.log('VDJ-API INFO: UserController.createUser - WARNING - Agave account creation is being bypassed.');
+        // skip for test account
+        console.log('VDJ-API INFO: UserController.createUser - WARNING - Agave account creation is being bypassed.');
     } else {
         await agaveIO.createUser(user.getCreateUserAttributes())
             .catch(function(error) {
-		msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
                     + ', error: ' + error;
             });
     }
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
     console.log('VDJ-API INFO: UserController.createUser - agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
@@ -169,8 +169,8 @@ UserController.createUser = async function(request, response) {
                 + ', error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
     console.log('VDJ-API INFO: UserController.createUser - token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
@@ -184,8 +184,8 @@ UserController.createUser = async function(request, response) {
                 + ', error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
     console.log('VDJ-API INFO: UserController.createUser - create user profile (' + userProfile.uuid
@@ -198,8 +198,8 @@ UserController.createUser = async function(request, response) {
                 + ', error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
     console.log('VDJ-API INFO: UserController.createUser - verification metadata (' + userVerificationMetadata.uuid
@@ -270,8 +270,8 @@ UserController.changePassword = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendErrorWithCode(msg, 'incorrect password', 400, response);
     }
 
@@ -283,8 +283,8 @@ UserController.changePassword = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -300,8 +300,8 @@ UserController.changePassword = async function(request, response) {
         msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + '. User profile is not valid.';
     }
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
@@ -321,49 +321,49 @@ UserController.verifyUser = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
     if (userVerificationMetadata.name != 'userVerification') {
         msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId;
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
     if (userVerificationMetadata.owner != ServiceAccount.username) {
         msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not owned by service account: ' + verificationId;
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
     if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
         var username = userVerificationMetadata.value.username;
 
-	if (!username) {
+        if (!username) {
             msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata missing username: ' + verificationId;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 400, response);
-	}
+        }
 
         await agaveIO.verifyUser(username, verificationId)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
             });
         if (msg) {
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
         }
     }
     else {
         msg = 'UserController.verifyUser - error - verification metadata failed comparison for ' + verificationId;
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -384,22 +384,22 @@ UserController.resendVerificationEmail = async function(request, response) {
             msg = 'VDJ-API ERROR: Non-existent verification for username: ' + username;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
     }
 
     if (!userVerificationMetadata || userVerificationMetadata.length != 1) {
         msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - invalid verification metadata for ' + username;
         console.error(msg);
-	webhookIO.postToSlack(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
     if (userVerificationMetadata[0].value.isVerified === true) {
         msg = 'VDJ-API INFO: UserController.resendVerificationEmail - user is already verified';
         console.error(msg);
-	webhookIO.postToSlack(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -410,8 +410,8 @@ UserController.resendVerificationEmail = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - user profile could not be found for ' + username;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -421,7 +421,7 @@ UserController.resendVerificationEmail = async function(request, response) {
     } else {
         msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - invalid user profile for ' + username;
         console.error(msg);
-	webhookIO.postToSlack(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -447,16 +447,16 @@ UserController.createResetPasswordRequest = async function(request, response) {
             msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
     }
 
     if (userProfile && userProfile[0]) userProfile = userProfile[0];
     else {
         msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - username unknown for ' + username;
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
     }
 
@@ -466,8 +466,8 @@ UserController.createResetPasswordRequest = async function(request, response) {
             msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
@@ -499,22 +499,22 @@ UserController.processResetPasswordRequest = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
     if (passwordResetMetadata.length == 0) {
-	msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, Invalid metadata id: ' + uuid;
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, Invalid metadata id: ' + uuid;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
     if (username != passwordResetMetadata[0].value.username) {
-	msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, reset metadata uuid does not match.';
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, reset metadata uuid does not match.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
     }
 
@@ -525,8 +525,8 @@ UserController.processResetPasswordRequest = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - getUserProfile for user ' + username + ', error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
@@ -536,8 +536,8 @@ UserController.processResetPasswordRequest = async function(request, response) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - updateUserPassword for user ' + username + ', error: ' + error;
         });
     if (msg) {
-	console.error(msg);
-	webhookIO.postToSlack(msg);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
@@ -547,8 +547,8 @@ UserController.processResetPasswordRequest = async function(request, response) {
     await agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - deleteMetadata for user ' + username + ', error: ' + error;
-	    console.error(msg);
-	    webhookIO.postToSlack(msg);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
         });
 
     apiResponseController.sendSuccess('Password reset successfully.', response);

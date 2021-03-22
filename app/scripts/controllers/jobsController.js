@@ -346,57 +346,57 @@ JobsController.archiveJob = function(request, response) {
     // 3. Job must not already by archived
     var msg = null;
     agaveIO.getJobPermissions(jobId)
-	.then(function(jobPermissions) {
-	    var validUser = false;
-	    for (var i = 0; i < jobPermissions.length; ++i)
-		if (jobPermissions[i].username == request.user.username) validUser = true;
+        .then(function(jobPermissions) {
+            var validUser = false;
+            for (var i = 0; i < jobPermissions.length; ++i)
+                if (jobPermissions[i].username == request.user.username) validUser = true;
 
-	    if (validUser) return agaveIO.getJobOutput(jobId);
-	    else {
-		msg = 'VDJ-API ERROR: JobsController.archiveJob - user (' + request.user.username + ') does not have permission on job ' + jobId;
-		return Q.reject(new Error(msg));
-	    }
-	})
-	.then(function(jobData) {
-	    var validState = false;
-	    //console.log(jobData);
+            if (validUser) return agaveIO.getJobOutput(jobId);
+            else {
+                msg = 'VDJ-API ERROR: JobsController.archiveJob - user (' + request.user.username + ') does not have permission on job ' + jobId;
+                return Q.reject(new Error(msg));
+            }
+        })
+        .then(function(jobData) {
+            var validState = false;
+            //console.log(jobData);
 
-	    if (jobData.status == 'FINISHED') validState = true;
-	    if (jobData.status == 'FAILED') validState = true;
-	    if (jobData.status == 'STOPPED') validState = true;
+            if (jobData.status == 'FINISHED') validState = true;
+            if (jobData.status == 'FAILED') validState = true;
+            if (jobData.status == 'STOPPED') validState = true;
 
-	    if (validState) return agaveIO.getJobMetadataForJob(jobId);
-	    else {
-		msg = 'VDJ-API ERROR: JobsController.archiveJob - job ' + jobId + ' not in valid archivable state (' + jobData.status + ')';
-		return Q.reject(new Error(msg));
-	    }
-	})
-	.then(function(jobMetadata) {
-	    //console.log(jobMetadata);	    
+            if (validState) return agaveIO.getJobMetadataForJob(jobId);
+            else {
+                msg = 'VDJ-API ERROR: JobsController.archiveJob - job ' + jobId + ' not in valid archivable state (' + jobData.status + ')';
+                return Q.reject(new Error(msg));
+            }
+        })
+        .then(function(jobMetadata) {
+            //console.log(jobMetadata);     
 
-	    if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJob') {
-		// archive the job
-		return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJobArchive', jobMetadata[0].value);
-	    } else {
-		msg = 'VDJ-API ERROR: JobsController.archiveJob - job metadata ' + jobId + ' is not valid';
-		return Q.reject(new Error(msg));
-	    }
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: JobsController.archiveJob - job ' + jobId + ' was archived.');
-	    return apiResponseController.sendSuccess('', response);
-	})
+            if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJob') {
+                // archive the job
+                return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJobArchive', jobMetadata[0].value);
+            } else {
+                msg = 'VDJ-API ERROR: JobsController.archiveJob - job metadata ' + jobId + ' is not valid';
+                return Q.reject(new Error(msg));
+            }
+        })
+        .then(function() {
+            console.log('VDJ-API INFO: JobsController.archiveJob - job ' + jobId + ' was archived.');
+            return apiResponseController.sendSuccess('', response);
+        })
         .fail(function(error) {
-	    if (msg) {
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return apiResponseController.sendError(msg, 500, response);
-	    } else {
-		msg = 'VDJ-API ERROR: JobsController.archiveJob - could not verify that job ' + jobId + ' is valid for archiving , error ' + error;
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return apiResponseController.sendError(msg, 500, response);
-	    }
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            } else {
+                msg = 'VDJ-API ERROR: JobsController.archiveJob - could not verify that job ' + jobId + ' is valid for archiving , error ' + error;
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
         })
         ;
 };
@@ -417,43 +417,43 @@ JobsController.unarchiveJob = function(request, response) {
 
     var msg = null;
     agaveIO.getJobPermissions(jobId)
-	.then(function(jobPermissions) {
-	    var validUser = false;
-	    for (var i = 0; i < jobPermissions.length; ++i)
-		if (jobPermissions[i].username == request.user.username) validUser = true;
+        .then(function(jobPermissions) {
+            var validUser = false;
+            for (var i = 0; i < jobPermissions.length; ++i)
+                if (jobPermissions[i].username == request.user.username) validUser = true;
 
-	    if (validUser) return agaveIO.getJobMetadataForArchivedJob(jobId);
-	    else {
-		msg = 'VDJ-API ERROR: JobsController.unarchiveJob - user (' + request.user.username + ') does not have permission on job ' + jobId;
-		return Q.reject(new Error(msg));
-	    }
-	})
-	.then(function(jobMetadata) {
-	    //console.log(jobMetadata);	    
+            if (validUser) return agaveIO.getJobMetadataForArchivedJob(jobId);
+            else {
+                msg = 'VDJ-API ERROR: JobsController.unarchiveJob - user (' + request.user.username + ') does not have permission on job ' + jobId;
+                return Q.reject(new Error(msg));
+            }
+        })
+        .then(function(jobMetadata) {
+            //console.log(jobMetadata);     
 
-	    if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJobArchive') {
-		// unarchive the job
-		return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJob', jobMetadata[0].value);
-	    } else {
-		msg = 'VDJ-API ERROR: JobsController.unarchiveJob - job metadata ' + jobId + ' is not valid archived state';
-		return Q.reject(new Error(msg));
-	    }
-	})
-	.then(function() {
-	    console.log('VDJ-API INFO: JobsController.unarchiveJob - job ' + jobId + ' was unarchived.');
-	    return apiResponseController.sendSuccess('', response);
-	})
+            if (jobMetadata && jobMetadata[0] && jobMetadata[0].name == 'projectJobArchive') {
+                // unarchive the job
+                return agaveIO.updateJobMetadata(jobMetadata[0].uuid, 'projectJob', jobMetadata[0].value);
+            } else {
+                msg = 'VDJ-API ERROR: JobsController.unarchiveJob - job metadata ' + jobId + ' is not valid archived state';
+                return Q.reject(new Error(msg));
+            }
+        })
+        .then(function() {
+            console.log('VDJ-API INFO: JobsController.unarchiveJob - job ' + jobId + ' was unarchived.');
+            return apiResponseController.sendSuccess('', response);
+        })
         .fail(function(error) {
-	    if (msg) {
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return apiResponseController.sendError(msg, 500, response);
-	    } else {
-		msg = 'VDJ-API ERROR: JobsController.unarchiveJob - could not verify that job ' + jobId + ' is valid for archiving , error ' + error;
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-		return apiResponseController.sendError(msg, 500, response);
-	    }
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            } else {
+                msg = 'VDJ-API ERROR: JobsController.unarchiveJob - could not verify that job ' + jobId + ' is valid for archiving , error ' + error;
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
         })
         ;
 };
