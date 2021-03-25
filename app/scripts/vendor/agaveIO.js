@@ -3450,6 +3450,45 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 //
 /////////////////////////////////////////////////////////////////////
 //
+// AIRR Data Commons functions
+//
+
+// the global/system list of ADC repositories
+// this should be a singleton metadata entry
+agaveIO.getSystemADCRepositories = function() {
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{"name":"adc_system_repositories",'
+                            + ' "owner":"' + ServiceAccount.username + '"}'
+                    )
+                    + '&limit=1'
+                ,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+}
+
+
+//
+/////////////////////////////////////////////////////////////////////
+//
 // Higher level composite functions
 //
 

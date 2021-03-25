@@ -121,6 +121,40 @@ AuthController.userAuthorization = function(req, scopes, definition) {
         });
 }
 
+// Requires the user account to have admin privileges.
+// Currently, only the service account has that.
+AuthController.adminAuthorization = function(req, scopes, definition) {
+    if (config.debug) console.log('VDJ-API INFO: AuthController.adminAuthorization');
+
+    var token = AuthController.extractToken(req);
+    if (!token) return false;
+
+    // get my profile and username from the token
+    // return a promise
+    return agaveIO.getAgaveUserProfile(token, 'me')
+        .then(function(userProfile) {
+            // save the user profile
+            req['user'] = userProfile;
+
+            if (userProfile.username == ServiceAccount.username) {
+                // valid
+                return true;
+            }
+            else {
+                var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - access by unauthorized user: ' + req['user']['username'];
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return false;
+            }
+        })
+        .catch(function(error) {
+            var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - invalid token: ' + token + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return false;
+        });
+}
+
 // Verify a user has access to project
 AuthController.projectAuthorization = function(req, scopes, definition) {
     if (config.debug) console.log('VDJ-API INFO: AuthController.projectAuthorization');

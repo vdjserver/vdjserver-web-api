@@ -240,6 +240,17 @@ components:
         os:
           type: string
 
+    ADCRepositorySet:
+      description: Set of ADC repositories.
+      discriminator:
+        propertyName: VDJServer
+      type: object
+      required:
+        - adc
+      properties:
+        adc:
+          type: object
+
     Test:
       description: Test object
       discriminator:
@@ -254,6 +265,9 @@ components:
 
   securitySchemes:
     user_authorization:
+      type: http
+      scheme: bearer
+    admin_authorization:
       type: http
       scheme: bearer
     project_authorization:
@@ -743,7 +757,6 @@ paths:
           'application/json':
             schema:
               $ref: '#/components/schemas/UserAccountCreation'
-
       responses:
         '200':
           description: Success.
@@ -967,3 +980,53 @@ paths:
           description: Not authorized.
         '500':
           description: Internal service error occurred.
+
+  /adc/registry:
+    get:
+      description: get set of default ADC repositories
+      operationId: defaultADCRepositories
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: update set of default ADC repositories
+      operationId: updateADCRepositories
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ADCRepositorySet'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse' 
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+
+
+
+

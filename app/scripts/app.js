@@ -56,6 +56,7 @@ var feedbackController = require('./controllers/feedbackController');
 var userController = require('./controllers/userController');
 var telemetryController = require('./controllers/telemetryController');
 var permissionsController = require('./controllers/permissionsController');
+var adcController = require('./controllers/adcController');
 
 // Server Options
 var config = require('./config/config');
@@ -165,6 +166,7 @@ ServiceAccount.getToken()
             },
             securityHandlers: {
                 user_authorization: authController.userAuthorization,
+                admin_authorization: authController.adminAuthorization,
                 project_authorization: authController.projectAuthorization
             },
             operations: {
@@ -195,15 +197,19 @@ ServiceAccount.getToken()
 
                 // permissions
                 addPermissionsForUsername: permissionsController.addPermissionsForUsername,
-		removePermissionsForUsername: permissionsController.removePermissionsForUsername,
-		syncMetadataPermissionsWithProject: permissionsController.syncMetadataPermissionsWithProject,
+                removePermissionsForUsername: permissionsController.removePermissionsForUsername,
+                syncMetadataPermissionsWithProject: permissionsController.syncMetadataPermissionsWithProject,
 
-		// feedback
-		createFeedback: feedbackController.createFeedback,
-		createPublicFeedback: feedbackController.createPublicFeedback,
+                // feedback
+                createFeedback: feedbackController.createFeedback,
+                createPublicFeedback: feedbackController.createPublicFeedback,
 
                 // telemetry
-                recordErrorTelemetry: telemetryController.recordErrorTelemetry
+                recordErrorTelemetry: telemetryController.recordErrorTelemetry,
+                
+                // ADC
+                defaultADCRepositories: adcController.defaultADCRepositories,
+                updateADCRepositories: adcController.updateADCRepositories
             }
         });
 
