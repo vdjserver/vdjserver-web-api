@@ -68,12 +68,50 @@ ADCController.defaultADCRepositories = async function(request, response) {
         return apiResponseController.sendError(msg, 500, response);
     }
 
-    apiResponseController.sendSuccess(adc['value'], response);
+    if (adc && adc.length == 1)
+        return apiResponseController.sendSuccess(adc[0]['value'], response);
+    else {
+        msg = 'VDJ-API ERROR: ADCController.defaultADCRepositories, could not retrieve.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
 };
 
 ADCController.updateADCRepositories = async function(request, response) {
 
     var msg = null;
+    var data = request['body']['adc'];
+    var value = { adc: data };
 
-    return apiResponseController.sendError('Not implemented', 500, response);
+    // get list from metadata
+    var adc = await agaveIO.getSystemADCRepositories()
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (adc && adc.length == 1) {
+        // update
+        await agaveIO.updateMetadata(adc[0]['uuid'], adc[0]['name'], value, null)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, error while updating: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        return apiResponseController.sendSuccess('Updated', response);
+    } else {
+        msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, could not retrieve default set.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
 };

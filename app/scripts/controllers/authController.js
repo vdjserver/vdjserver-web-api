@@ -141,7 +141,8 @@ AuthController.adminAuthorization = function(req, scopes, definition) {
                 return true;
             }
             else {
-                var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - access by unauthorized user: ' + req['user']['username'];
+                var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - access by unauthorized user: ' + req['user']['username']
+                    + ', route: ' + JSON.stringify(req.route.path);
                 console.error(msg);
                 webhookIO.postToSlack(msg);
                 return false;
