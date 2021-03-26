@@ -472,7 +472,9 @@ UserController.createResetPasswordRequest = async function(request, response) {
     }
 
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
-    await emailIO.sendPasswordResetEmail(userProfile.value.email, passwordReset.uuid)
+    await emailIO.sendPasswordResetEmail(userProfile.value.email, username, passwordReset.uuid)
+
+    webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
 
     apiResponseController.sendSuccess('Password reset email sent.', response);
 };
@@ -505,17 +507,17 @@ UserController.processResetPasswordRequest = async function(request, response) {
     }
 
     if (passwordResetMetadata.length == 0) {
-        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, Invalid metadata id: ' + uuid;
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, Invalid reset code: ' + uuid;
         console.error(msg);
         webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 400, response);
+        return apiResponseController.sendErrorWithCode(msg, 'invalid reset code', 400, response);
     }
 
     if (username != passwordResetMetadata[0].value.username) {
-        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, reset metadata uuid does not match.';
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, reset code and username does not match.';
         console.error(msg);
         webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 400, response);
+        return apiResponseController.sendErrorWithCode(msg, 'incorrect username', 400, response);
     }
 
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getUserProfile for user ' + username);
@@ -550,6 +552,8 @@ UserController.processResetPasswordRequest = async function(request, response) {
             console.error(msg);
             webhookIO.postToSlack(msg);
         });
+
+    webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
 
     apiResponseController.sendSuccess('Password reset successfully.', response);
 };

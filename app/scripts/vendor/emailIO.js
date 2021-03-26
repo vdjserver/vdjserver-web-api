@@ -36,7 +36,7 @@ var transporter = nodemailer.createTransport(sendmailTransport());
 var emailIO = {};
 module.exports = emailIO;
 
-emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
+emailIO.sendPasswordResetEmail = function(recipientEmail, username, passwordResetCode) {
 
     var passwordResetUrl = agaveSettings.vdjBackbone + '/password-reset/' + passwordResetCode;
 
@@ -48,7 +48,12 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, passwordResetCode) {
         generateTextFromHTML: true,
         html: 'A password reset request has been submitted to vdjserver.org.'
               + '<br>'
+              + '<br>'
+              + 'Reset your password for account "' + username + '" with reset code: ' + passwordResetCode + ', or by clicking on the link below:'
+              + '<br>'
+              + '<br>'
               + 'Please go to <a href="' + passwordResetUrl + '">' + passwordResetUrl + '</a> to reset your password.'
+              + '<br>'
               + '<br>'
               + 'If you have not submitted a password reset request, then please disregard this email.',
 
