@@ -133,7 +133,7 @@ ADCController.getADCDownloadCacheStatus = async function(request, response) {
 
     if (cache && cache.length == 1) {
         return apiResponseController.sendSuccess(cache[0]['value'], response);
-    else {
+    } else {
         msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheStatus, could not retrieve.';
         console.error(msg);
         webhookIO.postToSlack(msg);
