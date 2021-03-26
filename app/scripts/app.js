@@ -209,7 +209,15 @@ ServiceAccount.getToken()
                 
                 // ADC
                 defaultADCRepositories: adcController.defaultADCRepositories,
-                updateADCRepositories: adcController.updateADCRepositories
+                updateADCRepositories: adcController.updateADCRepositories,
+
+                // ADC Download Cache
+                getADCDownloadCacheStatus: adcController.getADCDownloadCacheStatus,
+                updateADCDownloadCacheStatus: adcController.updateADCDownloadCacheStatus,
+                updateADCDownloadCacheForStudy: adcController.updateADCDownloadCacheForStudy,
+                deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
+                updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
+                deleteADCDownloadCacheForRepertoire: adcController.deleteADCDownloadCacheForRepertoire
             }
         });
 

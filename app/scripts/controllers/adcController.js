@@ -115,3 +115,102 @@ ADCController.updateADCRepositories = async function(request, response) {
         return apiResponseController.sendError(msg, 500, response);
     }
 };
+
+ADCController.getADCDownloadCacheStatus = async function(request, response) {
+
+    var msg = null;
+
+    // get list from metadata
+    var cache = await agaveIO.getADCDownloadCache()
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheStatus, error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (cache && cache.length == 1) {
+        return apiResponseController.sendSuccess(cache[0]['value'], response);
+    else {
+        msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheStatus, could not retrieve.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+};
+
+ADCController.updateADCDownloadCacheStatus = async function(request, response) {
+
+    var msg = null;
+    var operation = request.body.operation;
+
+    // get singleton metadata entry
+    var cache = await agaveIO.getADCDownloadCache()
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (cache && cache.length == 1) {
+        var value = cache[0]['value'];
+        if (operation == 'enable') value['enable_cache'] = true;
+        if (operation == 'disable') value['enable_cache'] = false;
+        if (operation == 'trigger') value['enable_cache'] = true;
+
+        // update
+        await agaveIO.updateMetadata(cache[0]['uuid'], cache[0]['name'], value, null)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, error while updating: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        if (operation == 'trigger') {
+            // kick off the queue process
+        }
+
+        return apiResponseController.sendSuccess('Updated', response);
+    } else {
+        msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, could not retrieve metadata entry.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+};
+
+ADCController.updateADCDownloadCacheForStudy = async function(request, response) {
+
+    var msg = null;
+
+    return apiResponseController.sendError('Not implemented', 500, response);
+};
+
+ADCController.deleteADCDownloadCacheForStudy = async function(request, response) {
+
+    var msg = null;
+
+    return apiResponseController.sendError('Not implemented', 500, response);
+};
+
+ADCController.updateADCDownloadCacheForRepertoire = async function(request, response) {
+
+    var msg = null;
+
+    return apiResponseController.sendError('Not implemented', 500, response);
+};
+
+ADCController.deleteADCDownloadCacheForRepertoire = async function(request, response) {
+
+    var msg = null;
+
+    return apiResponseController.sendError('Not implemented', 500, response);
+};

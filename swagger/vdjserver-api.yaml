@@ -1026,7 +1026,187 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /adc/cache:
+    get:
+      description: get ADC download cache status
+      operationId: getADCDownloadCacheStatus
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: change ADC download cache queue
+      operationId: updateADCDownloadCacheStatus
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - operation
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - enable
+                    - disable
+                    - trigger
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
 
+  /adc/cache/study/{cache_uuid}:
+    post:
+      description: update cache settings for study
+      operationId: updateADCDownloadCacheForStudy
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete cache for study
+      operationId: deleteADCDownloadCacheForStudy
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
 
+  /adc/cache/repertoire/{cache_uuid}:
+    post:
+      description: update cache settings for repertoire
+      operationId: updateADCDownloadCacheForRepertoire
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete cache for repertoire
+      operationId: deleteADCDownloadCacheForRepertoire
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
 
 

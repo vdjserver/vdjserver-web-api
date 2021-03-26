@@ -3454,7 +3454,7 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
 //
 
 // the global/system list of ADC repositories
-// this should be a singleton metadata entry
+// this should be a singleton metadata entry owned by service account
 agaveIO.getSystemADCRepositories = function() {
 
     return ServiceAccount.getToken()
@@ -3465,6 +3465,38 @@ agaveIO.getSystemADCRepositories = function() {
                 path:     '/meta/v2/data?q='
                     + encodeURIComponent(
                         '{"name":"adc_system_repositories",'
+                            + ' "owner":"' + ServiceAccount.username + '"}'
+                    )
+                    + '&limit=1'
+                ,
+                rejectUnauthorized: false,
+                headers: {
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+}
+
+// ADC download cache status
+// this should be a singleton metadata entry owned by service account
+agaveIO.getADCDownloadCache = function() {
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'GET',
+                path:     '/meta/v2/data?q='
+                    + encodeURIComponent(
+                        '{"name":"adc_cache",'
                             + ' "owner":"' + ServiceAccount.username + '"}'
                     )
                     + '&limit=1'
