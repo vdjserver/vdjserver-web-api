@@ -70,14 +70,10 @@ components:
       type: object
       required:
         - g-recaptcha-response
-        - remoteip
       properties:
         g-recaptcha-response:
           type: string
           description: The recaptcha response
-        remoteip:
-          type: string
-          description: IP address of client that generated the recaptcha response
 
     UserAccount:
       description: User account.

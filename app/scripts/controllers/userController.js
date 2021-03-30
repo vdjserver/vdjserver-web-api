@@ -88,7 +88,7 @@ UserController.createUser = async function(request, response) {
     // The API middleware verifies these are present
     var user = new User(request.body);
     var recaptchaData = {
-        remoteip:  request.body['remoteip'],
+        remoteip:  request.connection.remoteAddress,
         response: request.body['g-recaptcha-response'],
         secret: config.recaptchaSecret,
     };
