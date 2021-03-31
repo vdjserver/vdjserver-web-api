@@ -47,6 +47,26 @@ var webhookIO = require('../vendor/webhookIO');
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 var _ = require('underscore');
 
+// we use recaptcha to deter user creation bots
+var verifyRecaptcha = function(recaptchaData) {
+
+    var recaptcha = new Recaptcha(
+        config.recaptchaPublic,
+        config.recaptchaSecret,
+        recaptchaData
+    );
+
+    return new Promise(function(resolve, reject) {
+        recaptcha.verify(function(success, errorCode) {
+            if (!success) {
+                reject(errorCode);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
 // This requires an authenticated user
 FeedbackController.createFeedback = function(request, response) {
 
@@ -93,7 +113,8 @@ FeedbackController.createFeedback = function(request, response) {
 };
 
 // public feedback, this requires a valid recaptcha response
-FeedbackController.createPublicFeedback = function(request, response) {
+FeedbackController.createPublicFeedback = async function(request, response) {
+    var msg = null;
     var feedback = new Feedback({
         feedback: request.body.feedback,
         email: request.body.email,
@@ -107,46 +128,45 @@ FeedbackController.createPublicFeedback = function(request, response) {
         secret: config.recaptchaSecret,
     };
 
-    // verify the recaptcha
-    var recaptcha = new Recaptcha(
-        config.recaptchaPublic,
-        config.recaptchaSecret,
-        recaptchaData
-    );
+    // BEGIN RECAPTCHA CHECK
+    if (config.allowRecaptchaSkip && (recaptchaData['response'] == 'skip_recaptcha')) {
+        console.log('VDJ-API INFO: FeedbackController.createPublicFeedback - WARNING - Recaptcha check is being skipped.');
+    } else {
+        await verifyRecaptcha(recaptchaData)
+            .catch(function(errorCode) {
+                msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - Recaptcha response invalid - error code is: ' + errorCode;
+            });
 
-    recaptcha.verify(function(success, errorCode) {
-        if (!success) {
-            var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - Recaptcha response invalid - error code is: ' + errorCode;
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
+    }
+    // END RECAPTCHA CHECK
+
+    console.log('VDJ-API INFO: FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
+
+    // store in metadata
+    var emailFeedbackMessage = feedback.getEmailMessage();
+    feedback.storeFeedbackInMetadata()
+        .then(function() {
+            // send as email
+            return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
+        })
+        .then(function() {
+            // send acknowledgement
+            return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
+        })
+        .then(function() {
+            apiResponseController.sendSuccess('Feedback submitted successfully.', response);
+            return;
+        })
+        .catch(function(error) {
+            var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
+                + JSON.stringify(feedback) + ' error: ' + error;
             console.error(msg);
             webhookIO.postToSlack(msg);
             apiResponseController.sendError(msg, 400, response);
-            return;
-        }
-        else {
-            console.log('VDJ-API INFO: FeedbackController.createPublicFeedback - event - received feedback: ' + JSON.stringify(feedback));
-
-            // store in metadata
-            var emailFeedbackMessage = feedback.getEmailMessage();
-            feedback.storeFeedbackInMetadata()
-                .then(function() {
-                    // send as email
-                    return emailIO.sendFeedbackEmail(config.feedbackEmail, emailFeedbackMessage);
-                })
-                .then(function() {
-                    // send acknowledgement
-                    return emailIO.sendFeedbackAcknowledgementEmail(feedback.email, emailFeedbackMessage);
-                })
-                .then(function() {
-                    apiResponseController.sendSuccess('Feedback submitted successfully.', response);
-                    return;
-                })
-                .catch(function(error) {
-                    var msg = 'VDJ-API ERROR: FeedbackController.createPublicFeedback - error occured while processing feedback. Feedback is: '
-                        + JSON.stringify(feedback) + ' error: ' + error;
-                    console.error(msg);
-                    webhookIO.postToSlack(msg);
-                    apiResponseController.sendError(msg, 400, response);
-                });
-        }
-    });
+        });
 };
