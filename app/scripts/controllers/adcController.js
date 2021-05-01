@@ -38,6 +38,9 @@ var app = require('../app');
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
+// Queues
+var adcDownloadQueueManager = require('../queues/adcDownloadQueueManager');
+
 // Models
 var User = require('../models/user');
 var ServiceAccount = require('../models/serviceAccount');
@@ -46,12 +49,6 @@ var ServiceAccount = require('../models/serviceAccount');
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
-
-// Node Libraries
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
 
 ADCController.defaultADCRepositories = async function(request, response) {
 
@@ -159,6 +156,8 @@ ADCController.updateADCDownloadCacheStatus = async function(request, response) {
 
     if (cache && cache.length == 1) {
         var value = cache[0]['value'];
+        console.log('VDJ-API INFO: ADCController.updateADCDownloadCacheStatus, current enable_cache = ' + value['enable_cache']);
+
         if (operation == 'enable') value['enable_cache'] = true;
         if (operation == 'disable') value['enable_cache'] = false;
         if (operation == 'trigger') value['enable_cache'] = true;
@@ -175,9 +174,11 @@ ADCController.updateADCDownloadCacheStatus = async function(request, response) {
         }
 
         if (operation == 'trigger') {
-            // kick off the queue process
+            // trigger the process
+            adcDownloadQueueManager.triggerDownloadCache();
         }
 
+        console.log('VDJ-API INFO: ADCController.updateADCDownloadCacheStatus, updated enable_cache = ' + value['enable_cache']);
         return apiResponseController.sendSuccess('Updated', response);
     } else {
         msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, could not retrieve metadata entry.';

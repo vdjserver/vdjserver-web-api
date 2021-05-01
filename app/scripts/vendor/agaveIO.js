@@ -3487,7 +3487,44 @@ agaveIO.getSystemADCRepositories = function() {
 
 // ADC download cache status
 // this should be a singleton metadata entry owned by service account
+agaveIO.createADCDownloadCache = function() {
+    if (config.shouldInjectError("agaveIO.createADCDownloadCache")) return config.performInjectError();
+
+    var postData = {
+        name: 'adc_cache',
+        value: {
+            enable_cache: false
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
 agaveIO.getADCDownloadCache = function() {
+    if (config.shouldInjectError("agaveIO.getADCDownloadCache")) return config.performInjectError();
 
     return ServiceAccount.getToken()
         .then(function(token) {
