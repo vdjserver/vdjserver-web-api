@@ -15,6 +15,7 @@
     "type": "git",
     "url": "https://bitbucket.org/vdjserver/vdjserver-web-api"
   },
+  "license": "GNU AGPL V3",
   "private": true,
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "8.0.0",
