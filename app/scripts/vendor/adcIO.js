@@ -42,19 +42,151 @@ var _ = require('underscore');
 var csv = require('csv-parser');
 var fs = require('fs');
 const zlib = require('zlib');
+var jsonApprover = require('json-approver');
 
 var airr = require('../vendor/airr');
 
+//
+// Generic send request
+//
+adcIO.sendRequest = function(requestSettings, postData) {
+
+    return new Promise(function(resolve, reject) {
+        var request = require('https').request(requestSettings, function(response) {
+
+            var output = '';
+
+            response.on('data', function(chunk) {
+                output += chunk;
+            });
+
+            response.on('end', function() {
+
+                var responseObject;
+                //console.log(output);
+
+                if (output && jsonApprover.isJSON(output)) {
+                    responseObject = JSON.parse(output);
+                }
+                else {
+                    reject(new Error('ADC repository response is not json. Raw output: ' + output));
+                }
+
+                //console.log(responseObject);
+                if (responseObject) {
+                    resolve(responseObject);
+                }
+                else {
+                    reject(new Error('ADC repository response is empty: ' + JSON.stringify(responseObject)));
+                }
+
+            });
+        });
+
+        request.on('error', function(error) {
+            reject(new Error('ADC repository connection error, ' + error));
+        });
+
+        if (postData) {
+            // Request body parameters
+            request.write(postData);
+        }
+
+        request.end();
+    });
+};
+
 // Get the set of default ADC repositories
+// TODO: is this the same as system set?
 adcIO.defaultADCRepositories = function() {
 }
 
 // Query the repertoires from an ADC repository with optional study_id
-adcIO.getRepertoires = function(repository, study_id) {
+adcIO.getRepertoires = async function(repository, study_id) {
+    var msg = null;
+
+    // we assume the passed in repository is an object entry
+    if (! repository) return Promise.resolve(null);
+    if (! repository['server_host']) return Promise.reject('repository entry missing server_host');
+    if (! repository['base_url']) return Promise.reject('repository entry missing base_url');
+
+    // do a facets query
+    var postData = {
+        "filters": {
+            "op": "=",
+            "content": {
+                "field": "study.study_id",
+                "value": study_id
+            }
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     repository['server_host'],
+        method:   'POST',
+        path:     repository['base_url'] + '/repertoire',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+    console.log(requestSettings);
+
+    var data = await adcIO.sendRequest(requestSettings, postData)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: adcIO.getStudies, adcIO.sendRequest error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    return Promise.resolve(data['Repertoire']);
 }
 
 // Query the studies from an ADC repository
-adcIO.getStudies = function(repository) {
+adcIO.getStudies = async function(repository) {
+    var msg = null;
+
+    // we assume the passed in repository is an object entry
+    if (! repository) return Promise.resolve(null);
+    if (! repository['server_host']) return Promise.reject('repository entry missing server_host');
+    if (! repository['base_url']) return Promise.reject('repository entry missing base_url');
+
+    // do a facets query
+    var postData = {
+        facets: 'study.study_id',
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     repository['server_host'],
+        method:   'POST',
+        path:     repository['base_url'] + '/repertoire',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+    console.log(requestSettings);
+
+    var data = await adcIO.sendRequest(requestSettings, postData)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: adcIO.getStudies, adcIO.sendRequest error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    return Promise.resolve(data['Facet']);
 }
 
 //

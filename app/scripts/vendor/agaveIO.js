@@ -3554,6 +3554,187 @@ agaveIO.getADCDownloadCache = function() {
         });
 }
 
+// create metadata entry for cached ADC study
+agaveIO.createCachedStudyMetadata = function(repository_id, study_id, should_cache) {
+
+    var postData = {
+        name: 'adc_cache_study',
+        value: {
+            repository_id: repository_id,
+            study_id: study_id,
+            should_cache: should_cache,
+            is_cached: false,
+            archive_file: null,
+            download_url: null
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
+// get list of studies cache entries
+agaveIO.getStudyCacheEntries = function(repository_id, study_id, should_cache, not_cached) {
+
+    var models = [];
+
+    var query = '{"name":"adc_cache_study"';
+    if (repository_id) query += ',"value.repository_id":"' + repository_id + '"';
+    if (study_id) query += ',"value.study_id":"' + study_id + '"';
+    if (should_cache) query += ',"value.should_cache":true';
+    if (not_cached) query += ',"value.is_cached":false';
+    query += '}';
+
+    var doFetch = function(offset) {
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(query)
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, null)
+            })
+            .then(function(responseObject) {
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
+            .catch(function(errorObject) {
+                return Promise.reject(errorObject);
+            });
+    }
+
+    return doFetch(0);
+};
+
+// create metadata entry for cached ADC rearrangements for a single repertoire
+agaveIO.createCachedRepertoireMetadata = function(repository_id, study_id, repertoire_id, should_cache) {
+
+    var postData = {
+        name: 'adc_cache_repertoire',
+        value: {
+            repository_id: repository_id,
+            study_id: study_id,
+            repertoire_id: repertoire_id,
+            should_cache: should_cache,
+            is_cached: false,
+            archive_file: null,
+            download_url: null
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
+// get list of repertoire cache entries
+agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire_id, should_cache, not_cached) {
+
+    var models = [];
+
+    var query = '{"name":"adc_cache_repertoire"';
+    if (repository_id) query += ',"value.repository_id":"' + repository_id + '"';
+    if (study_id) query += ',"value.study_id":"' + study_id + '"';
+    if (repertoire_id) query += ',"value.repertoire_id":"' + repertoire_id + '"';
+    if (should_cache) query += ',"value.should_cache":true';
+    if (not_cached) query += ',"value.is_cached":false';
+    query += '}';
+
+    var doFetch = function(offset) {
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(query)
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, null)
+            })
+            .then(function(responseObject) {
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
+            .catch(function(errorObject) {
+                return Promise.reject(errorObject);
+            });
+    }
+
+    return doFetch(0);
+};
 
 //
 /////////////////////////////////////////////////////////////////////
