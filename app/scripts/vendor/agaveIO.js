@@ -2535,19 +2535,17 @@ agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunit
         });
 };
 
-/*
-agaveIO.createCommunityDirectory = function(directory) {
-
-    var deferred = Q.defer();
+//
+agaveIO.createCommunityCacheDirectory = function(directory) {
 
     var postData = 'action=mkdir&path=' + directory;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
         .then(function(token) {
             var requestSettings = {
                 host:     agaveSettings.hostname,
                 method:   'PUT',
-                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/cache/',
                 rejectUnauthorized: false,
                 headers: {
                     'Content-Length': Buffer.byteLength(postData),
@@ -2557,19 +2555,14 @@ agaveIO.createCommunityDirectory = function(directory) {
 
             return agaveIO.sendRequest(requestSettings, postData);
         })
-        .then(function() {
-            return agaveIO.setCommunityFilePermissions(directory);
-        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
         .catch(function(errorObject) {
             return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
-*/
+
 
 /*
 agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity) {
@@ -3687,7 +3680,7 @@ agaveIO.createCachedRepertoireMetadata = function(repository_id, study_id, reper
 };
 
 // get list of repertoire cache entries
-agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire_id, should_cache, not_cached) {
+agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire_id, should_cache, not_cached, max_limit) {
 
     var models = [];
 
@@ -3699,6 +3692,12 @@ agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire
     if (not_cached) query += ',"value.is_cached":false';
     query += '}';
 
+    var limit = 50;
+    if (max_limit) {
+        if (max_limit < limit) limit = max_limit;
+        if (max_limit < 1) return Promise.resolve([]);
+    }
+
     var doFetch = function(offset) {
         return ServiceAccount.getToken()
             .then(function(token) {
@@ -3707,7 +3706,7 @@ agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire
                     method:   'GET',
                     path:     '/meta/v2/data?q='
                         + encodeURIComponent(query)
-                        + '&limit=50&offset=' + offset,
+                        + '&limit=' + limit + '&offset=' + offset,
                     rejectUnauthorized: false,
                     headers: {
                         'Authorization': 'Bearer ' + ServiceAccount.accessToken()
@@ -3721,6 +3720,8 @@ agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire
                 if (result.length > 0) {
                     // maybe more data
                     models = models.concat(result);
+                    if ((max_limit) && (models.length >= max_limit))
+                        return Promise.resolve(models);
                     var newOffset = offset + result.length;
                     return doFetch(newOffset);
                 } else {

@@ -101,6 +101,53 @@ adcIO.sendRequest = function(requestSettings, postData) {
 adcIO.defaultADCRepositories = function() {
 }
 
+// Query rearrangements from an ADC repository with ASYNC API
+adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
+    var msg = null;
+
+    // we assume the passed in repository is an object entry
+    if (! repository) return Promise.resolve(null);
+    if (! repository['async_host']) return Promise.reject('repository entry missing async_host');
+    if (! repository['async_base_url']) return Promise.reject('repository entry missing async_base_url');
+
+    // do a facets query
+    var postData = {
+      "filters": {
+        "op": "=",
+        "content": {
+          "field": "repertoire_id",
+          "value": repertoire_id
+        }
+      }
+    };
+
+    postData = JSON.stringify(postData);
+
+    var requestSettings = {
+        host:     repository['async_host'],
+        method:   'POST',
+        path:     repository['async_base_url'] + '/rearrangement',
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+        }
+    };
+    console.log(requestSettings);
+
+    var data = await adcIO.sendRequest(requestSettings, postData)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: adcIO.getStudies, adcIO.sendRequest error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    return Promise.resolve(data);
+}
+
 // Query the repertoires from an ADC repository with optional study_id
 adcIO.getRepertoires = async function(repository, study_id) {
     var msg = null;

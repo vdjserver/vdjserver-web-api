@@ -193,10 +193,12 @@ triggerQueue.process(async (job) => {
 // 2. Get next study/repertoire to be cached
 // 3. do the caching
 //
+// we attempt to write in a re-entrant fashion
+//
 submitQueue.process(async (job) => {
     var msg = null;
 
-    console.log('VDJ-API INFO: starting ADC download cache submit job');
+    console.log('VDJ-API INFO: starting ADC download cache job');
     //console.log(job['data']);
 
     // get set of ADC repositories
@@ -217,12 +219,14 @@ submitQueue.process(async (job) => {
         return Promise.resolve();
     }
 
-    // create/update cache entries
+    // create/update cache entries for each repository
     repos = repos[0]['value']['adc'];
-    console.log(repos);
+    //console.log(repos);
+
+    /*
     for (var repository_id in repos) {
         // only if cache is enabled on repository
-        if (! repos[repository_id]['cache_enable']) continue;
+        if (! repos[repository_id]['enable_cache']) continue;
 
         console.log('VDJ-API INFO: ADC download cache submit job for repository:', repository_id);
 
@@ -249,7 +253,7 @@ submitQueue.process(async (job) => {
             webhookIO.postToSlack(msg);
             return Promise.resolve();
         }
-        console.log(cached_studies);
+        //console.log(cached_studies);
         // turn into dictionary keyed by study_id
         var cached_studies_dict = {};
         for (var i in cached_studies) {
@@ -266,7 +270,7 @@ submitQueue.process(async (job) => {
         // create study cache entries if necessary
         for (var s in studies) {
             var study_id = studies[s]['study.study_id'];
-            console.log(study_id);
+            //console.log(study_id);
             // TODO: we should check if an existing study has been updated
             if (cached_studies_dict[study_id]) continue;
             
@@ -353,7 +357,7 @@ submitQueue.process(async (job) => {
 
             for (var r in reps) {
                 var repertoire_id = reps[r]['repertoire_id'];
-                console.log(repertoire_id);
+
                 // TODO: we might want to update the existing entry
                 if (cached_reps_dict[repertoire_id]) continue;
 
@@ -370,22 +374,105 @@ submitQueue.process(async (job) => {
                 console.log('VDJ-API INFO: caching enabled for ADC repertoire:', repertoire_id, 'for study:', study_id);
             }
         }
-    }
+    } */
+    console.log('VDJ-API INFO: all cache entries updated.');
 
     // All cache entries should be created/updated
     // Now do the caching
+    // we submit only one job for now, with trigger
+    for (var repository_id in repos) {
+        // only if cache is enabled on repository
+        if (! repos[repository_id]['enable_cache']) continue;
+
+        console.log('VDJ-API INFO: ADC query and download job for repository:', repository_id);
+
+        // should be and not yet cached
+        var next_reps = await agaveIO.getRepertoireCacheEntries(repository_id, null, null, true, true, 1)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getRepertoireCacheEntries error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+        console.log(next_reps.length);
+        console.log(next_reps);
+
+        if (next_reps.length == 0) {
+            console.log('VDJ-API INFO: no more entries need to be cached for repository: ', repository_id);
+        } else {
+            console.log('VDJ-API INFO:', next_reps.length, 'entries to be cached for repository: ', repository_id);
+            var repv = next_reps[0]['value'];
+
+            // reload with any new entries
+            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study.study_id'])
+                .catch(function(error) {
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
+                });
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+
+            cacheQueue.add({repository:repos[repository_id], study_cache:cs[0], repertoire_id:repv['repertoire_id']});
+        }
+    }
+
+    return Promise.resolve();
+});
+
+cacheQueue.process(async (job) => {
+    var msg = null;
+
+    console.log('VDJ-API INFO: start ADC query and download job');
+
+    // process data
+    console.log(job['data']);
+    var repository = job['data']['repository'];
+    var repertoire_id = job['data']['repertoire_id'];
+    var study_cache_uuid = job['data']['study_cache']['uuid'];
+    var tapis_path = 'agave://data.vdjserver.org//community/cache';
+
+    //console.log(study_cache_uuid);
+    console.log('VDJ-API INFO: creating cache directory:', study_cache_uuid);
+
+    await agaveIO.createCommunityCacheDirectory(study_cache_uuid)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, agaveIO.createCommunityCacheDirectory error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    // use ADC ASYNC API if supported
+    // TODO: we should get this from the repository info
+    if (repository['supports_async']) {
+        var query_id = await adcIO.asyncGetRearrangements(repository, repertoire_id);
+        console.log(query_id);
+    }
+
+    // otherwise we do our own download
+
+    // update cache metadata entry
+    //console.log('update metadata');
+
+    // okay we got to the end
+    finishQueue.add(job['data']);
 
     return Promise.resolve();
 });
 
 finishQueue.process(async (job) => {
-    // process data
-    console.log('process data');
-    console.log(job['data']);
-    
-    // update metadata record
-    console.log('update metadata');
-    
+    var msg = null;
+
+    console.log('VDJ-API INFO: finishing ADC download cache job');
+
+    // if we got here then we can safely re-trigger the process
+
     return Promise.resolve();
 });
 
