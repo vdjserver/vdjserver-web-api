@@ -114,9 +114,13 @@ console.log('VDJ-API INFO: Using load collection suffix: ' + mongoSettings.loadC
 // This is also so that the /vdjZ Corral file volume can be accessed,
 // as it is restricted to the TACC vdj account.
 // Currently only read access is required.
-console.log('VDJ-API INFO: Downgrading to host user: ' + config.hostServiceAccount);
-process.setuid(config.hostServiceAccount);
-console.log('VDJ-API INFO: Current uid: ' + process.getuid());
+if (config.hostServiceAccount) {
+    console.log('VDJ-API INFO: Downgrading to host user: ' + config.hostServiceAccount);
+    process.setuid(config.hostServiceAccount);
+    console.log('VDJ-API INFO: Current uid: ' + process.getuid());
+} else {
+    console.log('VDJ-API WARNING: config.hostServiceAccount is not defined, Corral access will generate errors.');
+}
 
 // Verify we can login with service account
 var ServiceAccount = require('./models/serviceAccount');
@@ -221,10 +225,19 @@ ServiceAccount.getToken()
             }
         });
 
+        // Initialize queues
+
+        // ADC download cache queues
+        adcDownloadQueueManager.triggerDownloadCache();
+
+        // TODO: decide how to restart
+        // ADC load of rearrangements
+        //projectQueueManager.checkRearrangementLoad();
+        //projectQueueManager.triggerRearrangementLoad();
+
+        // Start listening on port
         app.listen(app.get('port'), function() {
-            console.log('VDJ-API INFO: VDJServer API service listening on port ' + app.get('port'));
-            // TODO: decide how to restart
-            projectQueueManager.checkRearrangementLoad();
+            console.log('VDJ-API INFO: VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
         });
     })
     .catch(function(error) {
@@ -250,3 +263,5 @@ jobQueueManager.processJobs();
 
 var projectQueueManager = require('./queues/projectQueueManager');
 projectQueueManager.processProjects();
+
+var adcDownloadQueueManager = require('./queues/adcDownloadQueueManager');

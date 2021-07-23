@@ -31,6 +31,9 @@ var config = {};
 
 module.exports = config;
 
+var path = require('path');
+var fs = require('fs');
+
 function parseBoolean(value)
 {
     if (value == 'true') return true;
@@ -81,3 +84,19 @@ config.shouldInjectError = function(value) {
     if (config.errorInjection) return global.errorInjection.shouldInjectError(value);
     else return false;
 };
+
+// get service info
+var infoFile = path.resolve(__dirname, '../../../package.json');
+var infoString = fs.readFileSync(infoFile, 'utf8');
+var info = JSON.parse(infoString);
+config.info = {};
+config.info.title = info.name;
+config.info.description = info.description;
+config.info.version = info.version;
+config.info.contact = {
+    name: "VDJServer",
+    url: "http://vdjserver.org/",
+    email: "vdjserver@utsouthwestern.edu"
+};
+config.info.license = {};
+config.info.license.name = info.license;

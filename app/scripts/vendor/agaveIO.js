@@ -2535,19 +2535,17 @@ agaveIO.setCommunityFilePermissions = function(projectUuid, filePath, toCommunit
         });
 };
 
-/*
-agaveIO.createCommunityDirectory = function(directory) {
-
-    var deferred = Q.defer();
+//
+agaveIO.createCommunityCacheDirectory = function(directory) {
 
     var postData = 'action=mkdir&path=' + directory;
 
-    ServiceAccount.getToken()
+    return ServiceAccount.getToken()
         .then(function(token) {
             var requestSettings = {
                 host:     agaveSettings.hostname,
                 method:   'PUT',
-                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/',
+                path:     '/files/v2/media/system/' + agaveSettings.storageSystem + '//community/cache/',
                 rejectUnauthorized: false,
                 headers: {
                     'Content-Length': Buffer.byteLength(postData),
@@ -2557,19 +2555,14 @@ agaveIO.createCommunityDirectory = function(directory) {
 
             return agaveIO.sendRequest(requestSettings, postData);
         })
-        .then(function() {
-            return agaveIO.setCommunityFilePermissions(directory);
-        })
         .then(function(responseObject) {
             return Promise.resolve(responseObject.result);
         })
         .catch(function(errorObject) {
             return Promise.reject(errorObject);
         });
-
-    return deferred.promise;
 };
-*/
+
 
 /*
 agaveIO.moveProjectFileToCommunity = function(projectUuid, filename, toCommunity) {
@@ -3487,7 +3480,44 @@ agaveIO.getSystemADCRepositories = function() {
 
 // ADC download cache status
 // this should be a singleton metadata entry owned by service account
+agaveIO.createADCDownloadCache = function() {
+    if (config.shouldInjectError("agaveIO.createADCDownloadCache")) return config.performInjectError();
+
+    var postData = {
+        name: 'adc_cache',
+        value: {
+            enable_cache: false
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
 agaveIO.getADCDownloadCache = function() {
+    if (config.shouldInjectError("agaveIO.getADCDownloadCache")) return config.performInjectError();
 
     return ServiceAccount.getToken()
         .then(function(token) {
@@ -3517,6 +3547,195 @@ agaveIO.getADCDownloadCache = function() {
         });
 }
 
+// create metadata entry for cached ADC study
+agaveIO.createCachedStudyMetadata = function(repository_id, study_id, should_cache) {
+
+    var postData = {
+        name: 'adc_cache_study',
+        value: {
+            repository_id: repository_id,
+            study_id: study_id,
+            should_cache: should_cache,
+            is_cached: false,
+            archive_file: null,
+            download_url: null
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
+// get list of studies cache entries
+agaveIO.getStudyCacheEntries = function(repository_id, study_id, should_cache, not_cached) {
+
+    var models = [];
+
+    var query = '{"name":"adc_cache_study"';
+    if (repository_id) query += ',"value.repository_id":"' + repository_id + '"';
+    if (study_id) query += ',"value.study_id":"' + study_id + '"';
+    if (should_cache) query += ',"value.should_cache":true';
+    if (not_cached) query += ',"value.is_cached":false';
+    query += '}';
+
+    var doFetch = function(offset) {
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(query)
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, null)
+            })
+            .then(function(responseObject) {
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
+            .catch(function(errorObject) {
+                return Promise.reject(errorObject);
+            });
+    }
+
+    return doFetch(0);
+};
+
+// create metadata entry for cached ADC rearrangements for a single repertoire
+agaveIO.createCachedRepertoireMetadata = function(repository_id, study_id, repertoire_id, should_cache) {
+
+    var postData = {
+        name: 'adc_cache_repertoire',
+        value: {
+            repository_id: repository_id,
+            study_id: study_id,
+            repertoire_id: repertoire_id,
+            should_cache: should_cache,
+            is_cached: false,
+            archive_file: null,
+            download_url: null
+        }
+    };
+
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/meta/v2/data',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
+// get list of repertoire cache entries
+agaveIO.getRepertoireCacheEntries = function(repository_id, study_id, repertoire_id, should_cache, not_cached, max_limit) {
+
+    var models = [];
+
+    var query = '{"name":"adc_cache_repertoire"';
+    if (repository_id) query += ',"value.repository_id":"' + repository_id + '"';
+    if (study_id) query += ',"value.study_id":"' + study_id + '"';
+    if (repertoire_id) query += ',"value.repertoire_id":"' + repertoire_id + '"';
+    if (should_cache) query += ',"value.should_cache":true';
+    if (not_cached) query += ',"value.is_cached":false';
+    query += '}';
+
+    var limit = 50;
+    if (max_limit) {
+        if (max_limit < limit) limit = max_limit;
+        if (max_limit < 1) return Promise.resolve([]);
+    }
+
+    var doFetch = function(offset) {
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(query)
+                        + '&limit=' + limit + '&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, null)
+            })
+            .then(function(responseObject) {
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    if ((max_limit) && (models.length >= max_limit))
+                        return Promise.resolve(models);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
+            .catch(function(errorObject) {
+                return Promise.reject(errorObject);
+            });
+    }
+
+    return doFetch(0);
+};
 
 //
 /////////////////////////////////////////////////////////////////////
