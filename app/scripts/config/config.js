@@ -9,7 +9,7 @@
 // VDJ API Service
 // https://vdjserver.org
 //
-// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+// Copyright (C) 2020-2021 The University of Texas Southwestern Medical Center
 //
 // Author: Scott Christley <scott.christley@utsouthwestern.edu>
 //
@@ -44,6 +44,8 @@ function parseBoolean(value)
 // General
 config.port = process.env.VDJ_API_PORT;
 config.sessionSecret = process.env.SESSION_SECRET;
+config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
+config.lrqdata_path = process.env.LRQDATA_PATH;
 
 // Host user and group
 config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;

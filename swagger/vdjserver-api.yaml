@@ -1205,4 +1205,35 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /adc/cache/notify/{notify_id}:
+    post:
+      description: >
+        Notifications from an ADC ASYNC query.
+      operationId: notifyADCDownloadCache
+      tags:
+        - async
+      parameters:
+        - name: notify_id
+          in: path
+          description: ID of notification
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |
+            A successful call recognizes the notification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '500':
+          description: Internal service error occurred.
 

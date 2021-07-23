@@ -3120,6 +3120,44 @@ agaveIO.createCommunityFilePostit = function(projectUuid, path) {
         });
 };
 
+agaveIO.createPublicFilePostit = function(url, unlimited, maxUses, lifetime) {
+
+    var postData = {
+        url: url,
+        method: 'GET'
+    };
+    if (unlimited) {
+        postData["unlimited"] = true;
+    } else {
+        postData["maxUses"] = maxUses;
+        postData["lifetime"] = lifetime;
+    }
+    postData = JSON.stringify(postData);
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'POST',
+                path:     '/postits/v2/',
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, postData);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
 //
 /////////////////////////////////////////////////////////////////////
 //

@@ -116,8 +116,10 @@ console.log('VDJ-API INFO: Using load collection suffix: ' + mongoSettings.loadC
 // Currently only read access is required.
 if (config.hostServiceAccount) {
     console.log('VDJ-API INFO: Downgrading to host user: ' + config.hostServiceAccount);
+    process.setgid(config.hostServiceGroup);
     process.setuid(config.hostServiceAccount);
     console.log('VDJ-API INFO: Current uid: ' + process.getuid());
+    console.log('VDJ-API INFO: Current gid: ' + process.getgid());
 } else {
     console.log('VDJ-API WARNING: config.hostServiceAccount is not defined, Corral access will generate errors.');
 }
@@ -221,7 +223,8 @@ ServiceAccount.getToken()
                 updateADCDownloadCacheForStudy: adcController.updateADCDownloadCacheForStudy,
                 deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
                 updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
-                deleteADCDownloadCacheForRepertoire: adcController.deleteADCDownloadCacheForRepertoire
+                deleteADCDownloadCacheForRepertoire: adcController.deleteADCDownloadCacheForRepertoire,
+                notifyADCDownloadCache: adcController.notifyADCDownloadCache
             }
         });
 

@@ -1,0 +1,9 @@
+{
+  "query_id": "7268441458222493205-242ac117-0001-012",
+  "endpoint": "rearrangement",
+  "status": "FINISHED",
+  "message": null,
+  "created": "2021-07-23T14:38:50.736-05:00",
+  "final_file": "7268441458222493205-242ac117-0001-012.airr.tsv",
+  "download_url": "https://vdj-agave-api.tacc.utexas.edu/postits/v2/9a8e2e53-8d1d-44ac-9ddc-1745f6d4e26f-010"
+}

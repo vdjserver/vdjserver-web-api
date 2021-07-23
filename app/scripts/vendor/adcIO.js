@@ -101,6 +101,40 @@ adcIO.sendRequest = function(requestSettings, postData) {
 adcIO.defaultADCRepositories = function() {
 }
 
+// Get status of an ADC ASYNC query
+adcIO.asyncQueryStatus = async function(repository, query_id) {
+    var msg = null;
+
+    // we assume the passed in repository is an object entry
+    if (! repository) return Promise.reject('missing repository parameter');
+    if (! repository['async_host']) return Promise.reject('repository entry missing async_host');
+    if (! repository['async_base_url']) return Promise.reject('repository entry missing async_base_url');
+    if (! query_id) return Promise.reject('missing query_id parameter');
+
+    var requestSettings = {
+        host:     repository['async_host'],
+        method:   'GET',
+        path:     repository['async_base_url'] + '/status/' + query_id,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type':   'application/json'
+        }
+    };
+    console.log(requestSettings);
+
+    var data = await adcIO.sendRequest(requestSettings, null)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: adcIO.asyncQueryStatus, adcIO.sendRequest error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    return Promise.resolve(data);
+}
+
 // Query rearrangements from an ADC repository with ASYNC API
 adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
     var msg = null;
@@ -118,7 +152,8 @@ adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
           "field": "repertoire_id",
           "value": repertoire_id
         }
-      }
+      },
+      "format":"tsv"
     };
 
     postData = JSON.stringify(postData);
@@ -137,7 +172,7 @@ adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
 
     var data = await adcIO.sendRequest(requestSettings, postData)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: adcIO.getStudies, adcIO.sendRequest error ' + error;
+            msg = 'VDJ-API ERROR: adcIO.asyncGetRearrangements, adcIO.sendRequest error ' + error;
         });
     if (msg) {
         console.error(msg);

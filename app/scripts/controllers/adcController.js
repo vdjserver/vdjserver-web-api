@@ -215,3 +215,68 @@ ADCController.deleteADCDownloadCacheForRepertoire = async function(request, resp
 
     return apiResponseController.sendError('Not implemented', 500, response);
 };
+
+ADCController.notifyADCDownloadCache = async function(request, response) {
+    console.log('VDJ-API INFO: Received ADCDownloadCache notification id:', request.params.notify_id, 'body:', JSON.stringify(request.body));
+
+    var msg = null;
+    var notify_id = request.params.notify_id;
+    var notify_obj = request.body;
+
+    // return a response
+    response.status(200).json({"message":"notification received."});
+
+    // search for metadata item based on notification id
+    var metadata = await agaveIO.getMetadata(notify_id)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): Could not get metadata for notification id: ' + notify_id + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+
+    // do some error checking
+    console.log(metadata);
+    if (metadata['name'] == 'adc_cache_repertoire') {
+        // notification from ADC ASYNC that our query is done
+        if (metadata['value']['async_query_id'] != notify_obj['query_id']) {
+            msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): Query id does not match: '
+                + metadata['value']['async_query_id']  + ' != ' + notify_obj['query_id'];
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        }
+
+        // get study cache metadata
+        var cs = await agaveIO.getStudyCacheEntries(metadata['value']['repository_id'], metadata['value']['study_id'])
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): agaveIO.getCachedStudies error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        }
+        if (cs.length != 1) {
+            msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): Expected single metadata entry but got '
+                + cs.length + ' for repository: ' + metadata['value']['repository_id'] + ' and study_id: ' + metadata['value']['study_id'];
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        }
+        var study_cache = cs[0];
+
+        // TODO: need to check for duplicate notification
+
+        // submit the job to finish the download
+        adcDownloadQueueManager.finishDownload({study_cache: study_cache, repertoire_cache: metadata, query_status: notify_obj});
+    } else {
+        msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): Unknown notification: '
+            + notify_id + 'body:' + JSON.stringify(notify_obj);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    return Promise.resolve();
+};
