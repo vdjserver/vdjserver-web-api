@@ -226,6 +226,9 @@ ADCController.notifyADCDownloadCache = async function(request, response) {
     // return a response
     response.status(200).json({"message":"notification received."});
 
+    if (notify_obj['status'] != 'FINISHED')
+        return Promise.resolve();
+
     // search for metadata item based on notification id
     var metadata = await agaveIO.getMetadata(notify_id)
         .catch(function(error) {

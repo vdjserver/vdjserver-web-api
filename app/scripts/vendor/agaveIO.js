@@ -3653,6 +3653,8 @@ agaveIO.getStudyCacheEntries = function(repository_id, study_id, should_cache, n
                     }
                 };
 
+                console.log(requestSettings);
+
                 return agaveIO.sendRequest(requestSettings, null)
             })
             .then(function(responseObject) {

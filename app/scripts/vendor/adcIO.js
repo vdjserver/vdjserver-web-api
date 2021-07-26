@@ -136,11 +136,12 @@ adcIO.asyncQueryStatus = async function(repository, query_id) {
 }
 
 // Query rearrangements from an ADC repository with ASYNC API
-adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
+adcIO.asyncGetRearrangements = async function(repository, repertoire_id, notification) {
     var msg = null;
 
     // we assume the passed in repository is an object entry
-    if (! repository) return Promise.resolve(null);
+    if (! repository) return Promise.reject('missing repository entry');
+    if (! repertoire_id) return Promise.reject('missing repertoire_id entry');
     if (! repository['async_host']) return Promise.reject('repository entry missing async_host');
     if (! repository['async_base_url']) return Promise.reject('repository entry missing async_base_url');
 
@@ -155,6 +156,7 @@ adcIO.asyncGetRearrangements = async function(repository, repertoire_id) {
       },
       "format":"tsv"
     };
+    if (notification) postData["notification"] = notification;
 
     postData = JSON.stringify(postData);
 

@@ -410,7 +410,7 @@ submitQueue.process(async (job) => {
             var repv = entry['value'];
 
             // reload with any new entries
-            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study.study_id'])
+            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study_id'], true, true)
                 .catch(function(error) {
                     msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
                 });
@@ -488,7 +488,8 @@ cacheQueue.process(async (job) => {
     // use ADC ASYNC API if supported
     // TODO: we should get this from the repository info
     if (repository['supports_async']) {
-        var query_id = await adcIO.asyncGetRearrangements(repository, repertoire_id)
+        var notification = { url: agaveSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
+        var query_id = await adcIO.asyncGetRearrangements(repository, repertoire_id, notification)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, could not submit ADC ASYNC query for repertoire_id '
                     + repertoire_id + ' for repository ' + repository + '\n' + error;
@@ -610,6 +611,9 @@ finishQueue.process(async (job) => {
         });
 
     console.log('VDJ-API INFO: finishing ADC download cache job');
+
+    ADCDownloadQueueManager.triggerDownloadCache();
+
     return Promise.resolve();
 });
 

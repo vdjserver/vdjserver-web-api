@@ -48,6 +48,9 @@ module.exports = {
     // Agave Misc.
     storageSystem: process.env.AGAVE_STORAGE_SYSTEM,
 
+    // host URL for Tapis notifications
+    notifyHost: process.env.AGAVE_NOTIFY_HOST,
+
     // Email
     fromAddress: process.env.EMAIL_ADDRESS,
     replyToAddress: process.env.REPLYTO_EMAIL_ADDRESS,
