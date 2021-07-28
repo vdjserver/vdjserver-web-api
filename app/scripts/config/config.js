@@ -55,6 +55,7 @@ config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
 if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
 console.log('VDJ-API INFO: adc_system_repositories entry =', config.adcRepositoryEntry);
+config.enableADCDownloadCache = parseBoolean(process.env.ENABLE_ADC_DOWNLOAD_CACHE);
 
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
