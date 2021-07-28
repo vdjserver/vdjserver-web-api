@@ -51,6 +51,11 @@ config.lrqdata_path = process.env.LRQDATA_PATH;
 config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
 config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 
+// AIRR Data Commons
+config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
+if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
+console.log('VDJ-API INFO: adc_system_repositories entry =', config.adcRepositoryEntry);
+
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
 config.recaptchaPublic = process.env.RECAPTCHA_PUBLIC;
