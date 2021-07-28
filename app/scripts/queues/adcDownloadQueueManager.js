@@ -49,11 +49,13 @@ var Queue = require('bull');
 var fs = require('fs');
 const zlib = require('zlib');
 var stream = require('stream');
+var tar = require('tar');
 
 var triggerQueue = new Queue('ADC download cache trigger');
 var cacheQueue = new Queue('ADC download cache entry');
 var submitQueue = new Queue('ADC download cache submit');
 var finishQueue = new Queue('ADC download cache finish');
+var finishStudyQueue = new Queue('ADC download cache study finish');
 
 //
 // Trigger the download cache process
@@ -223,7 +225,7 @@ submitQueue.process(async (job) => {
     }
 
     // create/update cache entries for each repository
-    repos = repos[0]['value']['adc'];
+    repos = repos[0]['value'][config.adcRepositoryEntry];
     //console.log(repos);
 
     /*
@@ -323,7 +325,7 @@ submitQueue.process(async (job) => {
             var study_id = cached_studies[s]['value']['study_id'];
 
             // query repertoires from the ADC repository for the study
-            var reps = await adcIO.getRepertoires(repos[repository_id], study_id)
+            var repertoire_metadata = await adcIO.getRepertoires(repos[repository_id], study_id)
                 .catch(function(error) {
                     msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, adcIO.getRepertoires error ' + error;
                 });
@@ -332,6 +334,7 @@ submitQueue.process(async (job) => {
                 webhookIO.postToSlack(msg);
                 return Promise.resolve();
             }
+            var reps = repertoire_metadata['Repertoire'];
             console.log('VDJ-API INFO:', reps.length, 'repertoires for study:', study_id);
             //console.log(reps);
 
@@ -388,6 +391,52 @@ submitQueue.process(async (job) => {
         if (! repos[repository_id]['enable_cache']) continue;
 
         console.log('VDJ-API INFO: ADC query and download job for repository:', repository_id);
+
+        // get the cached study entries for the repository
+        var cached_studies = await agaveIO.getStudyCacheEntries(repository_id)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+        console.log('VDJ-API INFO:', cached_studies.length, 'cache study entries for repository:', repository_id);
+        //console.log(cached_studies);
+
+        // check if all of the repertoires have been cached for a study
+        for (var s in cached_studies) {
+            if (! cached_studies[s]['value']['should_cache']) continue;
+            if (cached_studies[s]['value']['is_cached']) continue;
+            var study_id = cached_studies[s]['value']['study_id'];
+
+            // get the cached repertoire entries for the study
+            var cached_reps = await agaveIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
+                .catch(function(error) {
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getRepertoireCacheEntries error ' + error;
+                });
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+
+            // have they all been cached?
+            var doneCaching = true;
+            var repcnt = 0;
+            for (var i in cached_reps) {
+                doneCaching &= cached_reps[i]['value']['is_cached'];
+                if (cached_reps[i]['value']['is_cached']) repcnt += 1;
+            }
+            if (doneCaching) {
+                console.log('VDJ-API INFO: (submitQueue): all', cached_reps.length, 'repertoires have been cached for study:', study_id);
+                finishStudyQueue.add({repository:repos[repository_id], study_cache:cached_studies[s]});
+                return Promise.resolve();
+            } else {
+                console.log('VDJ-API INFO: (submitQueue):', repcnt, 'of', cached_reps.length, 'repertoires have been cached for study:', study_id);
+            }
+        }
 
         // should be and not yet cached
         var next_reps = await agaveIO.getRepertoireCacheEntries(repository_id, null, null, true, true, 1)
@@ -479,8 +528,18 @@ cacheQueue.process(async (job) => {
 
             // query status is finished then presumably the finishQueue has been notified
             // TODO: may need to handle case when we did not get notification
-            //if (query_status['status'] == 'FINISHED') {
-            //}
+            if (query_status['status'] == 'FINISHED') {
+                console.log('VDJ-API INFO: async query is FINISHED, manually sending notification.');
+                // manually send notification
+                var notification = { url: agaveSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
+                await adcIO.sendNotification(notification, query_status)
+                    .catch(function(error) {
+                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, could not manually send notification '
+                            + repertoire_cache['uuid'] + '\n' + error;
+                        console.error(msg);
+                        webhookIO.postToSlack(msg);
+                    });
+            }
             return Promise.resolve();
         }
     }
@@ -572,6 +631,19 @@ finishQueue.process(async (job) => {
     console.log(repertoire_cache);
     console.log(query_status);
 
+    // reload cache metadata, to check if already finished
+    var metadata = await agaveIO.getMetadata(repertoire_cache['uuid'])
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishQueuee): Could not get metadata id: ' + repertoire_cache['uuid'] + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+    if ((! metadata['value']['should_cache']) || (metadata['value']['is_cached'])) {
+        console.log('VDJ-API INFO (finishQueue): already cached:',repertoire_cache['uuid'],', skipping finish process');
+        return Promise.resolve();
+    }
+
     // locate the file, copy it to the cache directory and gzip
     var outname = await ADCDownloadQueueManager.processRearrangementFile(repertoire_cache['value']['repertoire_id'], query_status['final_file'], study_cache['uuid'])
         .catch(function(error) {
@@ -617,3 +689,119 @@ finishQueue.process(async (job) => {
     return Promise.resolve();
 });
 
+// Create a single archive for the whole study
+// We directly access the Corral file system
+ADCDownloadQueueManager.processStudyFile = async function(cache_dir, file_list) {
+    var cache_path = config.vdjserver_data_path + 'community/cache/' + cache_dir + '/';
+    var outfile = 'study.tar';
+    var outname = cache_path + outfile;
+
+    console.log('VDJ-API INFO (ADCDownloadQueueManager.processStudyFile):', file_list.length, ' input files');
+    console.log('VDJ-API INFO (ADCDownloadQueueManager.processStudyFile): output file:', outname);
+
+    await tar.create({ gzip:false, file:outname, cwd:cache_path }, file_list);
+
+    return Promise.resolve(outfile);
+}
+
+// With the rearrangements cached in AIRR TSV files for all repertoires
+// in a study, now create archive for the whole study
+finishStudyQueue.process(async (job) => {
+    var msg = null;
+
+    var repository = job['data']['repository'];
+    var study_cache = job['data']['study_cache'];
+
+    console.log('VDJ-API INFO (finishStudyQueue): start job for repository:', study_cache['value']['repository_id'], 'and study:', study_cache['value']['study_id']);
+
+    // reload cache metadata, to check if already finished
+    var metadata = await agaveIO.getMetadata(study_cache['uuid'])
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): Could not get metadata id: ' + study_cache['uuid'] + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+    if ((! metadata['value']['should_cache']) || (metadata['value']['is_cached'])) {
+        console.log('VDJ-API INFO (finishStudyQueue): already cached:',study_cache['uuid'],', skipping finish process');
+        return Promise.resolve();
+    }
+
+    // get the cached repertoire entries for the study
+    var cached_reps = await agaveIO.getRepertoireCacheEntries(study_cache['value']['repository_id'], study_cache['value']['study_id'], null, null, null)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): agaveIO.getRepertoireCacheEntries error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    // get all the repertoire metadata for the study and put in file
+    var repertoire_metadata = await adcIO.getRepertoires(repository, study_cache['value']['study_id'])
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): agaveIO.getRepertoires error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    var cache_path = config.vdjserver_data_path + 'community/cache/' + study_cache['uuid'] + '/';
+    var metaname = 'repertoires.airr.json';
+    var metafile = cache_path + metaname;
+    fs.writeFileSync(metafile, JSON.stringify(repertoire_metadata, null, 2));
+
+    var file_list = ['repertoires.airr.json'];
+    for (var i in cached_reps) file_list.push(cached_reps[i]['value']['archive_file']);
+    console.log(file_list);
+
+    // TODO: analyze the size of files so that a single archive is not too big, split into multiple files
+
+    // create the study archive
+    var outname = await ADCDownloadQueueManager.processStudyFile(study_cache['uuid'], file_list)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): Could not create study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+
+    // create permanent postit
+    var url = 'https://' + agaveSettings.hostname
+        + '/files/v2/media/system/'
+        + agaveSettings.storageSystem
+        + '//community/cache/' + study_cache['uuid'] + '/' + outname
+        + '?force=true';
+
+    var postit = await agaveIO.createPublicFilePostit(url, true)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): Could not create postit for study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+
+    // update the metadata
+    if (config.debug) console.log('VDJ-API INFO (finishStudyQueue): Created postit: ' + postit["postit"]);
+    study_cache["value"]["archive_file"] = outname;
+    study_cache["value"]["postit_id"] = postit["postit"];
+    study_cache["value"]["download_url"] = postit["_links"]["self"]["href"];
+    study_cache["value"]["is_cached"] = true;
+    await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+
+    console.log('VDJ-API INFO (finishStudyQueue): end job for repository:', study_cache['value']['repository_id'], 'and study:', study_cache['value']['study_id']);
+
+    // retrigger
+    ADCDownloadQueueManager.triggerDownloadCache();
+
+    return Promise.resolve();
+});

@@ -194,7 +194,7 @@ adcIO.getRepertoires = async function(repository, study_id) {
     if (! repository['server_host']) return Promise.reject('repository entry missing server_host');
     if (! repository['base_url']) return Promise.reject('repository entry missing base_url');
 
-    // do a facets query
+    // query on study_id
     var postData = {
         "filters": {
             "op": "=",
@@ -221,15 +221,14 @@ adcIO.getRepertoires = async function(repository, study_id) {
 
     var data = await adcIO.sendRequest(requestSettings, postData)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: adcIO.getStudies, adcIO.sendRequest error ' + error;
+            msg = 'VDJ-API ERROR: adcIO.getRepertoires, adcIO.sendRequest error ' + error;
         });
     if (msg) {
         console.error(msg);
         webhookIO.postToSlack(msg);
         return Promise.reject(new Error(msg));
     }
-
-    return Promise.resolve(data['Repertoire']);
+    return Promise.resolve(data);
 }
 
 // Query the studies from an ADC repository
@@ -287,3 +286,58 @@ adcIO.getCachedRepertoiresForStudy = function(study_id) {
 adcIO.createCacheEntries = function() {
 
 }
+
+// send a notification
+adcIO.sendNotification = function(notification, data) {
+
+    // pull out host and path from URL
+    // TODO: handle http/https
+    var fields = notification['url'].split('://');
+    fields = fields[1].split('/');
+    var host = fields[0];
+    fields = notification['url'].split(host);
+    var path = fields[1];
+
+    var postData = null;
+    var method = 'GET';
+    if (data) {
+        // put data in request params
+        if (notification["method"] == 'GET') {
+            method = 'GET';
+
+            // check if URL already has some request params
+            var mark;
+            if (path.indexOf('?') >= 0) mark = '&';
+            else mark = '?';
+
+            var keys = Object.keys(data);
+            for (var p = 0; p < keys.length; ++p) {
+                path += mark;
+                path += keys[p] + '=' + encodeURIComponent(data[keys[p]]);
+                mark = '&';
+            }
+        } else {
+            method = 'POST';
+            postData = JSON.stringify(data);
+        }
+    }
+
+    var requestSettings = {
+        host:     host,
+        method:   method,
+        path:     path,
+        rejectUnauthorized: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept':   'application/json'
+        }
+    };
+
+    if (postData) {
+        requestSettings['headers']['Content-Length'] = Buffer.byteLength(postData);
+    }
+
+    console.log(requestSettings);
+
+    return adcIO.sendRequest(requestSettings, postData);
+};

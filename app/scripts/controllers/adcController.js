@@ -77,6 +77,8 @@ ADCController.defaultADCRepositories = async function(request, response) {
 
 ADCController.updateADCRepositories = async function(request, response) {
 
+    // TODO: change this to support the staging and develop entries
+
     var msg = null;
     var data = request['body']['adc'];
     var value = { adc: data };
@@ -269,7 +271,7 @@ ADCController.notifyADCDownloadCache = async function(request, response) {
         }
         var study_cache = cs[0];
 
-        // TODO: need to check for duplicate notification
+        // The finish queue will guard against duplicate notifications
 
         // submit the job to finish the download
         adcDownloadQueueManager.finishDownload({study_cache: study_cache, repertoire_cache: metadata, query_status: notify_obj});
