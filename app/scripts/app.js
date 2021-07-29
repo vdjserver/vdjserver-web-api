@@ -220,6 +220,7 @@ ServiceAccount.getToken()
                 // ADC Download Cache
                 getADCDownloadCacheStatus: adcController.getADCDownloadCacheStatus,
                 updateADCDownloadCacheStatus: adcController.updateADCDownloadCacheStatus,
+                getADCDownloadCacheForStudies: adcController.getADCDownloadCacheForStudies,
                 updateADCDownloadCacheForStudy: adcController.updateADCDownloadCacheForStudy,
                 deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
                 updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
@@ -228,20 +229,30 @@ ServiceAccount.getToken()
             }
         });
 
+        // Start listening on port
+        return new Promise(function(resolve, reject) {
+            app.listen(app.get('port'), function() {
+                console.log('VDJ-API INFO: VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
+                resolve();
+            });
+        });
+    })
+    .then(function() {
         // Initialize queues
 
         // ADC download cache queues
-        adcDownloadQueueManager.triggerDownloadCache();
+        if (config.enableADCDownloadCache) {
+            console.log('VDJ-API INFO: ADC download cache is enabled, triggering cache.');
+            adcDownloadQueueManager.triggerDownloadCache();
+        } else {
+            console.log('VDJ-API INFO: ADC download cache is disabled.');
+        }
 
         // TODO: decide how to restart
         // ADC load of rearrangements
         //projectQueueManager.checkRearrangementLoad();
         //projectQueueManager.triggerRearrangementLoad();
 
-        // Start listening on port
-        app.listen(app.get('port'), function() {
-            console.log('VDJ-API INFO: VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
-        });
     })
     .catch(function(error) {
         var msg = 'VDJ-API ERROR: Error occurred while initializing API service.\nSystem may need to be restarted.\n' + error;

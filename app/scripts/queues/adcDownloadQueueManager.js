@@ -459,7 +459,7 @@ submitQueue.process(async (job) => {
             var repv = entry['value'];
 
             // reload with any new entries
-            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study_id'], true, true)
+            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study_id'])
                 .catch(function(error) {
                     msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
                 });

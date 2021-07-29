@@ -190,6 +190,33 @@ ADCController.updateADCDownloadCacheStatus = async function(request, response) {
     }
 };
 
+ADCController.getADCDownloadCacheForStudies = async function(request, response) {
+    if (config.debug) console.log('VDJ-API INFO (ADCController.getADCDownloadCacheForStudies)');
+
+    var msg = null;
+
+    // all cached studies for all repositories
+    var cached_studies = await agaveIO.getStudyCacheEntries(null, null, true, true)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheForStudies, error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // clean up the output results
+    var results = [];
+    for (var i in cached_studies) {
+        var entry = cached_studies[i]['value'];
+        entry['cache_uuid'] = cached_studies[i]['uuid'];
+        results.push(entry);
+    }
+
+    return apiResponseController.sendSuccess(results, response);
+}
+
 ADCController.updateADCDownloadCacheForStudy = async function(request, response) {
 
     var msg = null;
