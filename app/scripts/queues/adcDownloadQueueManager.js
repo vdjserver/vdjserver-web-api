@@ -783,13 +783,15 @@ finishStudyQueue.process(async (job) => {
             webhookIO.postToSlack(msg);
             return Promise.reject(new Error(msg));
         });
+    if (config.debug) console.log('VDJ-API INFO (finishStudyQueue): Created postit: ' + postit["postit"]);
 
     // update the metadata
-    if (config.debug) console.log('VDJ-API INFO (finishStudyQueue): Created postit: ' + postit["postit"]);
     study_cache["value"]["archive_file"] = outname;
     study_cache["value"]["postit_id"] = postit["postit"];
     study_cache["value"]["download_url"] = postit["_links"]["self"]["href"];
     study_cache["value"]["is_cached"] = true;
+    var stats = fs.statSync(cache_path + outname);
+    study_cache["value"]["file_size"] = stats.size;
     await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
