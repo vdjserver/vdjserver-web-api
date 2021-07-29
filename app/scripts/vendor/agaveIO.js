@@ -3627,15 +3627,17 @@ agaveIO.createCachedStudyMetadata = function(repository_id, study_id, should_cac
 };
 
 // get list of studies cache entries
-agaveIO.getStudyCacheEntries = function(repository_id, study_id, should_cache, not_cached) {
+agaveIO.getStudyCacheEntries = function(repository_id, study_id, should_cache, is_cached) {
 
     var models = [];
 
     var query = '{"name":"adc_cache_study"';
     if (repository_id) query += ',"value.repository_id":"' + repository_id + '"';
     if (study_id) query += ',"value.study_id":"' + study_id + '"';
-    if (should_cache) query += ',"value.should_cache":true';
-    if (not_cached) query += ',"value.is_cached":false';
+    if (should_cache === false) query += ',"value.should_cache":false';
+    else if (should_cache === true) query += ',"value.should_cache":true';
+    if (is_cached === false) query += ',"value.is_cached":false';
+    else if (is_cached === true) query += ',"value.is_cached":true';
     query += '}';
 
     var doFetch = function(offset) {

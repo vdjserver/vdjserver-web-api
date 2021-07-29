@@ -220,6 +220,7 @@ ServiceAccount.getToken()
                 // ADC Download Cache
                 getADCDownloadCacheStatus: adcController.getADCDownloadCacheStatus,
                 updateADCDownloadCacheStatus: adcController.updateADCDownloadCacheStatus,
+                getADCDownloadCacheForStudies: adcController.getADCDownloadCacheForStudies,
                 updateADCDownloadCacheForStudy: adcController.updateADCDownloadCacheForStudy,
                 deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
                 updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
