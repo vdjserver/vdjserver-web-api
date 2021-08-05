@@ -3406,6 +3406,9 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
             }
             // always save vdjserver project uuid in custom field
             blank['study']['vdjserver_uuid'] = projectUuid;
+            // also save any vdjserver keywords
+            if (study['vdjserver_keywords'])
+                blank['study']['vdjserver_keywords'] = study['vdjserver_keywords'];
 
             for (var i in models) {
                 var model = models[i].value;
