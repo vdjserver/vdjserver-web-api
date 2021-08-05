@@ -1175,14 +1175,33 @@ ProjectQueueManager.processProjects = function() {
 
                 console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, load repertoire metadata for project: ' + projectUuid);
 
-                // gather the repertoire objects
-                return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
+                return agaveIO.getMetadata(projectUuid)
+                    .then(function(projectMetadata) {
+                        // set ADC dates
+                        if (! projectMetadata.value.adc_publish_date)
+                            projectMetadata.value.adc_publish_date = new Date().toISOString();
+                        else
+                            projectMetadata.value.adc_update_date = new Date().toISOString();
+
+                        return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, projectMetadata.associationIds);
+                    })
+                    .then(function(projectMetadata) {
+                        // gather the repertoire objects
+                        return agaveIO.gatherRepertoireMetadataForProject(projectUuid, true);
+                    })
                     .then(function(repertoireMetadata) {
                         //console.log(JSON.stringify(repertoireMetadata));
                         console.log('VDJ-API INFO: projectQueueManager.loadRepertoireMetadataTask, gathered ' + repertoireMetadata.length
                                     + ' repertoire metadata for project: ' + projectUuid);
 
                         if (! repertoireMetadata || repertoireMetadata.length == 0) return;
+
+                        for (let i in repertoireMetadata) {
+                            if (! repertoireMetadata[i]['repertoire_id']) {
+                                msg = 'VDJ-API ERROR (projectQueueManager.loadRepertoireMetadataTask): Entry is missing repertoire_id, aborting!';
+                                return Promise.reject(new Error(msg));
+                            }
+                        }
 
                         // insert repertoires into database
                         // TODO: we should use RestHeart meta/v3 API but we are getting errors
