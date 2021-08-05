@@ -34,6 +34,7 @@ module.exports = ADCDownloadQueueManager;
 var app = require('../app');
 var config = require('../config/config');
 var agaveSettings = require('../config/agaveSettings');
+var mongoSettings = require('../config/mongoSettings');
 
 // Models
 var ServiceAccount = require('../models/serviceAccount');
@@ -228,7 +229,6 @@ submitQueue.process(async (job) => {
     repos = repos[0]['value'][config.adcRepositoryEntry];
     //console.log(repos);
 
-    /*
     for (var repository_id in repos) {
         // only if cache is enabled on repository
         if (! repos[repository_id]['enable_cache']) continue;
@@ -278,7 +278,43 @@ submitQueue.process(async (job) => {
             //console.log(study_id);
             // TODO: we should check if an existing study has been updated
             if (cached_studies_dict[study_id]) continue;
-            
+
+            // query repertoires from the ADC repository for the study
+            var repertoire_metadata = await adcIO.getRepertoires(repos[repository_id], study_id)
+                .catch(function(error) {
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, adcIO.getRepertoires error ' + error;
+                });
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+            var reps = repertoire_metadata['Repertoire'];
+            console.log('VDJ-API INFO:', reps.length, 'repertoires for study:', study_id);
+
+            if (reps.length == 0) continue;
+
+            // For VDJServer, verify that the study has been completely loaded
+            var vdjserver_uuid = reps[0]['study']['vdjserver_uuid'];
+            if (vdjserver_uuid) {
+                console.log('VDJ-API INFO: check project load:', vdjserver_uuid);
+                var projectLoad = await agaveIO.getProjectLoadMetadata(vdjserver_uuid, mongoSettings.loadCollection)
+                    .catch(function(error) {
+                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.createCachedStudyMetadata error ' + error;
+                    });
+                if (msg) {
+                    console.error(msg);
+                    webhookIO.postToSlack(msg);
+                    return Promise.resolve();
+                }
+                if (!projectLoad) continue;
+                if (projectLoad.length == 0) continue;
+                if (!projectLoad[0]['value']['isLoaded']) {
+                    console.log('VDJ-API INFO: skipping ADC study:', study_id, 'because not completely loaded, load record:', projectLoad[0]['uuid']);
+                    continue;
+                }
+            }
+
             // insert cache entry
             console.log('VDJ-API INFO: ADC study to be cached:', study_id);
             var cache_entry = await agaveIO.createCachedStudyMetadata(repository_id, study_id, true)
@@ -380,7 +416,7 @@ submitQueue.process(async (job) => {
                 console.log('VDJ-API INFO: caching enabled for ADC repertoire:', repertoire_id, 'for study:', study_id);
             }
         }
-    } */
+    }
     console.log('VDJ-API INFO: all cache entries updated.');
 
     // All cache entries should be created/updated
@@ -435,43 +471,18 @@ submitQueue.process(async (job) => {
                 return Promise.resolve();
             } else {
                 console.log('VDJ-API INFO: (submitQueue):', repcnt, 'of', cached_reps.length, 'repertoires have been cached for study:', study_id);
+                for (var i in cached_reps) {
+                    var entry = cached_reps[i];
+                    if (! entry['value']['is_cached']) {
+                        cacheQueue.add({repository:repos[repository_id], study_cache:cached_studies[s], repertoire_cache:entry});
+                        return Promise.resolve();
+                    }
+                }
             }
-        }
-
-        // should be and not yet cached
-        var next_reps = await agaveIO.getRepertoireCacheEntries(repository_id, null, null, true, true, 1)
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getRepertoireCacheEntries error ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return Promise.resolve();
-        }
-        console.log(next_reps.length);
-        console.log(next_reps);
-
-        if (next_reps.length == 0) {
-            console.log('VDJ-API INFO: no more entries need to be cached for repository: ', repository_id);
-        } else {
-            console.log('VDJ-API INFO:', next_reps.length, 'entries to be cached for repository: ', repository_id);
-            var entry = next_reps[0];
-            var repv = entry['value'];
-
-            // reload with any new entries
-            var cs = await agaveIO.getStudyCacheEntries(repository_id, repv['study_id'])
-                .catch(function(error) {
-                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
-                });
-            if (msg) {
-                console.error(msg);
-                webhookIO.postToSlack(msg);
-                return Promise.resolve();
-            }
-
-            cacheQueue.add({repository:repos[repository_id], study_cache:cs[0], repertoire_cache:entry});
         }
     }
+
+    console.log('VDJ-API INFO (submitQueue): everything is cached.');
 
     return Promise.resolve();
 });
@@ -674,6 +685,9 @@ finishQueue.process(async (job) => {
     repertoire_cache["value"]["postit_id"] = postit["postit"];
     repertoire_cache["value"]["download_url"] = postit["_links"]["self"]["href"];
     repertoire_cache["value"]["is_cached"] = true;
+    var cache_path = config.vdjserver_data_path + 'community/cache/' + study_cache['uuid'] + '/';
+    var stats = fs.statSync(cache_path + outname);
+    repertoire_cache["value"]["file_size"] = stats.size;
     await agaveIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishQueue): Could not update metadata for repertoire cache: ' + repertoire_cache['uuid'] + '.\n' + error;
