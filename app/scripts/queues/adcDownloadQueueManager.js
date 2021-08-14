@@ -705,17 +705,35 @@ finishQueue.process(async (job) => {
 
 // Create a single archive for the whole study
 // We directly access the Corral file system
-ADCDownloadQueueManager.processStudyFile = async function(cache_dir, file_list) {
+ADCDownloadQueueManager.processStudyFile = async function(cache_dir, file_list, file_num) {
     var cache_path = config.vdjserver_data_path + 'community/cache/' + cache_dir + '/';
-    var outfile = 'study.tar';
+    var outfile;
+    if (file_num == 0) outfile = 'study.tar';
+    else outfile = 'study' + file_num + '.tar';
     var outname = cache_path + outfile;
 
     console.log('VDJ-API INFO (ADCDownloadQueueManager.processStudyFile):', file_list.length, ' input files');
     console.log('VDJ-API INFO (ADCDownloadQueueManager.processStudyFile): output file:', outname);
 
-    await tar.create({ gzip:false, file:outname, cwd:cache_path }, file_list);
+    //await tar.create({ gzip:false, file:outname, cwd:cache_path }, file_list);
 
-    return Promise.resolve(outfile);
+    const { exec } = require('child_process');
+    var files = file_list.join(' ');
+    var cmd = 'tar cf ' + outfile + ' ' + files;
+    console.log(cmd);
+    return new Promise(function(resolve, reject) {
+        exec(cmd, { cwd:cache_path }, (error, stdout, stderr) => {
+            if (error) {
+                console.error('exec error:', error);
+                return reject(new Error(error));
+            }
+            console.log('stdout:', stdout);
+            console.error('stderr:', stderr);
+            return resolve(outfile);
+        });
+    });
+
+    //return Promise.resolve(outfile);
 }
 
 // With the rearrangements cached in AIRR TSV files for all repertoires
@@ -769,43 +787,82 @@ finishStudyQueue.process(async (job) => {
     fs.writeFileSync(metafile, JSON.stringify(repertoire_metadata, null, 2));
 
     var file_list = ['repertoires.airr.json'];
-    for (var i in cached_reps) file_list.push(cached_reps[i]['value']['archive_file']);
+    for (let i in cached_reps) file_list.push(cached_reps[i]['value']['archive_file']);
     console.log(file_list);
 
     // TODO: analyze the size of files so that a single archive is not too big, split into multiple files
+    var max = 50 * 1024 * 1024 * 1024;
+    var current_size = 0;
+    var file_list = [ ['repertoires.airr.json'] ];
+    var idx = 0;
+    for (let i in cached_reps) {
+        if ((current_size + cached_reps[i]['value']['file_size']) < max) {
+            file_list[idx].push(cached_reps[i]['value']['archive_file']);
+            current_size += cached_reps[i]['value']['file_size'];
+        } else {
+            idx += 1;
+            file_list[idx] = [];
+            file_list[idx].push(cached_reps[i]['value']['archive_file']);
+            current_size = cached_reps[i]['value']['file_size'];
+        }
+    }
+    console.log(file_list);
 
-    // create the study archive
-    var outname = await ADCDownloadQueueManager.processStudyFile(study_cache['uuid'], file_list)
-        .catch(function(error) {
-            msg = 'VDJ-API ERROR (finishStudyQueue): Could not create study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return Promise.reject(new Error(msg));
-        });
+    var outnames = [];
+    var postits = [];
+    for (let i = 0; i <= idx; ++i) {
+        // create the study archive
+        var outname = await ADCDownloadQueueManager.processStudyFile(study_cache['uuid'], file_list[i], i)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (finishStudyQueue): Could not create study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.reject(new Error(msg));
+            });
+        outnames.push(outname);
 
-    // create permanent postit
-    var url = 'https://' + agaveSettings.hostname
-        + '/files/v2/media/system/'
-        + agaveSettings.storageSystem
-        + '//community/cache/' + study_cache['uuid'] + '/' + outname
-        + '?force=true';
+        // create permanent postit
+        var url = 'https://' + agaveSettings.hostname
+            + '/files/v2/media/system/'
+            + agaveSettings.storageSystem
+            + '//community/cache/' + study_cache['uuid'] + '/' + outname
+            + '?force=true';
 
-    var postit = await agaveIO.createPublicFilePostit(url, true)
-        .catch(function(error) {
-            msg = 'VDJ-API ERROR (finishStudyQueue): Could not create postit for study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return Promise.reject(new Error(msg));
-        });
-    if (config.debug) console.log('VDJ-API INFO (finishStudyQueue): Created postit: ' + postit["postit"]);
+        var postit = await agaveIO.createPublicFilePostit(url, true)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (finishStudyQueue): Could not create postit for study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                return Promise.reject(new Error(msg));
+            });
+        postits.push(postit);
+        if (config.debug) console.log('VDJ-API INFO (finishStudyQueue): Created postit: ' + postit["postit"]);
+    }
 
     // update the metadata
-    study_cache["value"]["archive_file"] = outname;
-    study_cache["value"]["postit_id"] = postit["postit"];
-    study_cache["value"]["download_url"] = postit["_links"]["self"]["href"];
+    if (idx == 0) {
+        study_cache["value"]["archive_file"] = outnames[0];
+        study_cache["value"]["postit_id"] = postits[0]["postit"];
+        study_cache["value"]["download_url"] = postits[0]["_links"]["self"]["href"];
+        let stats = fs.statSync(cache_path + outnames[0]);
+        study_cache["value"]["file_size"] = stats.size;
+    } else {
+        var postit_list = [];
+        var url_list = [];
+        var size_list = [];
+        for (let i = 0; i <= idx; ++i) {
+            postit_list.push(postits[i]["postit"]);
+            url_list.push(postits[i]["_links"]["self"]["href"]);
+            let stats = fs.statSync(cache_path + outnames[i]);
+            size_list.push(stats.size);
+        }
+        study_cache["value"]["archive_file"] = outnames;
+        study_cache["value"]["postit_id"] = postit_list;
+        study_cache["value"]["download_url"] = url_list;
+        study_cache["value"]["file_size"] = size_list;
+    }
     study_cache["value"]["is_cached"] = true;
-    var stats = fs.statSync(cache_path + outname);
-    study_cache["value"]["file_size"] = stats.size;
+
     await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
