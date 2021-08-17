@@ -194,6 +194,7 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: projectController.createProject,
+                importFile: projectController.importFile,
                 exportMetadata: projectController.exportMetadata,
                 importMetadata: projectController.importMetadata,
                 publishProject: projectController.publishProject,
@@ -246,11 +247,13 @@ ServiceAccount.getToken()
             adcDownloadQueueManager.triggerDownloadCache();
         } else {
             console.log('VDJ-API INFO: ADC download cache is disabled.');
+
+            // TODO: remove any existing jobs from the queue
         }
 
         // TODO: decide how to restart
         // ADC load of rearrangements
-        //projectQueueManager.checkRearrangementLoad();
+        projectQueueManager.checkRearrangementLoad();
         //projectQueueManager.triggerRearrangementLoad();
 
     })
@@ -264,10 +267,6 @@ ServiceAccount.getToken()
 
 // WebsocketIO
 require('./utilities/websocketManager');
-
-// Queue Management
-var filePermissionsQueueManager = require('./queues/filePermissionsQueueManager');
-filePermissionsQueueManager.processFileUploads();
 
 var accountQueueManager = require('./queues/accountQueueManager');
 accountQueueManager.processNewAccounts();

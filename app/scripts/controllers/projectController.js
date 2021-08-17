@@ -42,6 +42,10 @@ var apiResponseController = require('./apiResponseController');
 
 // Models
 var ServiceAccount = require('../models/serviceAccount');
+var FileUploadJob = require('../models/fileUploadJob');
+
+// Queues
+var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
 
 // Processing
 var agaveIO = require('../vendor/agaveIO');
@@ -121,6 +125,46 @@ ProjectController.createProject = function(request, response) {
             webhookIO.postToSlack(msg);            
             apiResponseController.sendError(msg, 500, response);
         });
+};
+
+//
+// Attach an uploaded file to the project
+//
+ProjectController.importFile = async function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var msg = null;
+
+    console.log('VDJ-API INFO: ProjectController.importFile - start, project: ' + projectUuid);
+
+    console.log(request.body);
+    var fileNotification = {
+        fileEvent:   request.body.event,
+        fileType:    request.body.type,
+        filePath:    request.body.path,
+        fileSystem:  request.body.system,
+        projectUuid: projectUuid,
+        vdjFileType: request.body.vdjFileType,
+        readDirection: request.body.readDirection,
+        tags: request.body.tags
+    };
+
+    // verify file notification
+    var fileUploadJob = new FileUploadJob(fileNotification);
+    await fileUploadJob.verifyFileNotification()
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ProjectController.importFile - fileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    console.log(fileUploadJob);
+
+    filePermissionsQueueManager.importFile(fileUploadJob);
+
+    console.log('VDJ-API INFO: ProjectController.importFile - event - queued for file uuid ' + fileUploadJob.fileUuid);
+    return apiResponseController.sendSuccess('Importing file', response);
 };
 
 //
