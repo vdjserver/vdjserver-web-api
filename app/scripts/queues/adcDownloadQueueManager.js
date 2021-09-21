@@ -57,6 +57,7 @@ var cacheQueue = new Queue('ADC download cache entry');
 var submitQueue = new Queue('ADC download cache submit');
 var finishQueue = new Queue('ADC download cache finish');
 var finishStudyQueue = new Queue('ADC download cache study finish');
+var clearQueue = new Queue('ADC download cache clear');
 
 //
 // Trigger the download cache process
@@ -877,4 +878,121 @@ finishStudyQueue.process(async (job) => {
     ADCDownloadQueueManager.triggerDownloadCache();
 
     return Promise.resolve();
+});
+
+//
+// Clear the download cache process
+//
+ADCDownloadQueueManager.triggerClearCache = function(repository_id, study_id) {
+    console.log('VDJ-API INFO (ADCDownloadQueueManager.triggerClearCache): start');
+    clearQueue.add({ repository_id:repository_id, study_id:study_id });
+}
+
+clearQueue.process(async (job) => {
+    var msg = null;
+    var repository_id = job['data']['repository_id'];
+    var study_id = job['data']['study_id'];
+
+    console.log('VDJ-API INFO (clearQueue): start');
+
+    console.log('VDJ-API INFO (clearQueue): clear ADC download cache for repository:', repository_id, 'and study:', study_id);
+
+    var study_cache = await agaveIO.getStudyCacheEntries(repository_id, study_id)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ADCDownloadQueueManager clearQueue, agaveIO.getCachedStudies error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (! study_cache || study_cache.length != 1) {
+        msg = 'VDJ-API INFO (clearQueue): incorrect number of study cache entries: ' + JSON.stringify(study_cache);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+    study_cache = study_cache[0];
+
+    // get any cached repertoire entries for the study
+    var cached_reps = await agaveIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (clearQueue): agaveIO.getRepertoireCacheEntries error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    console.log('VDJ-API INFO (clearQueue):', cached_reps.length, 'cache repertoire entries for study:', study_id);
+
+    await ServiceAccount.getToken()
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (unloadQueue): ServiceAccount.getToken, error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    // delete the whole study cache directory
+    var cache_path = config.vdjserver_data_path + 'community/cache/' + study_cache['uuid'];
+    console.log('VDJ-API INFO (clearQueue): deleting ADC directory:', cache_path);
+    fs.rmdirSync(cache_path, { recursive:true });
+
+    // for each cached repertoire entry, delete the postit, delete the metadata
+    for (let i in cached_reps) {
+        console.log('VDJ-API INFO (clearQueue): deleting ADC repertoire cache record:', cached_reps[i]['uuid']);
+
+        if (cached_reps[i]['value']['postit_id']) {
+            await agaveIO.deletePostit(cached_reps[i]['value']['postit_id'])
+                .catch(function(error) {
+                    msg = 'VDJ-API ERROR (clearQueue): agaveIO.deletePostit: ' + cached_reps[i]['value']['postit_id'] + ', error ' + error;
+                });
+            if (msg) {
+                console.error(msg);
+                webhookIO.postToSlack(msg);
+                // postits not critical so just continue
+            }
+        }
+
+        await agaveIO.deleteMetadata(ServiceAccount.accessToken(), cached_reps[i]['uuid'])
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (clearQueue): agaveIO.deleteMetadata: ' + cached_reps[i]['uuid'] + ', error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+    }
+
+    // for study, delete the postit, delete the metadata
+    console.log('VDJ-API INFO (clearQueue): deleting ADC study cache record:', study_cache['uuid']);
+    if (study_cache['value']['postit_id']) {
+        await agaveIO.deletePostit(study_cache['value']['postit_id'])
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (clearQueue): agaveIO.deletePostit: ' + study_cache['value']['postit_id'] + ', error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            // postits not critical so just continue
+        }
+    }
+
+    await agaveIO.deleteMetadata(ServiceAccount.accessToken(), study_cache['uuid'])
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (clearQueue): agaveIO.deleteMetadata: ' + study_cache['uuid'] + ', error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    console.log('VDJ-API INFO (clearQueue): complete');
 });

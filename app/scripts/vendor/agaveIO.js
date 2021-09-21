@@ -3158,6 +3158,31 @@ agaveIO.createPublicFilePostit = function(url, unlimited, maxUses, lifetime) {
         });
 };
 
+agaveIO.deletePostit = function(postit_id) {
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            var requestSettings = {
+                host:     agaveSettings.hostname,
+                method:   'DELETE',
+                path:     '/postits/v2/' + postit_id,
+                rejectUnauthorized: false,
+                headers: {
+                    'Content-Type':   'application/json',
+                    'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                }
+            };
+
+            return agaveIO.sendRequest(requestSettings, null);
+        })
+        .then(function(responseObject) {
+            return Promise.resolve(responseObject.result);
+        })
+        .catch(function(errorObject) {
+            return Promise.reject(errorObject);
+        });
+};
+
 //
 /////////////////////////////////////////////////////////////////////
 //

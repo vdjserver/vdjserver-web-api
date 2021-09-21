@@ -605,7 +605,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - admin_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -639,7 +639,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - admin_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -647,6 +647,23 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - load_id
+                - clear_cache
+                - clear_statistics
+              properties:
+                load_id:
+                  type: string
+                clear_cache:
+                  type: boolean
+                  default: true
+                clear_statistics:
+                  type: boolean
+                  default: true
       responses:
         '200':
           description: Success.

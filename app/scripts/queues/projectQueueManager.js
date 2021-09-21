@@ -48,11 +48,15 @@ var webhookIO = require('../vendor/webhookIO');
 var emailIO = require('../vendor/emailIO');
 
 // Node Libraries
+var Queue = require('bull');
 var jsonApprover = require('json-approver');
 var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
+
+// Bull queues
+var unloadQueue = new Queue('ADC project unload');
 
 //
 // Because loading rearrangement data is resource intensive, we
@@ -1571,3 +1575,100 @@ ProjectQueueManager.processProjects = function() {
 
     });
 };
+
+ProjectQueueManager.triggerProjectUnload = function(projectUuid, loadMetadata) {
+    console.log('VDJ-API INFO (ProjectQueueManager.triggerProjectUnload):');
+    unloadQueue.add({projectUuid:projectUuid, loadMetadata:loadMetadata});
+}
+
+unloadQueue.process(async (job) => {
+    var msg = null;
+    var projectUuid = job['data']['projectUuid'];
+    var loadMetadata = job['data']['loadMetadata'];
+
+    console.log('VDJ-API INFO (unloadQueue): start');
+
+    // get the rearrangement load records
+    var rearrangementLoad = await agaveIO.getRearrangementsToBeLoaded(projectUuid, mongoSettings.loadCollection)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (unloadQueue): agaveIO.getRearrangementsToBeLoaded, error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (! rearrangementLoad || rearrangementLoad.length == 0) {
+        console.log('VDJ-API INFO (unloadQueue): project has no rearrangement load records: ' + projectUuid);
+        return Promise.resolve();
+    }
+
+    console.log('VDJ-API INFO (unloadQueue): gathered ' + rearrangementLoad.length + ' rearrangement load records for project: ' + projectUuid);
+
+    // for each load record, delete rearrangements, delete load metadata
+    for (let i = 0; i < rearrangementLoad.length; i++) {
+        var loadRecord = rearrangementLoad[i];
+        var rearrangementCollection = 'rearrangement' + loadRecord['value']['collection'];
+        var repertoireCollection = 'repertoire' + loadRecord['value']['collection'];
+
+        if (! loadRecord['value']['repertoire_id']) {
+            msg = 'VDJ-API ERROR (unloadQueue): missing repertoire_id from load record: ' + JSON.stringify(loadRecord);
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        if (loadRecord['value']['collection'] != mongoSettings.loadCollection) {
+            msg = 'VDJ-API ERROR (unloadQueue): load record collection: ' + loadRecord['value']['collection'] + ' != ' + mongoSettings.loadCollection + ' config load collection';
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        console.log('VDJ-API INFO (unloadQueue): deleting rearrangements for repertoire:', loadRecord['value']['repertoire_id']);
+        await mongoIO.deleteLoadSet(loadRecord['value']['repertoire_id'], null, rearrangementCollection)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (unloadQueue): mongoIO.deleteLoadSet, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        console.log('VDJ-API INFO (unloadQueue): deleting repertoire:', loadRecord['value']['repertoire_id']);
+        await mongoIO.deleteRepertoire(loadRecord['value']['repertoire_id'], repertoireCollection)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (unloadQueue): mongoIO.deleteLoadSet, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        console.log('VDJ-API INFO (unloadQueue): deleting rearrangement load record:', loadRecord['uuid']);
+        await ServiceAccount.getToken()
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (unloadQueue): ServiceAccount.getToken, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        await agaveIO.deleteMetadata(ServiceAccount.accessToken(), loadRecord['uuid'])
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (unloadQueue): agaveIO.deleteMetadata, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+    }
+
+    console.log('VDJ-API INFO (unloadQueue): complete');
+});

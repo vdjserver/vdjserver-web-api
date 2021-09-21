@@ -413,8 +413,10 @@ mongoIO.deleteLoadSet = async function(repertoire_id, load_set, loadCollection) 
 
                 // delete load_set for repertoire
                 var filter = {"repertoire_id":repertoire_id}
-                if (load_set >= 0)
-                    filter['vdjserver_load_set'] = load_set;
+                if (load_set != null)
+                    if (load_set >= 0)
+                        filter['vdjserver_load_set'] = load_set;
+
                 console.log(filter);
 
                 var result = await collection.deleteMany(filter);
@@ -553,4 +555,14 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
             var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
             return Promise.reject(msg);
         });
+}
+
+//
+// Unload rearrangement data for a repertoire
+//
+mongoIO.unloadRearrangementData = async function(dataLoad, repertoire) {
+    var loadCollection = 'rearrangement' + dataLoad['value']['collection'];
+
+    // delete all rearrangements for repertoire
+    return mongoIO.deleteLoadSet(repertoire['repertoire_id'], null, loadCollection);
 }
