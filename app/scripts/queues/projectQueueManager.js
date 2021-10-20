@@ -107,6 +107,19 @@ ProjectQueueManager.checkRearrangementLoad = function() {
         });
 };
 
+//
+// Trigger queue process to load for projects to be loaded
+//
+ProjectQueueManager.triggerProjectLoad = function() {
+    console.log('VDJ-API INFO (ProjectQueueManager.triggerProjectLoad):');
+    taskQueue
+        .create('checkProjectsToLoadTask', null)
+        .removeOnComplete(true)
+        .attempts(5)
+        .backoff({delay: 60 * 1000, type: 'fixed'})
+        .save();
+}
+
 ProjectQueueManager.processProjects = function() {
 
     // Publishing a project to community data

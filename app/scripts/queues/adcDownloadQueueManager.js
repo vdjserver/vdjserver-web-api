@@ -797,6 +797,20 @@ finishStudyQueue.process(async (job) => {
     var file_list = [ ['repertoires.airr.json'] ];
     var idx = 0;
     for (let i in cached_reps) {
+        if (! cached_reps[i]['value']['file_size']) {
+            // missing file size so add it
+            var repertoire_cache = cached_reps[i];
+            var stats = fs.statSync(cache_path + repertoire_cache["value"]["archive_file"]);
+            repertoire_cache["value"]["file_size"] = stats.size;
+            await agaveIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
+                .catch(function(error) {
+                    msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for repertoire cache: ' + repertoire_cache['uuid'] + '.\n' + error;
+                    console.error(msg);
+                    webhookIO.postToSlack(msg);
+                    return Promise.reject(new Error(msg));
+                });
+        }
+
         if ((current_size + cached_reps[i]['value']['file_size']) < max) {
             file_list[idx].push(cached_reps[i]['value']['archive_file']);
             current_size += cached_reps[i]['value']['file_size'];
@@ -886,6 +900,49 @@ finishStudyQueue.process(async (job) => {
 ADCDownloadQueueManager.triggerClearCache = function(repository_id, study_id) {
     console.log('VDJ-API INFO (ADCDownloadQueueManager.triggerClearCache): start');
     clearQueue.add({ repository_id:repository_id, study_id:study_id });
+}
+
+//
+// This is specialized function when the repertoire metadata has been updated
+// but the rearrangement data has not changed. In this case we only need to
+// put a new repertoire metadata file and re-generate the study archive file.
+//
+ADCDownloadQueueManager.recacheRepertoireMetadata = async function(repository_id, study_id) {
+    var msg = null;
+
+    console.log('VDJ-API INFO (ADCDownloadQueueManager.recacheRepertoireMetadata): start');
+
+    var study_cache = await agaveIO.getStudyCacheEntries(repository_id, study_id)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (ADCDownloadQueueManager.recacheRepertoireMetadata): agaveIO.getCachedStudies error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (! study_cache || study_cache.length != 1) {
+        msg = 'VDJ-API INFO (ADCDownloadQueueManager.recacheRepertoireMetadata): incorrect number of study cache entries: ' + JSON.stringify(study_cache);
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+    study_cache = study_cache[0];
+
+    // flag the archive file to be re-generated
+    study_cache["value"]["is_cached"] = false;
+    study_cache["value"]["archive_file"] = null;
+
+    await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR (ADCDownloadQueueManager.recacheRepertoireMetadata): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return Promise.reject(new Error(msg));
+        });
+
+    console.log('VDJ-API INFO (ADCDownloadQueueManager.recacheRepertoireMetadata): end');
 }
 
 clearQueue.process(async (job) => {

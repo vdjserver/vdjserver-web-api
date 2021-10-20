@@ -683,6 +683,49 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/reload:
+    post:
+      description: reload repertoire metadata for project in VDJServer ADC data repository
+      operationId: reloadProject
+      tags:
+        - project
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - load_id
+              properties:
+                load_id:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /permission/user:
     post:
       description: add project permissions for user
