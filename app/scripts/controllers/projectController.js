@@ -427,7 +427,7 @@ ProjectController.unloadProject = async function(request, response) {
             msg = 'VDJ-API ERROR (ProjectController.unloadProject): Invalid load metadata id for project: ' + projectUuid;
             console.error(msg);
             webhookIO.postToSlack(msg);            
-            apiResponseController.sendError(msg, 400, response);
+            return apiResponseController.sendError(msg, 400, response);
         }
 
         // turn off load
@@ -517,10 +517,10 @@ ProjectController.reloadProject = async function(request, response) {
     if (loadMetadata && loadMetadata[0]) {
         loadMetadata = loadMetadata[0];
         if (loadMetadata['uuid'] != load_id) {
-            msg = 'VDJ-API ERROR (ProjectController.reloadProject): Invalid load metadata id for project: ' + projectUuid;
+            msg = 'VDJ-API ERROR (ProjectController.reloadProject): Invalid load metadata id for project: ' + projectUuid + ', ' + load_id + ' != ' + loadMetadata['uuid'];
             console.error(msg);
             webhookIO.postToSlack(msg);            
-            apiResponseController.sendError(msg, 400, response);
+            return apiResponseController.sendError(msg, 400, response);
         }
 
         // flag repertoire metadata as not loaded
