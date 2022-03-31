@@ -427,7 +427,7 @@ ProjectController.unloadProject = async function(request, response) {
             msg = 'VDJ-API ERROR (ProjectController.unloadProject): Invalid load metadata id for project: ' + projectUuid;
             console.error(msg);
             webhookIO.postToSlack(msg);            
-            apiResponseController.sendError(msg, 400, response);
+            return apiResponseController.sendError(msg, 400, response);
         }
 
         // turn off load
@@ -486,6 +486,90 @@ ProjectController.unloadProject = async function(request, response) {
         return apiResponseController.sendSuccess('Project queued for unload', response);
     } else {
         msg = 'VDJ-API ERROR (ProjectController.unloadProject): project: ' + projectUuid + ' does not have load metadata.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);            
+        return apiResponseController.sendError(msg, 400, response);
+    }
+};
+
+//
+// Reload repertoire metadata for project in VDJServer ADC data repository
+//
+ProjectController.reloadProject = async function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var load_id = request.body.load_id;
+    var msg = null;
+
+    console.log('VDJ-API INFO (ProjectController.reloadProject): start, project: ' + projectUuid);
+    console.log(request.body);
+
+    // check for project load metadata
+    var loadMetadata = await agaveIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: ProjectController.reloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (loadMetadata && loadMetadata[0]) {
+        loadMetadata = loadMetadata[0];
+        if (loadMetadata['uuid'] != load_id) {
+            msg = 'VDJ-API ERROR (ProjectController.reloadProject): Invalid load metadata id for project: ' + projectUuid + ', ' + load_id + ' != ' + loadMetadata['uuid'];
+            console.error(msg);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 400, response);
+        }
+
+        // flag repertoire metadata as not loaded
+        loadMetadata['value']['isLoaded'] = false;
+        loadMetadata['value']['repertoireMetadataLoaded'] = false;
+        await agaveIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: ProjectController.reloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        // trigger load queue if necessary
+        console.log('VDJ-API INFO: ProjectController.reloadProject, project: ' + projectUuid + ' flagged for repository reload'
+            + ', metadata: ' + loadMetadata.uuid);
+
+        projectQueueManager.triggerProjectLoad(projectUuid, loadMetadata);
+
+        // flag ADC download cache
+        await ServiceAccount.getToken()
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (ProjectController.reloadProject): ServiceAccount.getToken, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        // get the study_id
+        var projectMetadata = await agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR (ProjectController.reloadProject): agaveIO.getProjectMetadata, error: ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        // assume VDJServer repository
+        adcDownloadQueueManager.recacheRepertoireMetadata('vdjserver', projectMetadata['value']['study_id']);
+
+        return apiResponseController.sendSuccess('Project queued for reload', response);
+    } else {
+        msg = 'VDJ-API ERROR (ProjectController.reloadProject): project: ' + projectUuid + ' does not have load metadata.';
         console.error(msg);
         webhookIO.postToSlack(msg);            
         return apiResponseController.sendError(msg, 400, response);
