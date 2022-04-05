@@ -202,6 +202,9 @@ ServiceAccount.getToken()
                 loadProject: projectController.loadProject,
                 unloadProject: projectController.unloadProject,
                 reloadProject: projectController.reloadProject,
+                archiveProject: projectController.archiveProject,
+                unarchiveProject: projectController.unarchiveProject,
+                purgeProject: projectController.purgeProject,
 
                 // permissions
                 addPermissionsForUsername: permissionsController.addPermissionsForUsername,
