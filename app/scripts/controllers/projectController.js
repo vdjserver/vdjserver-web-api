@@ -576,6 +576,96 @@ ProjectController.reloadProject = async function(request, response) {
 };
 
 //
+// Archive (soft delete) project
+// This changes the name so it does not show up in normal project queries
+// None of the other metadata/files/jobs are modified
+//
+ProjectController.archiveProject = async function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var msg = null;
+
+    // TODO: the project cannot be published and/or loaded
+    ServiceAccount.getToken()
+        .then(function(token) {
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+        .then(function(projectMetadata) {
+            if (projectMetadata.name == 'private_project') {
+                projectMetadata.name = 'archive_project';
+                //console.log(projectMetadata);
+                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' is not in an archivable state.';
+                return Promise.reject(new Error(msg));
+            }
+        })
+        .then(function(responseObject) {
+            console.log('VDJ-API INFO: ProjectController.archiveProject - project ' + projectUuid + ' has been archived.');
+            //console.log(responseObject);
+
+            return apiResponseController.sendSuccess('ok', response);
+        })
+        .catch(function(error) {
+            if (!msg) msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' error ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        })
+        ;
+};
+
+//
+// Unarchive (soft delete) project
+// This changes the name back to normal private project
+//
+ProjectController.unarchiveProject = async function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var msg = null;
+
+    ServiceAccount.getToken()
+        .then(function(token) {
+            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+        .then(function(projectMetadata) {
+            if (projectMetadata.name == 'archive_project') {
+                projectMetadata.name = 'private_project';
+                //console.log(projectMetadata);
+                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+            } else {
+                msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' is not in an unarchivable state.';
+                return Promise.reject(new Error(msg));
+            }
+        })
+        .then(function(responseObject) {
+            console.log('VDJ-API INFO: ProjectController.unarchiveProject - project ' + projectUuid + ' has been unarchived.');
+            //console.log(responseObject);
+
+            return apiResponseController.sendSuccess('ok', response);
+        })
+        .catch(function(error) {
+            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' error ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        })
+        ;
+};
+
+//
+// Purge (hard delete) project
+// This permanently deletes everything for the project
+// Right now this can only be called by an admin
+//
+ProjectController.purgeProject = async function(request, response) {
+    var projectUuid = request.params.project_uuid;
+    var msg = null;
+
+    // TODO: the project must be already archived
+
+    return apiResponseController.sendError('Not implemented', 500, response);
+};
+
+//
 // Import/export metadata
 //
 

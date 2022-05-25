@@ -18,7 +18,13 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get update && DEBIAN_FRONTEND='noninter
     sendmail-bin \
     supervisor \
     wget \
-    xz-utils
+    xz-utils \
+    python3 \
+    python3-pip
+
+RUN pip3 install \
+    requests \
+    python-dotenv
 
 # Setup postfix
 # The postfix install won't respect noninteractivity unless this config is set beforehand.
@@ -71,5 +77,8 @@ COPY . /vdjserver-web-api
 
 # ESLint
 RUN cd /vdjserver-web-api && npm run eslint app/scripts
+
+# Install the local airr-standards
+RUN cd /vdjserver-web-api/app/airr-standards/lang/python && pip3 install .
 
 CMD ["/root/postfix-config-replace.sh"]
