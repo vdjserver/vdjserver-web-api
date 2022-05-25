@@ -145,7 +145,6 @@ ProjectController.importFile = async function(request, response) {
         filePath:    request.body.path,
         fileSystem:  request.body.system,
         projectUuid: projectUuid,
-        vdjFileType: request.body.vdjFileType,
         readDirection: request.body.readDirection,
         tags: request.body.tags
     };

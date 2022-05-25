@@ -427,8 +427,6 @@ paths:
                   type: string
                 system:
                   type: string
-                vdjFileType:
-                  type: number
                 readDirection:
                   type: string
                 tags:
