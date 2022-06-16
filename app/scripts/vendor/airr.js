@@ -122,6 +122,16 @@ airr.SchemaDefinition.prototype.type = function(field) {
     return field_type;
 };
 
+airr.SchemaDefinition.prototype.is_ontology = function(field) {
+    var field_spec = this.properties[field];
+    if (! field_spec) return false;
+    var field_type = field_spec['type'];
+    if (field_type != 'object') return false;
+    if ((this.properties[field]['x-airr']) && (this.properties[field]['x-airr']['format'] == 'ontology')) return true;
+
+    return false;
+};
+
 airr.SchemaDefinition.prototype.to_bool = function(value, validate) {
     if (value == null) return null;
 

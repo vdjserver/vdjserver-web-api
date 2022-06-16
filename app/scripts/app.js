@@ -197,6 +197,8 @@ ServiceAccount.getToken()
                 importFile: projectController.importFile,
                 exportMetadata: projectController.exportMetadata,
                 importMetadata: projectController.importMetadata,
+                exportTable: projectController.exportTable,
+                importTable: projectController.importTable,
                 publishProject: projectController.publishProject,
                 unpublishProject: projectController.unpublishProject,
                 loadProject: projectController.loadProject,

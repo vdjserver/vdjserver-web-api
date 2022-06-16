@@ -33,6 +33,7 @@ module.exports = config;
 
 var path = require('path');
 var fs = require('fs');
+var yaml = require('js-yaml');
 
 function parseBoolean(value)
 {
@@ -42,6 +43,7 @@ function parseBoolean(value)
 }
 
 // General
+config.name = 'VDJ-API';
 config.port = process.env.VDJ_API_PORT;
 config.sessionSecret = process.env.SESSION_SECRET;
 config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
@@ -50,32 +52,51 @@ config.lrqdata_path = process.env.LRQDATA_PATH;
 // Host user and group
 config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
 config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
+config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
+config.lrqdata_path = process.env.LRQDATA_PATH;
+
+// Error/debug reporting
+config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
+
+// standard info/error reporting
+config.log = {};
+config.log.info = function(context, msg, ignore_debug = false) {
+    var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    if (ignore_debug)
+        console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+    else
+        if (config.debug) console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+}
+
+config.log.error = function(context, msg) {
+    var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    var full_msg = date + ' - ' + config.name + ' ERROR (' + context + '): ' + msg
+    console.error(full_msg);
+    return full_msg;
+}
+config.log.info('config', 'Debug console messages are enabled.', true);
 
 // AIRR Data Commons
 config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
 if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
-console.log('VDJ-API INFO: adc_system_repositories entry =', config.adcRepositoryEntry);
+config.log.info('config', 'adc_system_repositories entry = ' + config.adcRepositoryEntry, true);
 config.enableADCDownloadCache = parseBoolean(process.env.ENABLE_ADC_DOWNLOAD_CACHE);
 
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
 config.recaptchaPublic = process.env.RECAPTCHA_PUBLIC;
 config.allowRecaptchaSkip = parseBoolean(process.env.ALLOW_RECAPTCHA_SKIP);
-if (config.allowRecaptchaSkip) console.log('VDJ-API WARNING: Recaptcha check is being skipped.');
+if (config.allowRecaptchaSkip) config.log.info('config', 'Recaptcha check is being skipped.', true);
 
 // Test settings
 config.useTestAccount = parseBoolean(process.env.USE_TEST_ACCOUNT);
 config.testAccountUsername = process.env.TEST_ACCOUNT_USERNAME;
-if (config.useTestAccount) console.log('VDJ-API WARNING: Test account (' + config.testAccountUsername + ') is enabled.');
+if (config.useTestAccount) config.log.info('config', 'Test account (' + config.testAccountUsername + ') is enabled.', true);
 config.errorInjection = parseBoolean(process.env.ERROR_INJECTION);
-if (config.errorInjection) console.log('VDJ-API WARNING: Error injection is enabled.');
+if (config.errorInjection) config.log.info('config', 'Error injection is enabled.', true);
 
 // Feedback Email address
 config.feedbackEmail = process.env.FEEDBACK_EMAIL_ADDRESS;
-
-// Error/debug reporting
-config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
-if (config.debug) console.log('VDJ-API WARNING: Debug console messages are enabled.');
 
 // Error injection enabled
 if (config.errorInjection) {
@@ -108,3 +129,9 @@ config.info.contact = {
 };
 config.info.license = {};
 config.info.license.name = info.license;
+
+// get schema info
+var schemaFile = fs.readFileSync(path.resolve(__dirname, '../../airr-standards/specs/airr-schema.yaml'), 'utf8');
+var schemaSpec = yaml.safeLoad(schemaFile);
+config.info.schema = schemaSpec['Info'];
+

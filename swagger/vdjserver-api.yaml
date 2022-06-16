@@ -530,6 +530,109 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/{table_name}/import:
+    post:
+      description: import metadata table into project
+      operationId: importTable
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: table_name
+          in: path
+          description: table name
+          required: true
+          schema:
+            type: string
+            enum:
+              - subject
+              - diagnosis
+              - sample
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - replace
+                    - append
+                filename:
+                  type: string
+              required:
+                - operation
+                - filename
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/{table_name}/export:
+    get:
+      description: export metadata table from project
+      operationId: exportTable
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: table_name
+          in: path
+          description: table name
+          required: true
+          schema:
+            type: string
+            enum:
+              - subject
+              - diagnosis
+              - sample
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/publish:
     post:
       description: publish project to community data portal
