@@ -35,7 +35,6 @@ var FileUploadJob = function(kueAttributes) {
         this.filePath  = kueAttributes.filePath  || '';
         this.fileSystem = kueAttributes.fileSystem || '';
         this.projectUuid = kueAttributes.projectUuid || '';
-        this.vdjFileType = kueAttributes.vdjFileType || '';
         this.readDirection = kueAttributes.readDirection || '';
         this.tags = kueAttributes.tags || '';
     }
@@ -108,19 +107,19 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
     var name = fileDetail[0].name;
 
     // TODO: these file types need to be consistent with GUI
-    const defaultVdjFileType = 4;
+    const defaultFileType = 4;
 
     // VDJ File Type
-    if (_.isEmpty(this.vdjFileType) === false) {
+    if (_.isEmpty(this.fileType) === false) {
         try {
-            this.vdjFileType = parseInt(this.vdjFileType);
+            this.fileType = parseInt(this.fileType);
         }
         catch (e) {
-            this.vdjFileType = defaultVdjFileType;
+            this.fileType = defaultFileType;
         }
     }
     else {
-        this.vdjFileType = defaultVdjFileType;
+        this.fileType = defaultFileType;
     }
 
     // Read Direction
@@ -140,7 +139,7 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
         this.tags = tags;
     }
 
-    return agaveIO.createFileMetadata(this.fileUuid, this.projectUuid, this.vdjFileType, name, length, this.readDirection, this.tags);
+    return agaveIO.createFileMetadata(this.fileUuid, this.projectUuid, this.fileType, name, length, this.readDirection, this.tags);
 };
 
 FileUploadJob.prototype.checkFileAvailability = async function() {
