@@ -9,7 +9,7 @@
 // VDJ API Service
 // https://vdjserver.org
 //
-// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+// Copyright (C) 2020-2022 The University of Texas Southwestern Medical Center
 //
 // Author: Scott Christley <scott.christley@utsouthwestern.edu>
 //
@@ -557,3 +557,12 @@ UserController.processResetPasswordRequest = async function(request, response) {
 
     apiResponseController.sendSuccess('Password reset successfully.', response);
 };
+
+// admin security so must be considered admin to get this far
+UserController.userHasAdminRole = async function(request, response) {
+    var username = request['user']['username'];
+
+    console.log('VDJ-API INFO: UserController.userHasAdminRole - begin for user ' + username);
+
+    apiResponseController.sendSuccess('User has admin role.', response);
+}

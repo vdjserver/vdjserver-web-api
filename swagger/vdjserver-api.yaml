@@ -1264,6 +1264,28 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /user/has-admin-role:
+    get:
+      description: check for admin role
+      operationId: userHasAdminRole
+      tags:
+        - user
+      security:
+        - admin_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /telemetry:
     post:
       description: record error telemetry
