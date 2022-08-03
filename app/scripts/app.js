@@ -107,28 +107,28 @@ for (var obj in airr_spec) {
     }
 }
 
-console.log('VDJ-API INFO: Using query collection suffix: ' + mongoSettings.queryCollection);
-console.log('VDJ-API INFO: Using load collection suffix: ' + mongoSettings.loadCollection);
+config.log.info('app', 'Using query collection suffix: ' + mongoSettings.queryCollection);
+config.log.info('app', 'Using load collection suffix: ' + mongoSettings.loadCollection);
 
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,
 // as it is restricted to the TACC vdj account.
 // Currently only read access is required.
 if (config.hostServiceAccount) {
-    console.log('VDJ-API INFO: Downgrading to host user: ' + config.hostServiceAccount);
+    config.log.info('app', 'Downgrading to host user: ' + config.hostServiceAccount);
     process.setgid(config.hostServiceGroup);
     process.setuid(config.hostServiceAccount);
-    console.log('VDJ-API INFO: Current uid: ' + process.getuid());
-    console.log('VDJ-API INFO: Current gid: ' + process.getgid());
+    config.log.info('app', 'Current uid: ' + process.getuid());
+    config.log.info('app', 'Current gid: ' + process.getgid());
 } else {
-    console.log('VDJ-API WARNING: config.hostServiceAccount is not defined, Corral access will generate errors.');
+    config.log.info('WARNING', 'config.hostServiceAccount is not defined, Corral access will generate errors.');
 }
 
 // Verify we can login with service account
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-        console.log('VDJ-API INFO: Successfully acquired service token.');
+        config.log.info('app', 'Successfully acquired service token.');
 
         // wait for the AIRR spec to be dereferenced
         return airr.schemaPromise();
@@ -191,6 +191,7 @@ ServiceAccount.getToken()
                 changePassword: userController.changePassword,
                 resetPassword: userController.createResetPasswordRequest,
                 verifyResetPassword: userController.processResetPasswordRequest,
+                userHasAdminRole: userController.userHasAdminRole,
 
                 // project
                 createProject: projectController.createProject,
@@ -239,7 +240,7 @@ ServiceAccount.getToken()
         // Start listening on port
         return new Promise(function(resolve, reject) {
             app.listen(app.get('port'), function() {
-                console.log('VDJ-API INFO: VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
+                config.log.info('app', 'VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
                 resolve();
             });
         });
@@ -249,23 +250,27 @@ ServiceAccount.getToken()
 
         // ADC download cache queues
         if (config.enableADCDownloadCache) {
-            console.log('VDJ-API INFO: ADC download cache is enabled, triggering cache.');
+            config.log.info('app', 'ADC download cache is enabled, triggering cache.');
             adcDownloadQueueManager.triggerDownloadCache();
         } else {
-            console.log('VDJ-API INFO: ADC download cache is disabled.');
+            config.log.info('app', 'ADC download cache is disabled.');
 
             // TODO: remove any existing jobs from the queue
         }
 
-        // TODO: decide how to restart
         // ADC load of rearrangements
-        projectQueueManager.checkRearrangementLoad();
-        //projectQueueManager.triggerRearrangementLoad();
+        if (config.enableADCLoad) {
+            config.log.info('app', 'ADC loading is enabled, triggering checks.');
+            projectQueueManager.checkRearrangementLoad();
+            //projectQueueManager.triggerRearrangementLoad();
+        } else {
+            config.log.info('app', 'ADC loading is disabled.');
+            // TODO: remove any existing jobs from the queue?
+        }
 
     })
     .catch(function(error) {
-        var msg = 'VDJ-API ERROR: Error occurred while initializing API service.\nSystem may need to be restarted.\n' + error;
-        console.error(msg);
+        var msg = config.log.error('Error occurred while initializing API service.\nSystem may need to be restarted.\n' + error);
         webhookIO.postToSlack(msg);
         // let it continue in case its a temporary error
         //process.exit(1);

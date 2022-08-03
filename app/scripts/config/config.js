@@ -81,6 +81,7 @@ config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
 if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
 config.log.info('config', 'adc_system_repositories entry = ' + config.adcRepositoryEntry, true);
 config.enableADCDownloadCache = parseBoolean(process.env.ENABLE_ADC_DOWNLOAD_CACHE);
+config.enableADCLoad = parseBoolean(process.env.ENABLE_ADC_LOAD);
 
 // Recaptcha
 config.recaptchaSecret = process.env.RECAPTCHA_SECRET;
