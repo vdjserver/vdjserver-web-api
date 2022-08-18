@@ -57,6 +57,7 @@ var userController = require('./controllers/userController');
 var telemetryController = require('./controllers/telemetryController');
 var permissionsController = require('./controllers/permissionsController');
 var adcController = require('./controllers/adcController');
+var adminController = require('./controllers/adminController');
 
 // Server Options
 var config = require('./config/config');
@@ -233,7 +234,10 @@ ServiceAccount.getToken()
                 deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
                 updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
                 deleteADCDownloadCacheForRepertoire: adcController.deleteADCDownloadCacheForRepertoire,
-                notifyADCDownloadCache: adcController.notifyADCDownloadCache
+                notifyADCDownloadCache: adcController.notifyADCDownloadCache,
+
+                // administration
+                queryProjectLoad: adminController.queryProjectLoad
             }
         });
 

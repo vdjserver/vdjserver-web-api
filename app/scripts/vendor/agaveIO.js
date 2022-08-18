@@ -3267,6 +3267,61 @@ agaveIO.getProjectLoadMetadata = function(projectUuid, collection) {
         });
 };
 
+// query project load records
+agaveIO.queryProjectLoadMetadata = function(projectUuid, collection, shouldLoad, isLoaded, repertoireMetadataLoaded, rearrangementDataLoaded) {
+
+    var query = '{"name":"projectLoad"';
+    if (projectUuid) query += ',"associationIds":"' + projectUuid + '"';
+    if (collection) query += ',"value.collection":"' + collection + '"';
+    if (shouldLoad === false) query += ',"value.shouldLoad":false';
+    else if (shouldLoad === true) query += ',"value.shouldLoad":true';
+    if (isLoaded === false) query += ',"value.isLoaded":false';
+    else if (isLoaded === true) query += ',"value.isLoaded":true';
+    if (repertoireMetadataLoaded === false) query += ',"value.repertoireMetadataLoaded":false';
+    else if (repertoireMetadataLoaded === true) query += ',"value.repertoireMetadataLoaded":true';
+    if (rearrangementDataLoaded === false) query += ',"value.rearrangementDataLoaded":false';
+    else if (rearrangementDataLoaded === true) query += ',"value.rearrangementDataLoaded":true';
+    query += '}';
+
+    var models = [];
+
+    var doFetch = function(offset) {
+        return ServiceAccount.getToken()
+            .then(function(token) {
+                var requestSettings = {
+                    host:     agaveSettings.hostname,
+                    method:   'GET',
+                    path:     '/meta/v2/data?q='
+                        + encodeURIComponent(query)
+                        + '&limit=50&offset=' + offset,
+                    rejectUnauthorized: false,
+                    headers: {
+                        'Authorization': 'Bearer ' + ServiceAccount.accessToken()
+                    }
+                };
+
+                return agaveIO.sendRequest(requestSettings, null)
+            })
+            .then(function(responseObject) {
+                var result = responseObject.result;
+                if (result.length > 0) {
+                    // maybe more data
+                    models = models.concat(result);
+                    var newOffset = offset + result.length;
+                    return doFetch(newOffset);
+                } else {
+                    // no more data
+                    return Promise.resolve(models);
+                }
+            })
+            .catch(function(errorObject) {
+                return Promise.reject(errorObject);
+            });
+    }
+
+    return doFetch(0);
+};
+
 // get list of projects to be loaded
 agaveIO.getProjectsToBeLoaded = function(collection) {
 

@@ -1597,3 +1597,69 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /admin/project/load:
+    get:
+      description: query project load records
+      operationId: queryProjectLoad
+      tags:
+        - admin
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: query
+          description: project identifer
+          required: false
+          schema:
+            type: string
+        - name: collection
+          in: query
+          description: collection name
+          required: false
+          schema:
+            type: string
+            enum:
+              - _0
+              - _1
+        - name: should_load
+          in: query
+          description: should load flag
+          required: false
+          schema:
+            type: boolean
+        - name: is_loaded
+          in: query
+          description: is loaded flag
+          required: false
+          schema:
+            type: boolean
+        - name: repertoire_loaded
+          in: query
+          description: is repertoire metadata loaded flag
+          required: false
+          schema:
+            type: boolean
+        - name: rearrangement_loaded
+          in: query
+          description: is rearrangement data loaded flag
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
