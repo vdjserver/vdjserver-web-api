@@ -1317,6 +1317,26 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /adc/status:
+    get:
+      description: get VDJServer ADC repository status
+      operationId: statusADCRepository
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /adc/registry:
     get:
       description: get set of default ADC repositories
