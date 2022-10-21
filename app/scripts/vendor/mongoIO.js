@@ -332,6 +332,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                             .catch(function(error) {
                                 var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
+                                readable.destroy();
                                 return reject(msg);
                             });
                     }
@@ -415,7 +416,7 @@ mongoIO.deleteLoadSet = async function(repertoire_id, load_set, loadCollection) 
                 var filter = {"repertoire_id":repertoire_id}
                 if (load_set != null)
                     if (load_set >= 0)
-                        filter['vdjserver_load_set'] = load_set;
+                        filter['vdjserver_load_set'] = {"$gte": load_set};
 
                 console.log(filter);
 
