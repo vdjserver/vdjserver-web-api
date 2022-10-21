@@ -30,10 +30,10 @@
 var ADCController = {};
 module.exports = ADCController;
 
-var config = require('../config/config');
-
 // App
+var config = require('../config/config');
 var app = require('../app');
+var mongoSettings = require('../config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
@@ -49,6 +49,19 @@ var ServiceAccount = require('../models/serviceAccount');
 var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
+var mongoIO = require('../vendor/mongoIO');
+
+ADCController.statusADCRepository = async function(request, response) {
+
+    var msg = null;
+
+    var status = { query_collection: mongoSettings.queryCollection, load_collection: mongoSettings.loadCollection };
+
+    var result = await mongoIO.testConnection();
+    status['db_connection'] = result;
+
+    return apiResponseController.sendSuccess(status, response);
+};
 
 ADCController.defaultADCRepositories = async function(request, response) {
 

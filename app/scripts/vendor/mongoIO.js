@@ -48,6 +48,22 @@ const zlib = require('zlib');
 
 var airr = require('../vendor/airr');
 
+// test connection
+mongoIO.testConnection = async function() {
+
+    return new Promise(function(resolve, reject) {
+        // get connection to database
+        MongoClient.connect(mongoSettings.url, async function(err, db) {
+            if (err) {
+                resolve(false)
+            } else {
+                db.close();
+                resolve(true);
+            }
+        });
+    });
+}
+
 //
 // Clean object by removing fields with null or empty string values
 //

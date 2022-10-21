@@ -223,6 +223,7 @@ ServiceAccount.getToken()
                 recordErrorTelemetry: telemetryController.recordErrorTelemetry,
                 
                 // ADC
+                statusADCRepository: adcController.statusADCRepository,
                 defaultADCRepositories: adcController.defaultADCRepositories,
                 updateADCRepositories: adcController.updateADCRepositories,
 
