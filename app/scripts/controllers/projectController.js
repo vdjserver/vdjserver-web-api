@@ -171,6 +171,25 @@ ProjectController.importFile = async function(request, response) {
     return apiResponseController.sendSuccess('Importing file', response);
 };
 
+ProjectController.executePROV = function(request, response) {
+    var context = 'ProjectController.executePROV';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+    // validate PROV
+    // validate that activities are tapis app ids
+    // determine input files, validate their existence
+
+    // 1. set file set as initial input files
+    // 2. get set of non-executed activities that have all of their inputs
+    // 2a. if none, then perform error checks and exit
+    // 3. execute those activities
+    // 4. update file set with output files, goto 2
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
 //
 // Publish project to community data
 //
