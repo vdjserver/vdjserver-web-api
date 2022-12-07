@@ -171,6 +171,25 @@ ProjectController.importFile = async function(request, response) {
     return apiResponseController.sendSuccess('Importing file', response);
 };
 
+ProjectController.executePROV = function(request, response) {
+    var context = 'ProjectController.executePROV';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+    // validate PROV
+    // validate that activities are tapis app ids
+    // determine input files, validate their existence
+
+    // 1. set file set as initial input files
+    // 2. get set of non-executed activities that have all of their inputs
+    // 2a. if none, then perform error checks and exit
+    // 3. execute those activities
+    // 4. update file set with output files, goto 2
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
 //
 // Publish project to community data
 //
@@ -946,7 +965,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing samples
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
         })
         .then(function(_samples) {
             if (! data) return null;
@@ -989,7 +1008,7 @@ ProjectController.importMetadata = function(request, response) {
             // within scope for the then(), otherwise entry has a different value when
             // the promises are performed in allSettled() below.
             var agaveCall = function(entry) {
-                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
+                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample_processing', entry['sample'])
                     .then(function(object) {
                         entry['uuid'] = object['uuid'];
                     });
@@ -1469,7 +1488,7 @@ ProjectController.exportTable = async function(request, response) {
     var schema = null;
     if (tableName == 'subject') schema = airr.getSchema('Subject');
     if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
-    if (tableName == 'sample') schema = airr.getSchema('SampleProcessing');
+    if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];
     var columns = [ 'vdjserver_uuid' ];
     for (let i in schema.properties) {

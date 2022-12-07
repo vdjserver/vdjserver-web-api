@@ -198,14 +198,14 @@ airr.SchemaDefinition.prototype.map_value = function(map) {
 };
 
 airr.repertoireTemplate = function() {
-    var airrFile = path.resolve(__dirname, '../../airr-standards/lang/python/airr/specs/blank.airr.yaml');
+    var airrFile = path.resolve(__dirname, '../config/blank.airr.json');
     var doc = yaml.safeLoad(fs.readFileSync(airrFile));
     if (!doc) {
-        var msg = 'Could not load AIRR blank repertoire yaml file.';
+        var msg = 'Could not load AIRR blank repertoire file.';
         console.error(msg);
         throw new Error(msg);
     }
-    return doc['Repertoire'][0];
+    return doc;
 }
 
 // Given a field, check if included in field set
