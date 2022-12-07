@@ -965,7 +965,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing samples
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
         })
         .then(function(_samples) {
             if (! data) return null;
@@ -1008,7 +1008,7 @@ ProjectController.importMetadata = function(request, response) {
             // within scope for the then(), otherwise entry has a different value when
             // the promises are performed in allSettled() below.
             var agaveCall = function(entry) {
-                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample', entry['sample'])
+                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample_processing', entry['sample'])
                     .then(function(object) {
                         entry['uuid'] = object['uuid'];
                     });
@@ -1488,7 +1488,7 @@ ProjectController.exportTable = async function(request, response) {
     var schema = null;
     if (tableName == 'subject') schema = airr.getSchema('Subject');
     if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
-    if (tableName == 'sample') schema = airr.getSchema('SampleProcessing');
+    if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];
     var columns = [ 'vdjserver_uuid' ];
     for (let i in schema.properties) {

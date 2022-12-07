@@ -3504,8 +3504,8 @@ agaveIO.gatherRepertoireMetadataForProject = function(projectUuid, keep_uuids) {
                 subjectMetadata[models[i].uuid] = models[i].value;
             }
 
-            // get sample objects
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+            // get sample processing objects
+            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
         })
         .then(function(models) {
             for (var i in models) {
