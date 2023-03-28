@@ -61,6 +61,28 @@ paths:
                 properties:
                   result:
                     type: string
+            text/html:
+              schema:
+                type: string
+
+  /tenants:
+    get:
+      description: |
+        VDJServer tenants proxy for agave/tapis v2 clients. This only returns VDJServer as a valid tenant and is designed for internal tools like agave-cli which have been modified to point here.
+      operationId: getTenants
+      tags:
+        - agave proxy
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
 
   /token:
     post:
@@ -416,7 +438,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PROVModel'
+              $ref: '#/components/schemas/PROVRequest'
       responses:
         '200':
           description: Success.
