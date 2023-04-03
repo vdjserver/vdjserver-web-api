@@ -1,0 +1,12 @@
+{
+    "repository_set":"staging",
+    "repository_id":"ipa1",
+    "repository": {
+        "repository_id":"ipa1",
+        "server_host": "ipa1.ireceptor.org",
+        "base_url": "/airr/v1",
+        "title": "IPA",
+        "enable_cache": true,
+        "disable": false
+    }
+}

@@ -43,6 +43,7 @@ var csv = require('csv-parser');
 var fs = require('fs');
 const zlib = require('zlib');
 var jsonApprover = require('json-approver');
+const axios = require('axios');
 
 var airr = require('../vendor/airr');
 
@@ -145,7 +146,7 @@ adcIO.asyncGetRearrangements = async function(repository, repertoire_id, notific
     if (! repository['async_host']) return Promise.reject('repository entry missing async_host');
     if (! repository['async_base_url']) return Promise.reject('repository entry missing async_base_url');
 
-    // do a facets query
+    // query rearrangements for a repertoire
     var postData = {
       "filters": {
         "op": "=",
@@ -183,6 +184,80 @@ adcIO.asyncGetRearrangements = async function(repository, repertoire_id, notific
     }
 
     return Promise.resolve(data);
+}
+
+// Query rearrangements from an ADC repository with standard synchronous ADC API and write response to file
+// This assumes iReceptor turnkey behavior which dumps the whole database
+// This assumes direct access to Corral for writing the output file
+adcIO.downloadRearrangements = async function(repository, repertoire_id, filepath) {
+    var msg = null;
+    var context = 'adcIO.downloadRearrangements';
+
+    // we assume the passed in repository is an object entry
+    if (! repository) return Promise.reject('missing repository entry');
+    if (! repertoire_id) return Promise.reject('missing repertoire_id entry');
+
+    // download progress
+    var progress_size = 10000000;
+    var progress_count = 0;
+    var axiosProgressFunction = function(axiosProgressEvent) {
+        var progress_limit = progress_size * progress_count;
+        if (axiosProgressEvent.loaded > progress_limit) {
+            progress_count += 1;
+            config.log.info(context, 'Downloaded ' + axiosProgressEvent.loaded + ' bytes of data so far.');
+        }
+    };
+
+    // query rearrangements for a repertoire
+    var postData = {
+      "filters": {
+        "op": "=",
+        "content": {
+          "field": "repertoire_id",
+          "value": repertoire_id
+        }
+      },
+      "format":"tsv"
+    };
+    postData = JSON.stringify(postData);
+
+    var url = 'https://' + repository['server_host'] + repository['base_url'] + '/rearrangement';
+    var requestSettings = {
+        url: url,
+        method: 'POST',
+        data: postData,
+        headers: {
+            'Content-Type':   'application/json',
+        },
+
+        // axios settings for streaming
+        responseType: 'stream',
+        maxRedirects: 0, // avoid buffering the entire stream
+        onDownloadProgress: axiosProgressFunction
+    };
+    console.log(requestSettings);
+
+    // we do our own request so we can stream
+    config.log.info(context, 'Requesting download to file: ' + filepath + ' for repository: ' + repository['repository_id'] + ' for repertoire_id: ' + repertoire_id);
+    const writer = fs.createWriteStream(filepath);
+    return axios(requestSettings)
+        .then(function (response) {
+            return new Promise((resolve, reject) => {
+              response.data.pipe(writer);
+              let error = null;
+              writer.on('error', err => {
+                error = err;
+                writer.close();
+                reject(err);
+              });
+              writer.on('close', () => {
+                config.log.info(context, 'Download complete to file: ' + filepath + ' for repository: ' + repository['repository_id'] + ' for repertoire_id: ' + repertoire_id);
+                if (!error) {
+                  resolve(true);
+                }
+              });
+            });
+        });
 }
 
 // Query the repertoires from an ADC repository with optional study_id

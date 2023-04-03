@@ -48,6 +48,7 @@ var adcIO = require('../vendor/adcIO');
 // Node Libraries
 var Queue = require('bull');
 var fs = require('fs');
+const fsPromises = require('fs').promises;
 const zlib = require('zlib');
 var stream = require('stream');
 var tar = require('tar');
@@ -490,6 +491,7 @@ submitQueue.process(async (job) => {
 
 cacheQueue.process(async (job) => {
     var msg = null;
+    var context = 'ADCDownloadQueueManager cacheQueue'
 
     console.log('VDJ-API INFO: start ADC query and download job');
 
@@ -586,6 +588,23 @@ cacheQueue.process(async (job) => {
         }
     } else {
         // otherwise we do our own download
+        config.log.info(context, 'ADC ASYNC API not available for repository: ' + repository['repository_id']);
+
+        var filename = repertoire_cache['uuid'] + '.airr.tsv';
+        var filepath = config.lrqdata_path + filename;
+        await adcIO.downloadRearrangements(repository, repertoire_id, filepath)
+            .catch(function(error) {
+                msg = 'Could not download rearrangements for repertoire_id '
+                    + repertoire_id + ' for repository ' + repository + '\n' + error;
+                msg = config.log.error(context, msg);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        // finish the download
+        ADCDownloadQueueManager.finishDownload({study_cache: job['data']['study_cache'], repertoire_cache: repertoire_cache, query_status: {'final_file':filename, 'delete_file':filepath}});
     }
 
     // update cache metadata entry
@@ -635,6 +654,7 @@ ADCDownloadQueueManager.processRearrangementFile = async function(repertoire_id,
 
 finishQueue.process(async (job) => {
     var msg = null;
+    var context = 'ADCDownloadQueueManager.finishQueue';
 
     var study_cache = job['data']['study_cache'];
     var repertoire_cache = job['data']['repertoire_cache'];
@@ -664,6 +684,19 @@ finishQueue.process(async (job) => {
             webhookIO.postToSlack(msg);
             return Promise.reject(new Error(msg));
         });
+
+    // delete temporary file
+    if (query_status['delete_file']) {
+        try {
+            config.log.info(context, 'Deleting temporary file: ' + query_status['delete_file']);
+            await fsPromises.unlink(query_status['delete_file']);
+        } catch (e) {
+            if (e.code != 'ENOENT') {
+                msg = config.log.error(context, 'Unknown error deleting ' + query_status['delete_file'] + ', error: ' + e);
+                webhookIO.postToSlack(msg);
+            }
+        }
+    }
 
     // create permanent postit
     var url = 'https://' + agaveSettings.hostname
