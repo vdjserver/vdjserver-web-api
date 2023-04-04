@@ -82,6 +82,10 @@ airr.getSchema = function(definition) {
     return new airr.SchemaDefinition(definition);
 };
 
+airr.get_info = function() {
+    return airr.Schema['specification']['Info'];
+}
+
 //
 // AIRR Schema
 //

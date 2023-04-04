@@ -40,9 +40,11 @@ var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
 var airr = require('./vendor/airr');
+var vdj_schema = require('vdjserver-schema');
 
 // Express app
 var app = module.exports = express();
+var context = 'app';
 
 var webhookIO = require('./vendor/webhookIO');
 var mongoSettings = require('./config/mongoSettings');
@@ -58,6 +60,7 @@ var telemetryController = require('./controllers/telemetryController');
 var permissionsController = require('./controllers/permissionsController');
 var adcController = require('./controllers/adcController');
 var adminController = require('./controllers/adminController');
+var tenantController = require('./controllers/tenantController');
 
 // Server Options
 var config = require('./config/config');
@@ -92,10 +95,10 @@ app.redisConfig = {
 
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
-// load AIRR Standards spec
-var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema.yaml'), 'utf8'));
+// load AIRR Standards spec, openapi v3
+var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema-openapi3.yaml'), 'utf8'));
 // fix up swagger v2 spec for openapi v3
-for (var obj in airr_spec) {
+/* for (var obj in airr_spec) {
     // discriminator is an object vs string
     if (airr_spec[obj]['discriminator'])
         airr_spec[obj]['discriminator'] = { propertyName: airr_spec[obj]['discriminator'] };
@@ -106,44 +109,76 @@ for (var obj in airr_spec) {
             p['nullable'] = true;
         }
     }
-}
+} */
 
-config.log.info('app', 'Using query collection suffix: ' + mongoSettings.queryCollection);
-config.log.info('app', 'Using load collection suffix: ' + mongoSettings.loadCollection);
+config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
+config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
 
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,
 // as it is restricted to the TACC vdj account.
 // Currently only read access is required.
 if (config.hostServiceAccount) {
-    config.log.info('app', 'Downgrading to host user: ' + config.hostServiceAccount);
+    config.log.info(context, 'Downgrading to host user: ' + config.hostServiceAccount);
     process.setgid(config.hostServiceGroup);
     process.setuid(config.hostServiceAccount);
-    config.log.info('app', 'Current uid: ' + process.getuid());
-    config.log.info('app', 'Current gid: ' + process.getgid());
+    config.log.info(context, 'Current uid: ' + process.getuid());
+    config.log.info(context, 'Current gid: ' + process.getgid());
 } else {
     config.log.info('WARNING', 'config.hostServiceAccount is not defined, Corral access will generate errors.');
 }
 
+// Tapis
+if (config.tapis_version == 2) config.log.info(context, 'Using Tapis V2 API', true);
+else if (config.tapis_version == 3) config.log.info(context, 'Using Tapis V3 API', true);
+else {
+    config.log.error(context, 'Invalid Tapis version, check TAPIS_VERSION environment variable');
+    process.exit(1);
+}
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = require('vdj-tapis-js');
+if (config.tapis_version == 3) tapisIO = require('vdj-tapis-js/tapisV3');
+
 // Verify we can login with service account
-var ServiceAccount = require('./models/serviceAccount');
+var ServiceAccount = tapisIO.serviceAccount;
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-        config.log.info('app', 'Successfully acquired service token.');
+        config.log.info(context, 'Successfully acquired service token.');
 
         // wait for the AIRR spec to be dereferenced
         return airr.schemaPromise();
     })
     .then(function() {
+        // wait for the VDJServer spec to be dereferenced
+        return vdj_schema.schemaPromise();
+    })
+    .then(function(schema) {
+        config.log.info(context, 'Loaded VDJServer Schema version ' + vdj_schema.get_info()['version']);
+        //console.log(vdj_schema.Schema['specification']);
+        //let test = new vdj_schema.SchemaDefinition('PROVRequest');
+        //console.log(test);
+        //console.log(test.tapis_name());
+        //console.log(test.template());
+        //console.log(vdj_schema.get_schemas());
+
+        //let test = new vdj_schema.SchemaDefinition('AnalysisDocument');
+        //console.log(JSON.stringify(test));
+        //console.log(test.tapis_name());
+        //console.log(test.template());
+
         // dereference the AIRR spec
         return $RefParser.dereference(airr_spec);
     })
     .then(function(schema) {
+        config.log.info(context, 'Loaded AIRR Schema version ' + airr.get_info()['version']);
         //console.log(JSON.stringify(schema['Study'],null,2));
 
+        // Drop in the VDJServer schema
+        api_spec['components']['schemas'] = vdj_schema.get_schemas();
+
         // Put the AIRR objects into the API
-        api_spec['components']['schemas']['Study'] = schema['Study'];
-        api_spec['components']['schemas']['Repertoire'] = schema['Repertoire'];
+        //api_spec['components']['schemas']['Study'] = schema['Study'];
+        //api_spec['components']['schemas']['Repertoire'] = schema['Repertoire'];
         //console.log(JSON.stringify(api_spec, null, 2));
 
         // dereference the API spec
@@ -179,6 +214,7 @@ ServiceAccount.getToken()
             operations: {
                 //getStatus: function(req, res) { res.send('{"result":"success"}'); }
                 getStatus: apiResponseController.confirmUpStatus,
+                getTenants: tenantController.getTenants,
 
                 // authentication
                 createToken: tokenController.getToken,
@@ -246,7 +282,7 @@ ServiceAccount.getToken()
         // Start listening on port
         return new Promise(function(resolve, reject) {
             app.listen(app.get('port'), function() {
-                config.log.info('app', 'VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
+                config.log.info(context, 'VDJServer API (' + config.info.version + ') service listening on port ' + app.get('port'));
                 resolve();
             });
         });
@@ -256,21 +292,21 @@ ServiceAccount.getToken()
 
         // ADC download cache queues
         if (config.enableADCDownloadCache) {
-            config.log.info('app', 'ADC download cache is enabled, triggering cache.');
+            config.log.info(context, 'ADC download cache is enabled, triggering cache.');
             adcDownloadQueueManager.triggerDownloadCache();
         } else {
-            config.log.info('app', 'ADC download cache is disabled.');
+            config.log.info(context, 'ADC download cache is disabled.');
 
             // TODO: remove any existing jobs from the queue
         }
 
         // ADC load of rearrangements
         if (config.enableADCLoad) {
-            config.log.info('app', 'ADC loading is enabled, triggering checks.');
+            config.log.info(context, 'ADC loading is enabled, triggering checks.');
             projectQueueManager.checkRearrangementLoad();
             //projectQueueManager.triggerRearrangementLoad();
         } else {
-            config.log.info('app', 'ADC loading is disabled.');
+            config.log.info(context, 'ADC loading is disabled.');
             // TODO: remove any existing jobs from the queue?
         }
 

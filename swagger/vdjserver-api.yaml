@@ -1,3 +1,28 @@
+#
+# VDJServer Web API specification
+#
+# VDJServer Analysis Portal
+# VDJServer Web API
+# https://vdjserver.org
+#
+# Copyright (C) 2023 The University of Texas Southwestern Medical Center
+#
+# Author: Scott Christley <scott.christley@utsouthwestern.edu>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
 openapi: '3.0'
 info:
   title: VDJServer API
@@ -21,6 +46,8 @@ servers:
       basePath:
         default: /api/v2
 
+# Even though we point to the VDJServer Schema, most services replace this with the
+# local copy of the schema.
 components:
   schemas:
     $ref: 'https://bitbucket.org/vdjserver/vdjserver-schema/raw/master/vdjserver-schema.yaml'
@@ -50,6 +77,28 @@ paths:
       description: |
         Service heartbeat.
       operationId: getStatus
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+            text/html:
+              schema:
+                type: string
+
+  /tenants:
+    get:
+      description: |
+        VDJServer tenants proxy for agave/tapis v2 clients. This only returns VDJServer as a valid tenant and is designed for internal tools like agave-cli which have been modified to point here.
+      operationId: getTenants
+      tags:
+        - agave proxy
       responses:
         '200':
           description: |
@@ -416,7 +465,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PROVModel'
+              $ref: '#/components/schemas/PROVRequest'
       responses:
         '200':
           description: Success.
@@ -1172,7 +1221,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/ADCRepositorySet'
+              $ref: '#/components/schemas/ADCRepositoryUpdateRequest'
       responses:
         '200':
           description: Success.

@@ -48,6 +48,7 @@ config.port = process.env.VDJ_API_PORT;
 config.sessionSecret = process.env.SESSION_SECRET;
 config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
 config.lrqdata_path = process.env.LRQDATA_PATH;
+config.tapis_version = process.env.TAPIS_VERSION;
 
 // Host user and group
 config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;

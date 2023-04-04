@@ -93,8 +93,7 @@ ADCController.updateADCRepositories = async function(request, response) {
     // TODO: change this to support the staging and develop entries
 
     var msg = null;
-    var data = request['body']['adc'];
-    var value = { adc: data };
+    var data = request['body'];
 
     // get list from metadata
     var adc = await agaveIO.getSystemADCRepositories()
@@ -108,8 +107,21 @@ ADCController.updateADCRepositories = async function(request, response) {
     }
 
     if (adc && adc.length == 1) {
+        let entry = adc[0];
+        let value = entry['value']
+
         // update
-        await agaveIO.updateMetadata(adc[0]['uuid'], adc[0]['name'], value, null)
+        if (value[data['repository_set']]) {
+            // existing set
+            value[data['repository_set']][data['repository']['repository_id']] = data['repository'];
+        } else {
+            // new set, new repository
+            value[data['repository_set']] = {};
+            value[data['repository_set']][data['repository']['repository_id']] = data['repository'];
+        }
+
+        // save
+        await agaveIO.updateMetadata(entry['uuid'], entry['name'], value, null)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, error while updating: ' + error;
             });
