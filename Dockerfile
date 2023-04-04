@@ -50,7 +50,7 @@ RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q \
 ##################
 
 # node
-ENV NODE_VER v12.18.3
+ENV NODE_VER v14.21.3
 RUN wget https://nodejs.org/dist/$NODE_VER/node-$NODE_VER-linux-x64.tar.xz
 RUN tar xf node-$NODE_VER-linux-x64.tar.xz
 RUN cp -rf /node-$NODE_VER-linux-x64/bin/* /usr/bin
