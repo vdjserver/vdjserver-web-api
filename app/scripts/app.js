@@ -237,7 +237,7 @@ ServiceAccount.getToken()
                 importMetadata: projectController.importMetadata,
                 exportTable: projectController.exportTable,
                 importTable: projectController.importTable,
-                executePROV: projectController.executePROV,
+                executeWorkflow: projectController.executeWorkflow,
                 publishProject: projectController.publishProject,
                 unpublishProject: projectController.unpublishProject,
                 loadProject: projectController.loadProject,
@@ -308,6 +308,12 @@ ServiceAccount.getToken()
         } else {
             config.log.info(context, 'ADC loading is disabled.');
             // TODO: remove any existing jobs from the queue?
+        }
+
+        if (config.enable_job_queues) {
+            config.log.info(context, 'Job queues are ENABLED.', true);
+        } else {
+            config.log.info(context, 'Job queues are DISABLED.', true);
         }
 
     })

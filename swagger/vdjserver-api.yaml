@@ -448,8 +448,8 @@ paths:
 
   /project/{project_uuid}/execute:
     post:
-      description: execute PROV workflow for project
-      operationId: executePROV
+      description: execute analysis workflow for project
+      operationId: executeWorkflow
       tags:
         - project
       security:
@@ -465,7 +465,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PROVRequest'
+              $ref: '#/components/schemas/AnalysisRequest'
       responses:
         '200':
           description: Success.

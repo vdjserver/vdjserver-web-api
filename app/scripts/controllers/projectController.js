@@ -44,6 +44,7 @@ var apiResponseController = require('./apiResponseController');
 // Models
 var ServiceAccount = require('../models/serviceAccount');
 var FileUploadJob = require('../models/fileUploadJob');
+var AnalysisDocument = require('../models/AnalysisDocument');
 
 var airr = require('../vendor/airr');
 
@@ -171,15 +172,67 @@ ProjectController.importFile = async function(request, response) {
     return apiResponseController.sendSuccess('Importing file', response);
 };
 
-ProjectController.executePROV = function(request, response) {
-    var context = 'ProjectController.executePROV';
+ProjectController.validatePROV = function(request, response) {
+    var context = 'ProjectController.validatePROV';
     var projectUuid = request.params.project_uuid;
 
     config.log.info(context, 'start, project: ' + projectUuid);
 
-    // validate PROV
-    // validate that activities are tapis app ids
-    // determine input files, validate their existence
+    // should be able to do this interactively
+    // doing this requires querying Tapis about apps
+    // pre-validate parameters for Tapis apps? can we parse the parameters?
+
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
+ProjectController.checkPROVStatus = function(request, response) {
+    var context = 'ProjectController.validatePROV';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+    // store PROV model, then asynchronously validate it
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
+ProjectController.executeWorkflow = async function(request, response) {
+    var context = 'ProjectController.executeWorkflow';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+    var doc = new AnalysisDocument(request.body.workflow);
+    config.log.info(context, 'document:' + JSON.stringify(doc, null, 2));
+
+    // validate
+    var valid = await doc.validate(projectUuid, request.body.use_alternate_app)
+        .catch(function(error) {
+            let msg = 'Error while validating workflow.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    if (!valid) return apiResponseController.sendError('Workflow is not valid.', 400, response);
+    else if (request.body.audit_only) {
+        return apiResponseController.sendSuccess('Workflow is valid.', response);
+    }
+
+    // create meta for analysis document
+    /*
+    var result = await tapisIO.createMetadataForType(projectUuid, vdj_schema.tapisName('AnalysisDocument'), doc)
+        .catch(function(error) {
+            let msg = 'Error while saving analysis document.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
+*/
+    //tapisIO.createMetadata(vdj_schema.tapisName('AnalysisDocument'));
+    //tapisIO.updateMetadata(vdj_schema.tapisName('ProvRequest'), obj);
+    //tapisIO.queryMetadata(vdj_schema.tapisName('ProvRequest'), obj);
 
     // 1. set file set as initial input files
     // 2. get set of non-executed activities that have all of their inputs
@@ -189,6 +242,18 @@ ProjectController.executePROV = function(request, response) {
 
     return apiResponseController.sendError('Not implemented.', 500, response);
 };
+
+ProjectController.getPendingPROV = function(request, response) {
+    var context = 'ProjectController.getPendingPROV';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+    // query list of pending PROV executions
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
 
 //
 // Publish project to community data
