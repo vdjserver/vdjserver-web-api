@@ -1377,7 +1377,7 @@ ProjectController.exportMetadata = async function(request, response) {
 
     // gather the repertoire objects
 //    var repertoireMetadata = await tapisIO.gatherRepertoireMetadataForProject(projectUuid, true)
-    var repertoireMetadata = await ProjectController.gatherRepertoireMetadataForProjecttttt(projectUuid, true)
+    var repertoireMetadata = await ProjectController.gatherRepertoireMetadataForProject(projectUuid, true)
         .catch(function(error) {
             msg = config.log.error(context, 'tapisIO.gatherRepertoireMetadataForProject, error: ' + error);
         });
