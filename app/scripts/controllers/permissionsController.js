@@ -30,12 +30,9 @@
 var PermissionsController = {};
 module.exports = PermissionsController;
 
-// Promises
-var Q = require('q');
-
 // App
 var app = require('../app');
-var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
@@ -44,10 +41,16 @@ var authController = require('./authController');
 // Models
 var FilePermissions = require('../models/filePermissions');
 var MetadataPermissions = require('../models/metadataPermissions');
-var ServiceAccount  = require('../models/serviceAccount');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 
@@ -86,12 +89,12 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
         .then(function(token) {
             // First, make sure serviceAccount has full pems on the new metadata
             // Use the user's accessToken to set this since serviceAccount may not have full pems yet
-            return agaveIO.addUsernameToMetadataPermissions(ServiceAccount.username, accessToken, uuid);
+            return tapisIO.addUsernameToMetadataPermissions(ServiceAccount.username, accessToken, uuid);
         })
         // Next, fetch project metadata pems
         .then(function() {
             console.log('VDJ-API INFO: PermissionsController.syncMetadataPermissionsWithProject - add service account pems for project ' + projectUuid);
-            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getMetadataPermissions(ServiceAccount.accessToken(), projectUuid);
         })
         // Apply project pems to new metadata
         .then(function(projectPermissions) {
@@ -107,7 +110,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
 
                 return function() {
 
-                    return agaveIO.addUsernameToMetadataPermissions(
+                    return tapisIO.addUsernameToMetadataPermissions(
                         username,
                         token,
                         projectUuid
@@ -131,7 +134,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
                 'VDJ-API INFO: PermissionsController.syncMetadataPermissionsWithProject - addUsernameToMetadataPermissions for project ' + projectUuid
             );
 
-            return agaveIO.getMetadataPermissions(ServiceAccount.accessToken(), uuid);
+            return tapisIO.getMetadataPermissions(ServiceAccount.accessToken(), uuid);
         })
         // Finally send updated fileMetadata pems back to user
         .then(function(updatedFileMetadataPermissions) {
@@ -172,7 +175,7 @@ PermissionsController.addPermissionsForUsername = function(request, response) {
                 return null;
             } else {
                 // Check that userToken is part of project (if it can fetch proj pems, then we're ok)
-                return agaveIO.getMetadataPermissions(accessToken, projectUuid);
+                return tapisIO.getMetadataPermissions(accessToken, projectUuid);
             }
         })
         .then(function(projectPermissions) {
@@ -225,7 +228,7 @@ PermissionsController.removePermissionsForUsername = function(request, response)
     // to restart the removal process.
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getMetadataPermissions(accessToken, projectUuid);
+            return tapisIO.getMetadataPermissions(accessToken, projectUuid);
         })
         .then(function(projectPermissions) {
             console.log('VDJ-API INFO: PermissionsController.removePermissionsForUsername - getMetadataPermissions for project ' + projectUuid);

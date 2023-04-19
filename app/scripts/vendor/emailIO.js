@@ -27,7 +27,6 @@
 //
 
 var emailSettings = require('../config/emailSettings');
-var agaveSettings = require('../config/agaveSettings');
 var nodemailer    = require('nodemailer');
 var sendmailTransport = require('nodemailer-sendmail-transport');
 
@@ -36,9 +35,19 @@ var transporter = nodemailer.createTransport(sendmailTransport());
 var emailIO = {};
 module.exports = emailIO;
 
+var config = require('../config/config');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
+
 emailIO.sendPasswordResetEmail = function(recipientEmail, username, passwordResetCode) {
 
-    var passwordResetUrl = agaveSettings.vdjBackbone + '/password-reset/' + passwordResetCode;
+    var passwordResetUrl = tapisSettings.vdjBackbone + '/password-reset/' + passwordResetCode;
 
     var mailOptions = {
         to: recipientEmail,
@@ -109,7 +118,7 @@ emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
 
 emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
 
-    var vdjWebappUrl = agaveSettings.vdjBackbone
+    var vdjWebappUrl = tapisSettings.vdjBackbone
                      + '/account'
                      + '/verify'
                      + '/' + verificationId

@@ -1,17 +1,52 @@
 
 'use strict';
 
+//
+// guest.js
+// guest proxy
+//
+// VDJServer Analysis Portal
+// VDJ API Service
+// https://vdjserver.org
+//
+// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
 var http = require('http');
 var https = require('https');
 
-var agaveSettings = require('./config/agaveSettings');
+var config = require('./config/config');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
+var GuestAccount = tapisIO.guestAccount;
+
 var webhookIO = require('./vendor/webhookIO');
 
 // node libraries
 var requestLib = require('request');
 
 // Verify we can login with guest account
-var GuestAccount = require('./models/guestAccount');
 GuestAccount.getToken()
     .then(function(guestToken) {
         console.log('VDJ-GUEST INFO: Successfully acquired guest token.');
@@ -39,7 +74,7 @@ http.createServer(function(request, response) {
                 newUrl = pathList.join('/');
 
                 var requestSettings = {
-                    url: 'https://' + agaveSettings.hostname + newUrl,
+                    url: 'https://' + tapisSettings.hostname + newUrl,
                     method:   'GET',
                     rejectUnauthorized: false,
                     headers: {

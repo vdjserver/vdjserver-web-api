@@ -32,13 +32,19 @@ module.exports = FilePermissionsQueueManager;
 
 // App
 var app = require('../app');
-var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
@@ -74,9 +80,9 @@ importQueue.process(10, async (job) => {
     var fileUploadJob = new FileUploadJob(job.data.file);
 
     // already imported?
-    var fileMetadata = await agaveIO.getProjectFileMetadataByFilename(fileUploadJob.projectUuid, fileUploadJob.fileUuid)
+    var fileMetadata = await tapisIO.getProjectFileMetadataByFilename(fileUploadJob.projectUuid, fileUploadJob.fileUuid)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (importQueue): agaveIO.getProjectFileMetadataByFilename, error ' + error;
+            msg = 'VDJ-API ERROR (importQueue): tapisIO.getProjectFileMetadataByFilename, error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -120,9 +126,9 @@ fileQueue.process(async (job) => {
 
     // set permissions on file for project users
     var path = fileUploadJob.getRelativeFilePath();
-    await agaveIO.setFilePermissionsForProjectUsers(fileUploadJob.projectUuid, path, false)
+    await tapisIO.setFilePermissionsForProjectUsers(fileUploadJob.projectUuid, path, false)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (fileQueue): agaveIO.setFilePermissionsForProjectUsers, error ' + error;
+            msg = 'VDJ-API ERROR (fileQueue): tapisIO.setFilePermissionsForProjectUsers, error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -149,9 +155,9 @@ fileQueue.process(async (job) => {
     // emit notification
     app.emit('fileImportNotification', { fileImportStatus: 'metadata', fileInformation: fileUploadJob });
 
-    await agaveIO.addMetadataPermissionsForProjectUsers(fileUploadJob.projectUuid, fileMetadata.uuid)
+    await tapisIO.addMetadataPermissionsForProjectUsers(fileUploadJob.projectUuid, fileMetadata.uuid)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (fileQueue): agaveIO.addMetadataPermissionsForProjectUsers, error ' + error;
+            msg = 'VDJ-API ERROR (fileQueue): tapisIO.addMetadataPermissionsForProjectUsers, error ' + error;
         });
     if (msg) {
         console.error(msg);

@@ -46,15 +46,21 @@ var FileUploadJob = function(kueAttributes) {
 module.exports = FileUploadJob;
 
 // Models
-var ServiceAccount = require('./serviceAccount');
 var FilePermissions = require('./filePermissions');
 
 // Node Libraries
 var _ = require('underscore');
 let moment = require('moment');
 
-// Processing
-var agaveIO = require('../vendor/agaveIO');
+var config = require('../config/config');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 var extractFileUUID = function(metadata) {
     var file_uuid = null;
@@ -84,9 +90,9 @@ FileUploadJob.prototype.getRelativeFilePath = function() {
 
 FileUploadJob.prototype.createAgaveFileMetadata = async function() {
 
-    var fileMetadata = await agaveIO.getProjectFileMetadataByFilename(this.projectUuid, this.fileUuid)
+    var fileMetadata = await tapisIO.getProjectFileMetadataByFilename(this.projectUuid, this.fileUuid)
         .catch(function(error) {
-            return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - agaveIO.getProjectFileMetadataByFilename, error ' + error));
+            return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - tapisIO.getProjectFileMetadataByFilename, error ' + error));
         });
 
     if (fileMetadata.length > 1) {
@@ -98,9 +104,9 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
         return Promise.resolve(fileMetadata[0]);
     }
 
-    var fileDetail = await agaveIO.getFileDetail(this.getRelativeFilePath())
+    var fileDetail = await tapisIO.getFileDetail(this.getRelativeFilePath())
         .catch(function(error) {
-            return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - agaveIO.getFileDetail, error ' + error));
+            return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - tapisIO.getFileDetail, error ' + error));
         });
 
     var length = fileDetail[0].length;
@@ -139,7 +145,7 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
         this.tags = tags;
     }
 
-    return agaveIO.createFileMetadata(this.fileUuid, this.projectUuid, this.fileType, name, length, this.readDirection, this.tags);
+    return tapisIO.createFileMetadata(this.fileUuid, this.projectUuid, this.fileType, name, length, this.readDirection, this.tags);
 };
 
 FileUploadJob.prototype.checkFileAvailability = async function() {
@@ -150,7 +156,7 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
 
     // if the file was manually copied to the storage system, requesting the file details
     // will cause Tapis to create the file uuid and an empty history
-    var detail = await agaveIO.getFileDetail(path)
+    var detail = await tapisIO.getFileDetail(path)
         .catch(function(error) {
             return Promise.reject(new Error('Could not get file detail for path: ' + path));
         });
@@ -174,7 +180,7 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
         return Promise.reject(new Error('fileUuid: ' + this.fileUuid + ' does not match uuid ' + file_uuid + ' for filePath: ' + path));
     }
 
-    var fileHistory = await agaveIO.getFileHistory(path)
+    var fileHistory = await tapisIO.getFileHistory(path)
         .catch(function(error) {
             return Promise.reject(new Error('Could not get file history for path: ' + path));
         });
@@ -203,7 +209,7 @@ FileUploadJob.prototype.verifyFileNotification = async function() {
 
     var retry = false;
     var path = this.getRelativeFilePath();
-    var detail = await agaveIO.getFileDetail(path)
+    var detail = await tapisIO.getFileDetail(path)
         .catch(function(error) {
             // if we get an error, Tapis might be slow in staging, wait and retry
             retry = true;
@@ -214,7 +220,7 @@ FileUploadJob.prototype.verifyFileNotification = async function() {
         console.log('Retry get file detail for path: ' + path);
         const timer = ms => new Promise(res => setTimeout(res, ms));
         await timer(30000);
-        detail = await agaveIO.getFileDetail(path)
+        detail = await tapisIO.getFileDetail(path)
             .catch(function(error) {
                 return Promise.reject(new Error('Could not get file detail for path: ' + path));
             });

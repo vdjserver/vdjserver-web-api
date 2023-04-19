@@ -33,9 +33,15 @@ module.exports = adcIO;
 // Server environment config
 var config = require('../config/config');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
 var webhookIO = require('../vendor/webhookIO');
-var agaveIO = require('../vendor/agaveIO');
 
 // Node Libraries
 var _ = require('underscore');
@@ -45,7 +51,6 @@ const zlib = require('zlib');
 var jsonApprover = require('json-approver');
 const axios = require('axios');
 
-var airr = require('../vendor/airr');
 
 //
 // Generic send request

@@ -40,10 +40,16 @@ var apiResponseController = require('./apiResponseController');
 
 // Models
 var User = require('../models/user');
-var ServiceAccount = require('../models/serviceAccount');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 
@@ -124,7 +130,7 @@ UserController.createUser = async function(request, response) {
         // skip for test account
         console.log('VDJ-API INFO: UserController.createUser - WARNING - Duplicate username check is being bypassed.');
     } else {
-        isDuplicate = await agaveIO.isDuplicateUsername(user.username)
+        isDuplicate = await tapisIO.isDuplicateUsername(user.username)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: UserController.createUser - agave duplicate account check got error for ' + JSON.stringify(user.getSanitizedAttributes())
                     + ', error: ' + error;
@@ -149,7 +155,7 @@ UserController.createUser = async function(request, response) {
         // skip for test account
         console.log('VDJ-API INFO: UserController.createUser - WARNING - Agave account creation is being bypassed.');
     } else {
-        await agaveIO.createUser(user.getCreateUserAttributes())
+        await tapisIO.createUser(user.getCreateUserAttributes())
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
                     + ', error: ' + error;
@@ -163,7 +169,7 @@ UserController.createUser = async function(request, response) {
     console.log('VDJ-API INFO: UserController.createUser - agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // get token for user
-    var userToken = await agaveIO.getToken(user)
+    var userToken = await tapisIO.getToken(user)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.createUser - token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
@@ -178,7 +184,7 @@ UserController.createUser = async function(request, response) {
     // TODO: should we check if user profile exists? It should not for a new user, presumably just for test accounts
 
     // create user profile
-    var userProfile = await agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
+    var userProfile = await tapisIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.createUser - create user profile failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
@@ -192,7 +198,7 @@ UserController.createUser = async function(request, response) {
                 + ') successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // create user verification
-    var userVerificationMetadata = await agaveIO.createUserVerificationMetadata(user.username)
+    var userVerificationMetadata = await tapisIO.createUserVerificationMetadata(user.username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.createUser - verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
@@ -223,7 +229,7 @@ UserController.duplicateUsername = async function(request, response) {
     if (config.debug) console.log('VDJ-API INFO: UserController.duplicateUsername - checking username ' + username);
 
     // check for duplicate username
-    var isDuplicate = await agaveIO.isDuplicateUsername(username)
+    var isDuplicate = await tapisIO.isDuplicateUsername(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.createUser - agave duplicate account check got error for ' + username
                 + ', error: ' + error;
@@ -265,7 +271,7 @@ UserController.changePassword = async function(request, response) {
     };
 
     // verify old password
-    await agaveIO.getToken(auth)
+    await tapisIO.getToken(auth)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
         });
@@ -278,7 +284,7 @@ UserController.changePassword = async function(request, response) {
     console.log('VDJ-API INFO: UserController.changePassword - token verify success for ' + username);
 
     // get user profile
-    var profile = await agaveIO.getUserProfile(username)
+    var profile = await tapisIO.getUserProfile(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
         });
@@ -292,7 +298,7 @@ UserController.changePassword = async function(request, response) {
 
     // change password
     if (profile && profile[0] && profile[0].value && profile[0].value.email) {
-        await agaveIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
+        await tapisIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + ', error ' + error;
             });
@@ -316,7 +322,7 @@ UserController.verifyUser = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.verifyUser - begin for ' + verificationId);
 
-    var userVerificationMetadata = await agaveIO.getMetadata(verificationId)
+    var userVerificationMetadata = await tapisIO.getMetadata(verificationId)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
         });
@@ -350,7 +356,7 @@ UserController.verifyUser = async function(request, response) {
             return apiResponseController.sendError(msg, 400, response);
         }
 
-        await agaveIO.verifyUser(username, verificationId)
+        await tapisIO.verifyUser(username, verificationId)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
             });
@@ -379,7 +385,7 @@ UserController.resendVerificationEmail = async function(request, response) {
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - begin for ' + username);
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - get verification metadata for ' + username);
 
-    var userVerificationMetadata = await agaveIO.getUserVerificationMetadata(username)
+    var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: Non-existent verification for username: ' + username;
         });
@@ -405,7 +411,7 @@ UserController.resendVerificationEmail = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - get profile for ' + username);
     var verificationId = userVerificationMetadata[0].uuid;
-    var profileMetadata = await agaveIO.getUserProfile(username)
+    var profileMetadata = await tapisIO.getUserProfile(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - user profile could not be found for ' + username;
         });
@@ -442,7 +448,7 @@ UserController.createResetPasswordRequest = async function(request, response) {
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
 
-    var userProfile = await agaveIO.getUserProfile(username)
+    var userProfile = await tapisIO.getUserProfile(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
         });
@@ -461,7 +467,7 @@ UserController.createResetPasswordRequest = async function(request, response) {
     }
 
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - createPasswordResetMetadata for user ' + username);
-    var passwordReset = await agaveIO.createPasswordResetMetadata(username)
+    var passwordReset = await tapisIO.createPasswordResetMetadata(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
         });
@@ -496,7 +502,7 @@ UserController.processResetPasswordRequest = async function(request, response) {
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - begin for user ' + username);
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
 
-    var passwordResetMetadata = await agaveIO.getPasswordResetMetadata(uuid)
+    var passwordResetMetadata = await tapisIO.getPasswordResetMetadata(uuid)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
         });
@@ -522,7 +528,7 @@ UserController.processResetPasswordRequest = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getUserProfile for user ' + username);
     var passwordReset = passwordResetMetadata[0];
-    var profile = await agaveIO.getUserProfile(username)
+    var profile = await tapisIO.getUserProfile(username)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - getUserProfile for user ' + username + ', error: ' + error;
         });
@@ -533,7 +539,7 @@ UserController.processResetPasswordRequest = async function(request, response) {
     }
 
     console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
-    await agaveIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
+    await tapisIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - updateUserPassword for user ' + username + ', error: ' + error;
         });
@@ -546,7 +552,7 @@ UserController.processResetPasswordRequest = async function(request, response) {
     //    while metadata is deleted, service returns 500 error;
     //    don't let this short-circuit the process
     console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
-    await agaveIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid)
+    await tapisIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - deleteMetadata for user ' + username + ', error: ' + error;
             console.error(msg);

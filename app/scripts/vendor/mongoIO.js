@@ -35,9 +35,15 @@ module.exports = mongoIO;
 var config = require('../config/config');
 var mongoSettings = require('../config/mongoSettings');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
 var webhookIO = require('../vendor/webhookIO');
-var agaveIO = require('../vendor/agaveIO');
 
 // Node Libraries
 var _ = require('underscore');
@@ -46,7 +52,7 @@ var csv = require('csv-parser');
 var fs = require('fs');
 const zlib = require('zlib');
 
-var airr = require('../vendor/airr');
+var airr = require('airr-js');
 
 // test connection
 mongoIO.testConnection = async function() {
@@ -302,7 +308,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
     var rows = [];
     var total_cnt = 0;
 
-    var schema = airr.getSchema('Rearrangement');
+    var schema = airr.get_schema('Rearrangement');
     //console.log(schema.spec('sequence_id'));
 
     var mapValues = function(map) {
@@ -336,7 +342,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     // update rearrangement data load record
                     var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
-                    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                    await tapisIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .catch(function(error) {
                             var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
@@ -344,7 +350,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                         });
                     if (retry) {
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
-                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                        await tapisIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                             .catch(function(error) {
                                 var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
@@ -380,7 +386,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                     // update rearrangement data load record
                     var retry = false;
                     dataLoad['value']['load_set'] = load_set + 1;
-                    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                    await tapisIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                         .catch(function(error) {
                             var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                             console.error(msg);
@@ -388,7 +394,7 @@ mongoIO.processFile = async function(filename, rep, dp_id, dataLoad, load_set, l
                         });
                     if (retry) {
                         console.log('VDJ-API INFO: mongoIO.processFile, retrying updateMetadata');
-                        await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+                        await tapisIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
                             .catch(function(error) {
                                 var msg = 'VDJ-API ERROR: mongoIO.processFile, updateMetadata error occurred, error: ' + error;
                                 console.error(msg);
@@ -566,7 +572,7 @@ mongoIO.loadRearrangementData = async function(dataLoad, repertoire, primaryDP, 
 
     // update rearrangement data load record
     dataLoad['value']['isLoaded'] = true;
-    await agaveIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
+    await tapisIO.updateMetadata(dataLoad.uuid, dataLoad.name, dataLoad.value, dataLoad.associationIds)
         .catch(function(error) {
             var msg = 'VDJ-API ERROR: mongoIO.loadRearrangementData, updateMetadata error occurred, error: ' + error;
             return Promise.reject(msg);

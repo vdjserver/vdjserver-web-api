@@ -3,15 +3,10 @@
 
 var _ = require('underscore');
 
-// Models
-var ServiceAccount = require('./serviceAccount');
+var config = require('../config/config');
 
 // Node Libraries
 var moment = require('moment');
-var Q = require('q');
-
-// Processing
-var agaveIO = require('../vendor/agaveIO');
 
 var Job = function(kueAttributes) {
 

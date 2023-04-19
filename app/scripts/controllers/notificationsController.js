@@ -1,9 +1,11 @@
 
 'use strict';
 
+// TODO: move to other controllers
+
 // App
 var app = require('../app');
-var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
@@ -13,8 +15,14 @@ var taskQueue = kue.createQueue({
     redis: app.redisConfig,
 });
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
 
 // Models
@@ -69,6 +77,7 @@ NotificationsController.processFileImportNotifications = function(request, respo
         ;
 };
 
+/*
 NotificationsController.processJobNotifications = function(request, response) {
 
     var jobId = request.params.jobId;
@@ -198,4 +207,4 @@ NotificationsController.processJobNotifications = function(request, response) {
             return apiResponseController.sendError(message, 400, response);
         });
 
-};
+}; */

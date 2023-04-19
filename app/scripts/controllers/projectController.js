@@ -35,18 +35,16 @@ var app = require('../app');
 var config = require('../config/config');
 
 // Settings
-var agaveSettings = require('../config/agaveSettings');
 var mongoSettings = require('../config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
 // Models
-var ServiceAccount = require('../models/serviceAccount');
 var FileUploadJob = require('../models/fileUploadJob');
 var AnalysisDocument = require('../models/AnalysisDocument');
 
-var airr = require('../vendor/airr');
+var airr = require('airr-js');
 
 // Queues
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
@@ -54,8 +52,16 @@ var projectQueueManager = require('../queues/projectQueueManager');
 var adcDownloadQueueManager = require('../queues/adcDownloadQueueManager');
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Node Libraries
 var yaml = require('js-yaml');
@@ -84,7 +90,7 @@ ProjectController.createProject = function(request, response) {
 
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.createProjectMetadata(project);
+            return tapisIO.createProjectMetadata(project);
         })
         .then(function(_projectMetadata) {
             console.log('VDJ-API INFO: ProjectController.createProject - event - metadata for username: ' + username + ', project name: ' + projectName);
@@ -93,31 +99,31 @@ ProjectController.createProject = function(request, response) {
             projectMetadata = _projectMetadata;
             uuid = projectMetadata.uuid;
 
-            return agaveIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), uuid);
+            return tapisIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), uuid);
         })
         // create project/files directory
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - metadata pems for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return agaveIO.createProjectDirectory(uuid + '/files');
+            return tapisIO.createProjectDirectory(uuid + '/files');
         })
         // create project/analyses directory
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - files dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return agaveIO.createProjectDirectory(uuid + '/analyses');
+            return tapisIO.createProjectDirectory(uuid + '/analyses');
         })
         // create project/deleted directory
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - analyses dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return agaveIO.createProjectDirectory(uuid + '/deleted');
+            return tapisIO.createProjectDirectory(uuid + '/deleted');
         })
         // set project directory permissions recursively
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - dir pems for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return agaveIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid, true);
+            return tapisIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid, true);
         })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.createProject - event - complete for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
@@ -288,13 +294,13 @@ ProjectController.publishProject = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
         .then(function(projectMetadata) {
             if (projectMetadata.name == 'private_project') {
                 projectMetadata.name = 'projectPublishInProcess';
                 //console.log(projectMetadata);
-                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
             } else if (projectMetadata.name == 'projectPublishInProcess') {
                 console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
                 return null;
@@ -346,12 +352,12 @@ ProjectController.unpublishProject = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
         .then(function(projectMetadata) {
             if (projectMetadata.name == 'public_project') {
                 projectMetadata.name = 'projectUnpublishInProcess';
-                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
             } else if (projectMetadata.name == 'projectUnpublishInProcess') {
                 console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' - restarting unpublish.');
                 return null;
@@ -401,9 +407,9 @@ ProjectController.loadProject = async function(request, response) {
     var msg = null;
 
     // check for project load metadata
-    var loadMetadata = await agaveIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
+    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.loadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+            msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -436,9 +442,9 @@ ProjectController.loadProject = async function(request, response) {
                     + ', metadata: ' + loadMetadata.uuid);
 
         loadMetadata['value']['shouldLoad'] = true;
-        await agaveIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
+        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.loadProject - agaveIO.updateMetadata, error: ' + error;
+                msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.updateMetadata, error: ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -458,9 +464,9 @@ ProjectController.loadProject = async function(request, response) {
     } else {
 
         // create the project load metadata
-       loadMetadata = await agaveIO.createProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
+       loadMetadata = await tapisIO.createProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.loadProject - agaveIO.createProjectLoadMetadata, error: ' + error;
+                msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.createProjectLoadMetadata, error: ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -497,9 +503,9 @@ ProjectController.unloadProject = async function(request, response) {
     console.log(request.body);
 
     // check for project load metadata
-    var loadMetadata = await agaveIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
+    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.unloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+            msg = 'VDJ-API ERROR: ProjectController.unloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -521,9 +527,9 @@ ProjectController.unloadProject = async function(request, response) {
         loadMetadata['value']['isLoaded'] = false;
         loadMetadata['value']['repertoireMetadataLoaded'] = false;
         loadMetadata['value']['rearrangementDataLoaded'] = false;
-        await agaveIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
+        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.unloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+                msg = 'VDJ-API ERROR: ProjectController.unloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -550,9 +556,9 @@ ProjectController.unloadProject = async function(request, response) {
             }
 
             // get the study_id
-            var projectMetadata = await agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
+            var projectMetadata = await tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
                 .catch(function(error) {
-                    msg = 'VDJ-API ERROR (ProjectController.unloadProject): agaveIO.getProjectMetadata, error: ' + error;
+                    msg = 'VDJ-API ERROR (ProjectController.unloadProject): tapisIO.getProjectMetadata, error: ' + error;
                 });
             if (msg) {
                 console.error(msg);
@@ -590,9 +596,9 @@ ProjectController.reloadProject = async function(request, response) {
     console.log(request.body);
 
     // check for project load metadata
-    var loadMetadata = await agaveIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
+    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.reloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+            msg = 'VDJ-API ERROR: ProjectController.reloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -612,9 +618,9 @@ ProjectController.reloadProject = async function(request, response) {
         // flag repertoire metadata as not loaded
         loadMetadata['value']['isLoaded'] = false;
         loadMetadata['value']['repertoireMetadataLoaded'] = false;
-        await agaveIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
+        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.reloadProject - agaveIO.getProjectLoadMetadata, error: ' + error;
+                msg = 'VDJ-API ERROR: ProjectController.reloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -640,9 +646,9 @@ ProjectController.reloadProject = async function(request, response) {
         }
 
         // get the study_id
-        var projectMetadata = await agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
+        var projectMetadata = await tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR (ProjectController.reloadProject): agaveIO.getProjectMetadata, error: ' + error;
+                msg = 'VDJ-API ERROR (ProjectController.reloadProject): tapisIO.getProjectMetadata, error: ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -674,13 +680,13 @@ ProjectController.archiveProject = async function(request, response) {
     // TODO: the project cannot be published and/or loaded
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
         .then(function(projectMetadata) {
             if (projectMetadata.name == 'private_project') {
                 projectMetadata.name = 'archive_project';
                 //console.log(projectMetadata);
-                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
             } else {
                 msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' is not in an archivable state.';
                 return Promise.reject(new Error(msg));
@@ -711,13 +717,13 @@ ProjectController.unarchiveProject = async function(request, response) {
 
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
         .then(function(projectMetadata) {
             if (projectMetadata.name == 'archive_project') {
                 projectMetadata.name = 'private_project';
                 //console.log(projectMetadata);
-                return agaveIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
+                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
             } else {
                 msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' is not in an unarchivable state.';
                 return Promise.reject(new Error(msg));
@@ -785,7 +791,7 @@ ProjectController.importMetadata = function(request, response) {
     ServiceAccount.getToken()
         .then(function(token) {
             // get metadata to import
-            return agaveIO.getProjectFileContents(projectUuid, fileName)
+            return tapisIO.getProjectFileContents(projectUuid, fileName)
         })
         .then(function(fileData) {
             console.log('VDJ-API INFO: ProjectController.importMetadata - parse file contents');
@@ -823,7 +829,7 @@ ProjectController.importMetadata = function(request, response) {
             console.log('VDJ-API INFO: ProjectController.importMetadata - parsed file');
 
             // get existing repertoires
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
         })
         .then(function(_reps) {
             if (! data) return null;
@@ -833,7 +839,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing jobs
-            return agaveIO.getJobsForProject(projectUuid);
+            return tapisIO.getJobsForProject(projectUuid);
         })
         .then(function(_jobs) {
             if (! data) return null;
@@ -843,7 +849,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing data processing objects
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
         })
         .then(function(_dps) {
             if (! data) return null;
@@ -936,7 +942,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing subjects
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
         .then(function(_subjects) {
             if (! data) return null;
@@ -973,9 +979,9 @@ ProjectController.importMetadata = function(request, response) {
             for (var i = 0; i < subjectList.length; i++) {
                 var entry = subjectList[i];
                 if (existingSubjects[entry['subject_id']])
-                    promises[i] = agaveIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
+                    promises[i] = tapisIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
                 else
-                    promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
+                    promises[i] = tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
             }
 
             return Promise.allSettled(promises);
@@ -998,7 +1004,7 @@ ProjectController.importMetadata = function(request, response) {
             var promises = [];
             for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
@@ -1007,7 +1013,7 @@ ProjectController.importMetadata = function(request, response) {
             if (! data) return null;
 
             // get existing subjects
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
         .then(function(_subjects) {
             if (! data) return null;
@@ -1030,7 +1036,7 @@ ProjectController.importMetadata = function(request, response) {
             }
 
             // get existing samples
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
         })
         .then(function(_samples) {
             if (! data) return null;
@@ -1052,7 +1058,7 @@ ProjectController.importMetadata = function(request, response) {
             var promises = [];
             for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
@@ -1073,7 +1079,7 @@ ProjectController.importMetadata = function(request, response) {
             // within scope for the then(), otherwise entry has a different value when
             // the promises are performed in allSettled() below.
             var agaveCall = function(entry) {
-                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'sample_processing', entry['sample'])
+                return tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'sample_processing', entry['sample'])
                     .then(function(object) {
                         entry['uuid'] = object['uuid'];
                     });
@@ -1113,7 +1119,7 @@ ProjectController.importMetadata = function(request, response) {
             var promises = [];
             for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
@@ -1134,7 +1140,7 @@ ProjectController.importMetadata = function(request, response) {
             // within scope for the then(), otherwise entry has a different value when
             // the promises are performed in allSettled() below.
             var agaveCall = function(entry) {
-                return agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
+                return tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
                     .then(function(object) {
                         entry['uuid'] = object['uuid'];
                     });
@@ -1183,7 +1189,7 @@ ProjectController.importMetadata = function(request, response) {
             var promises = [];
             for (var i = 0; i < deleteList.length; i++) {
                 var entry = deleteList[i];
-                promises[i] = agaveIO.deleteMetadata(ServiceAccount.accessToken(), entry);
+                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
             }
 
             return Promise.allSettled(promises);
@@ -1198,9 +1204,9 @@ ProjectController.importMetadata = function(request, response) {
             for (var i = 0; i < repList.length; i++) {
                 var entry = repList[i];
                 if (entry['repertoire_id'])
-                    promises[i] = agaveIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
+                    promises[i] = tapisIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
                 else
-                    promises[i] = agaveIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
+                    promises[i] = tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
             }
 
             return Promise.allSettled(promises);
@@ -1209,7 +1215,7 @@ ProjectController.importMetadata = function(request, response) {
             if (! data) return null;
 
             // get existing repertoires
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
         })
         .then(function(_reps) {
             if (! data) return null;
@@ -1223,7 +1229,7 @@ ProjectController.importMetadata = function(request, response) {
             var promises = [];
             for (var i = 0; i < _reps.length; i++) {
                 var entry = _reps[i];
-                promises[i] = agaveIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
+                promises[i] = tapisIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
             }
 
             return Promise.allSettled(promises);
@@ -1249,6 +1255,114 @@ ProjectController.importMetadata = function(request, response) {
         });
 };
 
+ProjectController.gatherRepertoireMetadataForProject = async function(projectUuid, keep_uuids) {
+
+    var msg = null;
+    var repertoireMetadata = [];
+    var subjectMetadata = {};
+    var sampleMetadata = {};
+    var dpMetadata = {};
+    var projectMetadata = null;
+
+    return ServiceAccount.getToken()
+        .then(function(token) {
+            // get the project metadata
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+        })
+        .then(function(_projectMetadata) {
+            projectMetadata = _projectMetadata;
+
+            // get repertoire objects
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
+        })
+        .then(function(models) {
+            // put into AIRR format
+            var study = projectMetadata.value;
+            var schema = airr.get_schema('Repertoire');
+            var blank = schema.template();
+            //var blank = airr.repertoireTemplate();
+
+            // only the AIRR fields
+            for (var o in blank['study']) {
+                blank['study'][o] = study[o];
+            }
+            // always save vdjserver project uuid in custom field
+            blank['study']['vdjserver_uuid'] = projectUuid;
+            // also save any vdjserver keywords
+            if (study['vdjserver_keywords'])
+                blank['study']['vdjserver_keywords'] = study['vdjserver_keywords'];
+
+            for (var i in models) {
+                var model = models[i].value;
+                model['study'] = blank['study']
+                repertoireMetadata.push(model);
+            }
+
+            // get subject objects
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
+        })
+        .then(function(models) {
+            for (var i in models) {
+                subjectMetadata[models[i].uuid] = models[i].value;
+            }
+
+            // get sample processing objects
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
+        })
+        .then(function(models) {
+            for (var i in models) {
+                sampleMetadata[models[i].uuid] = models[i].value;
+            }
+
+            // get data processing objects
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
+        })
+        .then(function(models) {
+            for (var i in models) {
+                dpMetadata[models[i].uuid] = models[i].value;
+            }
+        })
+        .then(function() {
+            // put into AIRR format
+            for (var i in repertoireMetadata) {
+                var rep = repertoireMetadata[i];
+                var subject = subjectMetadata[rep['subject']['vdjserver_uuid']];
+                if (! subject) {
+                    console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect subject: '
+                                  + rep['subject']['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                }
+                if (keep_uuids) subject['vdjserver_uuid'] = rep['subject']['vdjserver_uuid'];
+                rep['subject'] = subject;
+
+                var samples = [];
+                for (var j in rep['sample']) {
+                    var sample = sampleMetadata[rep['sample'][j]['vdjserver_uuid']];
+                    if (! sample) {
+                        console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect sample: '
+                                      + rep['sample'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                    }
+                    if (keep_uuids) sample['vdjserver_uuid'] = rep['sample'][j]['vdjserver_uuid'];
+                    samples.push(sample);
+                }
+                rep['sample'] = samples;
+
+                var dps = [];
+                for (var j in rep['data_processing']) {
+                    var dp = dpMetadata[rep['data_processing'][j]['vdjserver_uuid']];
+                    if (! dp) {
+                        console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect data_processing: '
+                                      + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                    }
+                    if (keep_uuids) dp['vdjserver_uuid'] = rep['data_processing'][j]['vdjserver_uuid'];
+                    dps.push(dp);
+                }
+                rep['data_processing'] = dps;
+            }
+
+            return repertoireMetadata;
+        });
+};
+
 //
 // Exporting is fairly simple as we just need to collect all the normalized objects
 // and put into the denormalized AIRR metadata format. We already have a function that
@@ -1262,9 +1376,10 @@ ProjectController.exportMetadata = async function(request, response) {
     config.log.info(context, 'start, project: ' + projectUuid);
 
     // gather the repertoire objects
-    var repertoireMetadata = await agaveIO.gatherRepertoireMetadataForProject(projectUuid, true)
+//    var repertoireMetadata = await tapisIO.gatherRepertoireMetadataForProject(projectUuid, true)
+    var repertoireMetadata = await ProjectController.gatherRepertoireMetadataForProjecttttt(projectUuid, true)
         .catch(function(error) {
-            msg = config.log.error(context, 'agaveIO.gatherRepertoireMetadataForProject, error: ' + error);
+            msg = config.log.error(context, 'tapisIO.gatherRepertoireMetadataForProject, error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
@@ -1278,9 +1393,9 @@ ProjectController.exportMetadata = async function(request, response) {
     data['Info'] = config.info.schema;
     data['Repertoire'] = repertoireMetadata;
     var buffer = Buffer.from(JSON.stringify(data, null, 2));
-    await agaveIO.uploadFileToProjectTempDirectory(projectUuid, 'repertoires.airr.json', buffer)
+    await tapisIO.uploadFileToProjectTempDirectory(projectUuid, 'repertoires.airr.json', buffer)
         .catch(function(error) {
-            msg = config.log.error(context, 'agaveIO.uploadFileToProjectTempDirectory, error: ' + error);
+            msg = config.log.error(context, 'tapisIO.uploadFileToProjectTempDirectory, error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
@@ -1326,7 +1441,7 @@ ProjectController.importTable = function(request, response) {
     var data;
 
     // get metadata to import
-    agaveIO.getProjectFileContents(projectUuid, fileName)
+    tapisIO.getProjectFileContents(projectUuid, fileName)
         .then(function(fileData) {
             // create metadata items
             console.log('VDJ-API INFO: ProjectController.importMetadata - get import file contents');
@@ -1344,47 +1459,47 @@ ProjectController.importTable = function(request, response) {
             if (op == 'replace') {
                 // delete existing metadata if requested
                 console.log('VDJ-API INFO: ProjectController.importMetadata - delete existing metadata entries');
-                return agaveIO.deleteAllMetadataForType(projectUuid, type);
+                return tapisIO.deleteAllMetadataForType(projectUuid, type);
             }
         })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.importMetadata - get columns');
-            return agaveIO.getMetadataColumnsForType(projectUuid, type)
+            return tapisIO.getMetadataColumnsForType(projectUuid, type)
                 .then(function(responseObject) {
                     //console.log(responseObject);
                     if (responseObject.length == 0) {
                         // no existing columns defined
                         var value = { columns: data.columns };
-                        return agaveIO.createMetadataColumnsForType(projectUuid, type, value, null);
+                        return tapisIO.createMetadataColumnsForType(projectUuid, type, value, null);
                     } else {
                         if (op == 'replace') {
                             // replace existing columns
                             value = responseObject[0].value;
                             value.columns = data.columns;
-                            return agaveIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
+                            return tapisIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
                         } else {
                             // merge with existing colums
                             value = responseObject[0].value;
                             for (var i = 0; i < data.columns.length; ++i) {
                                 if (value.columns.indexOf(data.columns[i]) < 0) value.columns.push(data.columns[i]);
                             }
-                            return agaveIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
+                            return tapisIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
                         }
                     }
                 });
         })
         .then(function() {
             console.log('VDJ-API INFO: ProjectController.importMetadata - set permissions on subject columns');
-            return agaveIO.getMetadataColumnsForType(projectUuid, type)
+            return tapisIO.getMetadataColumnsForType(projectUuid, type)
                 .then(function(responseObject) {
-                    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
+                    return tapisIO.addMetadataPermissionsForProjectUsers(projectUuid, responseObject[0].uuid);
                 });
         })
         .then(function() {
             // special fields - filename_uuid
             console.log('VDJ-API INFO: ProjectController.importMetadata - special field: filename_uuid');
             if (data.columns.indexOf('filename_uuid') < 0) return null;
-            else return agaveIO.getProjectFiles(projectUuid);
+            else return tapisIO.getProjectFiles(projectUuid);
         })
         .then(function(projectFiles) {
             if (!projectFiles) return;
@@ -1406,7 +1521,7 @@ ProjectController.importTable = function(request, response) {
             // special fields - subject_uuid
             console.log('VDJ-API INFO: ProjectController.importMetadata - special field: subject_uuid');
             if (data.columns.indexOf('subject_uuid') < 0) return null;
-            else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
+            else return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
         })
         .then(function(subjectMetadata) {
             if (!subjectMetadata) return;
@@ -1427,7 +1542,7 @@ ProjectController.importTable = function(request, response) {
             // special fields - sample_uuid
             console.log('VDJ-API INFO: ProjectController.importMetadata - special field: sample_uuid');
             if (data.columns.indexOf('sample_uuid') < 0) return null;
-            else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
+            else return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample');
         })
         .then(function(metadataList) {
             if (!metadataList) return;
@@ -1448,7 +1563,7 @@ ProjectController.importTable = function(request, response) {
             // special fields - cell_processing_uuid
             console.log('VDJ-API INFO: ProjectController.importMetadata - special field: cell_processing_uuid');
             if (data.columns.indexOf('cell_processing_uuid') < 0) return null;
-            else return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'cellProcessing');
+            else return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'cellProcessing');
         })
         .then(function(metadataList) {
             if (!metadataList) return;
@@ -1470,21 +1585,21 @@ ProjectController.importTable = function(request, response) {
             var promises = data.reverse().map(function(dataRow) {
                 //console.log(dataRow);
                 return function() {
-                    return agaveIO.createMetadataForType(projectUuid, type, dataRow);
+                    return tapisIO.createMetadataForType(projectUuid, type, dataRow);
                 }
             });
 
             return promises.reduce(Q.when, new Q());
         })
         .then(function() {
-            return agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
+            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, type);
         })
         .then(function(metadataList) {
             console.log('VDJ-API INFO: ProjectController.importMetadata - set permissions on metadata entries');
             var promises = metadataList.map(function(entry) {
                 //console.log(entry);
                 return function() {
-                    return agaveIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
+                    return tapisIO.addMetadataPermissionsForProjectUsers(projectUuid, entry.uuid);
                 }
             });
 
@@ -1540,9 +1655,9 @@ ProjectController.exportTable = async function(request, response) {
         return apiResponseController.sendError(msg, 500, response);
     }
 
-    var metadataList = await agaveIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, tableName)
+    var metadataList = await tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, tableName)
         .catch(function(error) {
-            msg = config.log.error(context, 'agaveIO.getMetadataForType, error: ' + error);
+            msg = config.log.error(context, 'tapisIO.getMetadataForType, error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
@@ -1551,9 +1666,9 @@ ProjectController.exportTable = async function(request, response) {
 
     var tsvData = '';
     var schema = null;
-    if (tableName == 'subject') schema = airr.getSchema('Subject');
-    if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
-    if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
+    //if (tableName == 'subject') schema = airr.getSchema('Subject');
+    //if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
+    //if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];
     var columns = [ 'vdjserver_uuid' ];
     for (let i in schema.properties) {
@@ -1616,18 +1731,18 @@ ProjectController.exportTable = async function(request, response) {
     }
 
     var buffer = Buffer.from(tsvData);
-    await agaveIO.uploadFileToProjectTempDirectory(projectUuid, tableName + '_metadata.tsv', buffer)
+    await tapisIO.uploadFileToProjectTempDirectory(projectUuid, tableName + '_metadata.tsv', buffer)
         .catch(function(error) {
-            msg = config.log.error(context, 'agaveIO.uploadFileToProjectTempDirectory, error: ' + error);
+            msg = config.log.error(context, 'tapisIO.uploadFileToProjectTempDirectory, error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
-    await agaveIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/' + tableName + '_metadata.tsv', false)
+    await tapisIO.setFilePermissionsForProjectUsers(projectUuid, projectUuid + '/deleted/' + tableName + '_metadata.tsv', false)
         .catch(function(error) {
-            msg = config.log.error(context, 'agaveIO.setFilePermissionsForProjectUsers, error: ' + error);
+            msg = config.log.error(context, 'tapisIO.setFilePermissionsForProjectUsers, error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
@@ -1666,12 +1781,12 @@ ProjectController.createPublicPostit = function(request, response) {
     var msg = null;
     ServiceAccount.getToken()
         .then(function(token) {
-            return agaveIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
+            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
         })
         .then(function(projectMetadata) {
             // Verify it is a public project
             if (projectMetadata.name == 'publicProject') {
-                return agaveIO.getMetadata(fileUuid);
+                return tapisIO.getMetadata(fileUuid);
             } else {
                 msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - project ' + projectUuid + ' is not a public project.';
                 return Q.reject(new Error(msg));
@@ -1683,10 +1798,10 @@ ProjectController.createPublicPostit = function(request, response) {
                 return Q.reject(new Error(msg));
             } else if (fileMetadata.name == 'projectFile') {
                 // if project data file
-                return agaveIO.createCommunityFilePostit(projectUuid, 'files/' + fileMetadata.value.name);
+                return tapisIO.createCommunityFilePostit(projectUuid, 'files/' + fileMetadata.value.name);
             } else if (fileMetadata.name == 'projectJobFile') {
                 // if project job file
-                return agaveIO.createCommunityFilePostit(projectUuid, 'analyses/' + fileMetadata.value.relativeArchivePath + '/' + fileMetadata.value.name);
+                return tapisIO.createCommunityFilePostit(projectUuid, 'analyses/' + fileMetadata.value.relativeArchivePath + '/' + fileMetadata.value.name);
             } else {
                 msg = 'VDJ-API ERROR: ProjectController.createPublicPostit - file ' + fileUuid + ' is not a valid project file.';
                 return Q.reject(new Error(msg));
