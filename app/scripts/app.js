@@ -39,7 +39,7 @@ var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
-var airr = require('./vendor/airr');
+var airr = require('airr-js');
 var vdj_schema = require('vdjserver-schema');
 
 // Express app
@@ -96,7 +96,7 @@ app.redisConfig = {
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
 // load AIRR Standards spec, openapi v3
-var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema-openapi3.yaml'), 'utf8'));
+//var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema-openapi3.yaml'), 'utf8'));
 // fix up swagger v2 spec for openapi v3
 /* for (var obj in airr_spec) {
     // discriminator is an object vs string
@@ -135,9 +135,11 @@ else {
     config.log.error(context, 'Invalid Tapis version, check TAPIS_VERSION environment variable');
     process.exit(1);
 }
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
 var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = require('vdj-tapis-js');
-if (config.tapis_version == 3) tapisIO = require('vdj-tapis-js/tapisV3');
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
 
 // Verify we can login with service account
 var ServiceAccount = tapisIO.serviceAccount;
@@ -146,9 +148,11 @@ ServiceAccount.getToken()
         config.log.info(context, 'Successfully acquired service token.');
 
         // wait for the AIRR spec to be dereferenced
-        return airr.schemaPromise();
+        return airr.load_schema();
     })
     .then(function() {
+        config.log.info(context, 'Loaded AIRR Schema version ' + airr.get_info()['version']);
+
         // wait for the VDJServer spec to be dereferenced
         return vdj_schema.schemaPromise();
     })
@@ -167,10 +171,9 @@ ServiceAccount.getToken()
         //console.log(test.template());
 
         // dereference the AIRR spec
-        return $RefParser.dereference(airr_spec);
-    })
-    .then(function(schema) {
-        config.log.info(context, 'Loaded AIRR Schema version ' + airr.get_info()['version']);
+//        return $RefParser.dereference(airr_spec);
+//    })
+//    .then(function(schema) {
         //console.log(JSON.stringify(schema['Study'],null,2));
 
         // Drop in the VDJServer schema
@@ -191,6 +194,17 @@ ServiceAccount.getToken()
     .then(function(api_schema) {
         //console.log(JSON.stringify(api_schema,null,2));
 
+        // wrap the operations functions to catch syntax errors and such
+        // we do not get a good stack trace with the middleware error handler
+        var try_function = async function (request, response, the_function) {
+            try {
+                await the_function(request, response);
+            } catch (e) {
+                console.error(e);
+                throw e;
+            }
+        };
+
         // Initialize express-openapi middleware
         openapi.initialize({
             apiDoc: api_schema,
@@ -204,7 +218,8 @@ ServiceAccount.getToken()
                 console.log('Got an error!');
                 console.log(JSON.stringify(err));
                 //console.trace("Here I am!");
-                res.status(err.status).json(err.errors);
+                if (err.status) res.status(err.status).json(err.errors);
+                else apiResponseController.sendError('Unknown server error.', 500, res);
             },
             securityHandlers: {
                 user_authorization: authController.userAuthorization,
@@ -213,69 +228,69 @@ ServiceAccount.getToken()
             },
             operations: {
                 //getStatus: function(req, res) { res.send('{"result":"success"}'); }
-                getStatus: apiResponseController.confirmUpStatus,
-                getTenants: tenantController.getTenants,
+                getStatus: async function(req, res) { return try_function(req, res, apiResponseController.confirmUpStatus); },
+                getTenants: async function(req, res) { return try_function(req, res, tenantController.getTenants); },
 
                 // authentication
-                createToken: tokenController.getToken,
-                refreshToken: tokenController.refreshToken,
+                createToken: async function(req, res) { return try_function(req, res, tokenController.getToken); },
+                refreshToken: async function(req, res) { return try_function(req, res, tokenController.refreshToken); },
 
                 // user
-                createUser: userController.createUser,
-                duplicateUsername: userController.duplicateUsername,
-                verifyUser: userController.verifyUser,
-                resendVerifyEmail: userController.resendVerificationEmail,
-                changePassword: userController.changePassword,
-                resetPassword: userController.createResetPasswordRequest,
-                verifyResetPassword: userController.processResetPasswordRequest,
-                userHasAdminRole: userController.userHasAdminRole,
+                createUser: async function(req, res) { return try_function(req, res, userController.createUser); },
+                duplicateUsername: async function(req, res) { return try_function(req, res, userController.duplicateUsername); },
+                verifyUser: async function(req, res) { return try_function(req, res, userController.verifyUser); },
+                resendVerifyEmail: async function(req, res) { return try_function(req, res, userController.resendVerificationEmail); },
+                changePassword: async function(req, res) { return try_function(req, res, userController.changePassword); },
+                resetPassword: async function(req, res) { return try_function(req, res, userController.createResetPasswordRequest); },
+                verifyResetPassword: async function(req, res) { return try_function(req, res, userController.processResetPasswordRequest); },
+                userHasAdminRole: async function(req, res) { return try_function(req, res, userController.userHasAdminRole); },
 
                 // project
-                createProject: projectController.createProject,
-                importFile: projectController.importFile,
-                exportMetadata: projectController.exportMetadata,
-                importMetadata: projectController.importMetadata,
-                exportTable: projectController.exportTable,
-                importTable: projectController.importTable,
-                executePROV: projectController.executePROV,
-                publishProject: projectController.publishProject,
-                unpublishProject: projectController.unpublishProject,
-                loadProject: projectController.loadProject,
-                unloadProject: projectController.unloadProject,
-                reloadProject: projectController.reloadProject,
-                archiveProject: projectController.archiveProject,
-                unarchiveProject: projectController.unarchiveProject,
-                purgeProject: projectController.purgeProject,
+                createProject: async function(req, res) { return try_function(req, res, projectController.createProject); },
+                importFile: async function(req, res) { return try_function(req, res, projectController.importFile); },
+                exportMetadata: async function(req, res) { return try_function(req, res, projectController.exportMetadata); },
+                importMetadata: async function(req, res) { return try_function(req, res, projectController.importMetadata); },
+                exportTable: async function(req, res) { return try_function(req, res, projectController.exportTable); },
+                importTable: async function(req, res) { return try_function(req, res, projectController.importTable); },
+                executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
+                publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
+                unpublishProject: async function(req, res) { return try_function(req, res, projectController.unpublishProject); },
+                loadProject: async function(req, res) { return try_function(req, res, projectController.loadProject); },
+                unloadProject: async function(req, res) { return try_function(req, res, projectController.unloadProject); },
+                reloadProject: async function(req, res) { return try_function(req, res, projectController.reloadProject); },
+                archiveProject: async function(req, res) { return try_function(req, res, projectController.archiveProject); },
+                unarchiveProject: async function(req, res) { return try_function(req, res, projectController.unarchiveProject); },
+                purgeProject: async function(req, res) { return try_function(req, res, projectController.purgeProject); },
 
                 // permissions
-                addPermissionsForUsername: permissionsController.addPermissionsForUsername,
-                removePermissionsForUsername: permissionsController.removePermissionsForUsername,
-                syncMetadataPermissionsWithProject: permissionsController.syncMetadataPermissionsWithProject,
+                addPermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.addPermissionsForUsername); },
+                removePermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.removePermissionsForUsername); },
+                syncMetadataPermissionsWithProject: async function(req, res) { return try_function(req, res, permissionsController.syncMetadataPermissionsWithProject); },
 
                 // feedback
-                createFeedback: feedbackController.createFeedback,
-                createPublicFeedback: feedbackController.createPublicFeedback,
+                createFeedback: async function(req, res) { return try_function(req, res, feedbackController.createFeedback); },
+                createPublicFeedback: async function(req, res) { return try_function(req, res, feedbackController.createPublicFeedback); },
 
                 // telemetry
-                recordErrorTelemetry: telemetryController.recordErrorTelemetry,
+                recordErrorTelemetry: async function(req, res) { return try_function(req, res, telemetryController.recordErrorTelemetry); },
                 
                 // ADC
-                statusADCRepository: adcController.statusADCRepository,
-                defaultADCRepositories: adcController.defaultADCRepositories,
-                updateADCRepositories: adcController.updateADCRepositories,
+                statusADCRepository: async function(req, res) { return try_function(req, res, adcController.statusADCRepository); },
+                defaultADCRepositories: async function(req, res) { return try_function(req, res, adcController.defaultADCRepositories); },
+                updateADCRepositories: async function(req, res) { return try_function(req, res, adcController.updateADCRepositories); },
 
                 // ADC Download Cache
-                getADCDownloadCacheStatus: adcController.getADCDownloadCacheStatus,
-                updateADCDownloadCacheStatus: adcController.updateADCDownloadCacheStatus,
-                getADCDownloadCacheForStudies: adcController.getADCDownloadCacheForStudies,
-                updateADCDownloadCacheForStudy: adcController.updateADCDownloadCacheForStudy,
-                deleteADCDownloadCacheForStudy: adcController.deleteADCDownloadCacheForStudy,
-                updateADCDownloadCacheForRepertoire: adcController.updateADCDownloadCacheForRepertoire,
-                deleteADCDownloadCacheForRepertoire: adcController.deleteADCDownloadCacheForRepertoire,
-                notifyADCDownloadCache: adcController.notifyADCDownloadCache,
+                getADCDownloadCacheStatus: async function(req, res) { return try_function(req, res, adcController.getADCDownloadCacheStatus); },
+                updateADCDownloadCacheStatus: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheStatus); },
+                getADCDownloadCacheForStudies: async function(req, res) { return try_function(req, res, adcController.getADCDownloadCacheForStudies); },
+                updateADCDownloadCacheForStudy: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheForStudy); },
+                deleteADCDownloadCacheForStudy: async function(req, res) { return try_function(req, res, adcController.deleteADCDownloadCacheForStudy); },
+                updateADCDownloadCacheForRepertoire: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheForRepertoire); },
+                deleteADCDownloadCacheForRepertoire: async function(req, res) { return try_function(req, res, adcController.deleteADCDownloadCacheForRepertoire); },
+                notifyADCDownloadCache: async function(req, res) { return try_function(req, res, adcController.notifyADCDownloadCache); },
 
                 // administration
-                queryProjectLoad: adminController.queryProjectLoad
+                queryProjectLoad: async function(req, res) { return try_function(req, res, adminController.queryProjectLoad); }
             }
         });
 
@@ -308,6 +323,12 @@ ServiceAccount.getToken()
         } else {
             config.log.info(context, 'ADC loading is disabled.');
             // TODO: remove any existing jobs from the queue?
+        }
+
+        if (config.enable_job_queues) {
+            config.log.info(context, 'Job queues are ENABLED.', true);
+        } else {
+            config.log.info(context, 'Job queues are DISABLED.', true);
         }
 
     })

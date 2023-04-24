@@ -40,10 +40,16 @@ var apiResponseController = require('./apiResponseController');
 
 // Models
 var User = require('../models/user');
-var ServiceAccount = require('../models/serviceAccount');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 
@@ -66,7 +72,7 @@ AdminController.queryProjectLoad = async function(request, response) {
     var msg = null;
 
     // query the records
-    var project_loads = await agaveIO.queryProjectLoadMetadata(projectUuid, collection, shouldLoad, isLoaded, repertoireMetadataLoaded, rearrangementDataLoaded)
+    var project_loads = await tapisIO.queryProjectLoadMetadata(projectUuid, collection, shouldLoad, isLoaded, repertoireMetadataLoaded, rearrangementDataLoaded)
         .catch(function(error) {
             msg = config.log.error(context, 'error ' + error);
         });

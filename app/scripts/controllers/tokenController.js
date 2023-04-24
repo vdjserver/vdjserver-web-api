@@ -30,11 +30,19 @@
 var TokenController = {};
 module.exports = TokenController;
 
+var config = require('../config/config');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
 
 // Retrieves a new user token from Agave and returns it to the client
@@ -42,11 +50,11 @@ TokenController.getToken = function(request, response) {
 
     console.log('VDJ-API INFO: TokenController.getToken - begin for ' + request.body.username);
 
-    return agaveIO.getUserVerificationMetadata(request.body.username)
+    return tapisIO.getUserVerificationMetadata(request.body.username)
         .then(function(userVerificationMetadata) {
             console.log('VDJ-API INFO: TokenController.getToken - verification metadata for ' + request.body.username);
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
-                return agaveIO.getToken(request.body);
+                return tapisIO.getToken(request.body);
             }
             else {
                 return Promise.reject(new Error('TokenController.getToken - error - unable to verify account for ' + request.body.username));
@@ -70,7 +78,7 @@ TokenController.refreshToken = function(request, response) {
 
     console.log('VDJ-API INFO: TokenController.refreshToken - begin for ' + request.body.username);
 
-    return agaveIO.refreshToken(request.body)
+    return tapisIO.refreshToken(request.body)
         .then(function(agaveToken) {
             console.log('VDJ-API INFO: TokenController.refreshToken - complete for ' + request.body.username);
             apiResponseController.sendSuccess(agaveToken, response);

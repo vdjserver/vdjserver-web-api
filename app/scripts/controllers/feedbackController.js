@@ -38,8 +38,14 @@ var apiResponseController = require('./apiResponseController');
 // Models
 var Feedback = require('../models/feedback');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 

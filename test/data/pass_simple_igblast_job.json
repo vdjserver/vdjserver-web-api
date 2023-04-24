@@ -1,0 +1,47 @@
+{
+  "audit_only": true,
+  "workflow": {
+    "prefix": {
+      "airr": "https://airr-community.org/",
+      "orcid": "https://orcid.org/",
+      "vdjserver": "https://vdjserver.org/",
+      "foaf": "http://xmlns.com/foaf/0.1/"
+    },
+    "agent": {
+      "orcid:0000-0002-9889-1221": {
+        "prov:type": {
+          "$": "prov:Person",
+          "type": "prov:QUALIFIED_NAME"
+        },
+        "foaf:givenName": "Scott",
+        "foaf:mbox": "<mailto:scott.christley@utsouthwestern.edu>"
+      }
+    },
+    "entity": {
+      "airr:Repertoire:9135128879355662826-242ac113-0001-012": {
+        "airr:type": "Repertoire",
+        "vdjserver:uuid": "9135128879355662826-242ac113-0001-012"
+      },
+      "airr:Rearrangement:null-1": {
+        "airr:type": "Rearrangement"
+      }
+    },
+    "activity": {
+      "vdjserver:activity:1": {
+          "vdjserver:app": "igblast-ls5-1.14u2"
+      }
+    },
+    "uses": {
+      "vdjserver:app:input:null-1": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "airr:Repertoire:9135128879355662826-242ac113-0001-012"
+      }
+    },
+    "isGeneratedBy": {
+      "vdjserver:app:output:null-1": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "airr:Rearrangement:null-1"
+      }
+    }
+  }
+}

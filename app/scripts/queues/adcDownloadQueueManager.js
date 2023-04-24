@@ -33,14 +33,18 @@ module.exports = ADCDownloadQueueManager;
 // App
 var app = require('../app');
 var config = require('../config/config');
-var agaveSettings = require('../config/agaveSettings');
 var mongoSettings = require('../config/mongoSettings');
 
-// Models
-var ServiceAccount = require('../models/serviceAccount');
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var webhookIO = require('../vendor/webhookIO');
 var emailIO = require('../vendor/emailIO');
 var adcIO = require('../vendor/adcIO');
@@ -70,7 +74,7 @@ ADCDownloadQueueManager.triggerDownloadCache = async function() {
 
     if (config.debug) console.log('VDJ-API INFO: ADCDownloadQueueManager.triggerDownloadCache');
     
-    var adc_cache = await agaveIO.getADCDownloadCache()
+    var adc_cache = await tapisIO.getADCDownloadCache()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCDownloadQueueManager.triggerDownloadCache, error ' + error;
         });
@@ -85,7 +89,7 @@ ADCDownloadQueueManager.triggerDownloadCache = async function() {
         console.log('VDJ-API INFO: ADCDownloadQueueManager.triggerDownloadCache, creating adc_cache metadata singleton');
 
         // create the adc_cache metadata singleton
-        adc_cache = await agaveIO.createADCDownloadCache()
+        adc_cache = await tapisIO.createADCDownloadCache()
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCDownloadQueueManager.triggerDownloadCache, error ' + error;
             });
@@ -103,7 +107,7 @@ ADCDownloadQueueManager.triggerDownloadCache = async function() {
     // enable the cache
     console.log('VDJ-API INFO: ADCDownloadQueueManager.triggerDownloadCache, enabling cache');
     adc_cache['value']['enable_cache'] = true;
-    await agaveIO.updateMetadata(adc_cache['uuid'], adc_cache['name'], adc_cache['value'], null)
+    await tapisIO.updateMetadata(adc_cache['uuid'], adc_cache['name'], adc_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCDownloadQueueManager.triggerDownloadCache, error ' + error;
         });
@@ -171,7 +175,7 @@ triggerQueue.process(async (job) => {
     }
 
     // nothing running so submit
-    var adc_cache = await agaveIO.getADCDownloadCache()
+    var adc_cache = await tapisIO.getADCDownloadCache()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: triggerQueue, error ' + error;
         });
@@ -210,9 +214,9 @@ submitQueue.process(async (job) => {
     //console.log(job['data']);
 
     // get set of ADC repositories
-    var repos = await agaveIO.getSystemADCRepositories()
+    var repos = await tapisIO.getSystemADCRepositories()
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getSystemADCRepositories error ' + error;
+            msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getSystemADCRepositories error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -221,7 +225,7 @@ submitQueue.process(async (job) => {
     }
 
     if (!repos || repos.length != 1) {
-        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getSystemADCRepositories invalid metadata: ' + repos;
+        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getSystemADCRepositories invalid metadata: ' + repos;
         console.error(msg);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
@@ -251,9 +255,9 @@ submitQueue.process(async (job) => {
         //console.log(studies);
 
         // get any cached study entries for the repository
-        var cached_studies = await agaveIO.getStudyCacheEntries(repository_id)
+        var cached_studies = await tapisIO.getStudyCacheEntries(repository_id)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
+                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getCachedStudies error ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -300,9 +304,9 @@ submitQueue.process(async (job) => {
             var vdjserver_uuid = reps[0]['study']['vdjserver_uuid'];
             if (vdjserver_uuid) {
                 console.log('VDJ-API INFO: check project load:', vdjserver_uuid);
-                var projectLoad = await agaveIO.getProjectLoadMetadata(vdjserver_uuid, mongoSettings.loadCollection)
+                var projectLoad = await tapisIO.getProjectLoadMetadata(vdjserver_uuid, mongoSettings.loadCollection)
                     .catch(function(error) {
-                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.createCachedStudyMetadata error ' + error;
+                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.createCachedStudyMetadata error ' + error;
                     });
                 if (msg) {
                     console.error(msg);
@@ -319,9 +323,9 @@ submitQueue.process(async (job) => {
 
             // insert cache entry
             console.log('VDJ-API INFO: ADC study to be cached:', study_id);
-            var cache_entry = await agaveIO.createCachedStudyMetadata(repository_id, study_id, true)
+            var cache_entry = await tapisIO.createCachedStudyMetadata(repository_id, study_id, true)
                 .catch(function(error) {
-                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.createCachedStudyMetadata error ' + error;
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.createCachedStudyMetadata error ' + error;
                 });
             if (msg) {
                 console.error(msg);
@@ -333,9 +337,9 @@ submitQueue.process(async (job) => {
         }
 
         // reload with any new entries
-        cached_studies = await agaveIO.getStudyCacheEntries(repository_id)
+        cached_studies = await tapisIO.getStudyCacheEntries(repository_id)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
+                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getCachedStudies error ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -377,9 +381,9 @@ submitQueue.process(async (job) => {
             //console.log(reps);
 
             // get any cached repertoire entries for the study
-            var cached_reps = await agaveIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
+            var cached_reps = await tapisIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
                 .catch(function(error) {
-                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getRepertoireCacheEntries error ' + error;
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getRepertoireCacheEntries error ' + error;
                 });
             if (msg) {
                 console.error(msg);
@@ -406,9 +410,9 @@ submitQueue.process(async (job) => {
                 if (cached_reps_dict[repertoire_id]) continue;
 
                 // create cache entry
-                var cache_entry = await agaveIO.createCachedRepertoireMetadata(repository_id, study_id, repertoire_id, true)
+                var cache_entry = await tapisIO.createCachedRepertoireMetadata(repository_id, study_id, repertoire_id, true)
                     .catch(function(error) {
-                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.createCachedRepertoireMetadata error ' + error;
+                        msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.createCachedRepertoireMetadata error ' + error;
                     });
                 if (msg) {
                     console.error(msg);
@@ -431,9 +435,9 @@ submitQueue.process(async (job) => {
         console.log('VDJ-API INFO: ADC query and download job for repository:', repository_id);
 
         // get the cached study entries for the repository
-        var cached_studies = await agaveIO.getStudyCacheEntries(repository_id)
+        var cached_studies = await tapisIO.getStudyCacheEntries(repository_id)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getCachedStudies error ' + error;
+                msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getCachedStudies error ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -450,9 +454,9 @@ submitQueue.process(async (job) => {
             var study_id = cached_studies[s]['value']['study_id'];
 
             // get the cached repertoire entries for the study
-            var cached_reps = await agaveIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
+            var cached_reps = await tapisIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
                 .catch(function(error) {
-                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, agaveIO.getRepertoireCacheEntries error ' + error;
+                    msg = 'VDJ-API ERROR: ADCDownloadQueueManager submitQueue, tapisIO.getRepertoireCacheEntries error ' + error;
                 });
             if (msg) {
                 console.error(msg);
@@ -506,9 +510,9 @@ cacheQueue.process(async (job) => {
     //console.log(study_cache_uuid);
     console.log('VDJ-API INFO: creating cache directory:', study_cache_uuid);
 
-    await agaveIO.createCommunityCacheDirectory(study_cache_uuid)
+    await tapisIO.createCommunityCacheDirectory(study_cache_uuid)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, agaveIO.createCommunityCacheDirectory error ' + error;
+            msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, tapisIO.createCommunityCacheDirectory error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -545,7 +549,7 @@ cacheQueue.process(async (job) => {
             if (query_status['status'] == 'FINISHED') {
                 console.log('VDJ-API INFO: async query is FINISHED, manually sending notification.');
                 // manually send notification
-                var notification = { url: agaveSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
+                var notification = { url: tapisSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
                 await adcIO.sendNotification(notification, query_status)
                     .catch(function(error) {
                         msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, could not manually send notification '
@@ -561,7 +565,7 @@ cacheQueue.process(async (job) => {
     // use ADC ASYNC API if supported
     // TODO: we should get this from the repository info
     if (repository['supports_async']) {
-        var notification = { url: agaveSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
+        var notification = { url: tapisSettings.notifyHost + '/api/v2/adc/cache/notify/' + repertoire_cache['uuid'], method: 'POST' };
         var query_id = await adcIO.asyncGetRearrangements(repository, repertoire_id, notification)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, could not submit ADC ASYNC query for repertoire_id '
@@ -577,7 +581,7 @@ cacheQueue.process(async (job) => {
 
         // save query_id in repertoire cache metadata
         repertoire_cache['value']['async_query_id'] = query_id['query_id'];
-        await agaveIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
+        await tapisIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCDownloadQueueManager cacheQueue, error ' + error;
             });
@@ -664,7 +668,7 @@ finishQueue.process(async (job) => {
     console.log(query_status);
 
     // reload cache metadata, to check if already finished
-    var metadata = await agaveIO.getMetadata(repertoire_cache['uuid'])
+    var metadata = await tapisIO.getMetadata(repertoire_cache['uuid'])
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishQueuee): Could not get metadata id: ' + repertoire_cache['uuid'] + ', error: ' + error;
             console.error(msg);
@@ -699,13 +703,13 @@ finishQueue.process(async (job) => {
     }
 
     // create permanent postit
-    var url = 'https://' + agaveSettings.hostname
+    var url = 'https://' + tapisSettings.hostname
         + '/files/v2/media/system/'
-        + agaveSettings.storageSystem
+        + tapisSettings.storageSystem
         + '//community/cache/' + study_cache['uuid'] + '/' + outname
         + '?force=true';
 
-    var postit = await agaveIO.createPublicFilePostit(url, true)
+    var postit = await tapisIO.createPublicFilePostit(url, true)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishQueue): Could not create postit for rearrangement file for repertoire cache: ' + repertoire_cache['uuid'] + '.\n' + error;
             console.error(msg);
@@ -722,7 +726,7 @@ finishQueue.process(async (job) => {
     var cache_path = config.vdjserver_data_path + 'community/cache/' + study_cache['uuid'] + '/';
     var stats = fs.statSync(cache_path + outname);
     repertoire_cache["value"]["file_size"] = stats.size;
-    await agaveIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
+    await tapisIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishQueue): Could not update metadata for repertoire cache: ' + repertoire_cache['uuid'] + '.\n' + error;
             console.error(msg);
@@ -781,7 +785,7 @@ finishStudyQueue.process(async (job) => {
     console.log('VDJ-API INFO (finishStudyQueue): start job for repository:', study_cache['value']['repository_id'], 'and study:', study_cache['value']['study_id']);
 
     // reload cache metadata, to check if already finished
-    var metadata = await agaveIO.getMetadata(study_cache['uuid'])
+    var metadata = await tapisIO.getMetadata(study_cache['uuid'])
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishStudyQueue): Could not get metadata id: ' + study_cache['uuid'] + ', error: ' + error;
             console.error(msg);
@@ -794,9 +798,9 @@ finishStudyQueue.process(async (job) => {
     }
 
     // get the cached repertoire entries for the study
-    var cached_reps = await agaveIO.getRepertoireCacheEntries(study_cache['value']['repository_id'], study_cache['value']['study_id'], null, null, null)
+    var cached_reps = await tapisIO.getRepertoireCacheEntries(study_cache['value']['repository_id'], study_cache['value']['study_id'], null, null, null)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (finishStudyQueue): agaveIO.getRepertoireCacheEntries error ' + error;
+            msg = 'VDJ-API ERROR (finishStudyQueue): tapisIO.getRepertoireCacheEntries error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -807,7 +811,7 @@ finishStudyQueue.process(async (job) => {
     // get all the repertoire metadata for the study and put in file
     var repertoire_metadata = await adcIO.getRepertoires(repository, study_cache['value']['study_id'])
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (finishStudyQueue): agaveIO.getRepertoires error ' + error;
+            msg = 'VDJ-API ERROR (finishStudyQueue): tapisIO.getRepertoires error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -835,7 +839,7 @@ finishStudyQueue.process(async (job) => {
             var repertoire_cache = cached_reps[i];
             var stats = fs.statSync(cache_path + repertoire_cache["value"]["archive_file"]);
             repertoire_cache["value"]["file_size"] = stats.size;
-            await agaveIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
+            await tapisIO.updateMetadata(repertoire_cache['uuid'], repertoire_cache['name'], repertoire_cache['value'], null)
                 .catch(function(error) {
                     msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for repertoire cache: ' + repertoire_cache['uuid'] + '.\n' + error;
                     console.error(msg);
@@ -870,13 +874,13 @@ finishStudyQueue.process(async (job) => {
         outnames.push(outname);
 
         // create permanent postit
-        var url = 'https://' + agaveSettings.hostname
+        var url = 'https://' + tapisSettings.hostname
             + '/files/v2/media/system/'
-            + agaveSettings.storageSystem
+            + tapisSettings.storageSystem
             + '//community/cache/' + study_cache['uuid'] + '/' + outname
             + '?force=true';
 
-        var postit = await agaveIO.createPublicFilePostit(url, true)
+        var postit = await tapisIO.createPublicFilePostit(url, true)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR (finishStudyQueue): Could not create postit for study archive for study cache: ' + study_cache['uuid'] + '.\n' + error;
                 console.error(msg);
@@ -911,7 +915,7 @@ finishStudyQueue.process(async (job) => {
     }
     study_cache["value"]["is_cached"] = true;
 
-    await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
+    await tapisIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (finishStudyQueue): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
             console.error(msg);
@@ -945,9 +949,9 @@ ADCDownloadQueueManager.recacheRepertoireMetadata = async function(repository_id
 
     console.log('VDJ-API INFO (ADCDownloadQueueManager.recacheRepertoireMetadata): start');
 
-    var study_cache = await agaveIO.getStudyCacheEntries(repository_id, study_id)
+    var study_cache = await tapisIO.getStudyCacheEntries(repository_id, study_id)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (ADCDownloadQueueManager.recacheRepertoireMetadata): agaveIO.getCachedStudies error ' + error;
+            msg = 'VDJ-API ERROR (ADCDownloadQueueManager.recacheRepertoireMetadata): tapisIO.getCachedStudies error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -967,7 +971,7 @@ ADCDownloadQueueManager.recacheRepertoireMetadata = async function(repository_id
     study_cache["value"]["is_cached"] = false;
     study_cache["value"]["archive_file"] = null;
 
-    await agaveIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
+    await tapisIO.updateMetadata(study_cache['uuid'], study_cache['name'], study_cache['value'], null)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (ADCDownloadQueueManager.recacheRepertoireMetadata): Could not update metadata for study cache: ' + study_cache['uuid'] + '.\n' + error;
             console.error(msg);
@@ -987,9 +991,9 @@ clearQueue.process(async (job) => {
 
     console.log('VDJ-API INFO (clearQueue): clear ADC download cache for repository:', repository_id, 'and study:', study_id);
 
-    var study_cache = await agaveIO.getStudyCacheEntries(repository_id, study_id)
+    var study_cache = await tapisIO.getStudyCacheEntries(repository_id, study_id)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ADCDownloadQueueManager clearQueue, agaveIO.getCachedStudies error ' + error;
+            msg = 'VDJ-API ERROR: ADCDownloadQueueManager clearQueue, tapisIO.getCachedStudies error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -1006,9 +1010,9 @@ clearQueue.process(async (job) => {
     study_cache = study_cache[0];
 
     // get any cached repertoire entries for the study
-    var cached_reps = await agaveIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
+    var cached_reps = await tapisIO.getRepertoireCacheEntries(repository_id, study_id, null, null, null)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (clearQueue): agaveIO.getRepertoireCacheEntries error ' + error;
+            msg = 'VDJ-API ERROR (clearQueue): tapisIO.getRepertoireCacheEntries error ' + error;
         });
     if (msg) {
         console.error(msg);
@@ -1038,9 +1042,9 @@ clearQueue.process(async (job) => {
         console.log('VDJ-API INFO (clearQueue): deleting ADC repertoire cache record:', cached_reps[i]['uuid']);
 
         if (cached_reps[i]['value']['postit_id']) {
-            await agaveIO.deletePostit(cached_reps[i]['value']['postit_id'])
+            await tapisIO.deletePostit(cached_reps[i]['value']['postit_id'])
                 .catch(function(error) {
-                    msg = 'VDJ-API ERROR (clearQueue): agaveIO.deletePostit: ' + cached_reps[i]['value']['postit_id'] + ', error ' + error;
+                    msg = 'VDJ-API ERROR (clearQueue): tapisIO.deletePostit: ' + cached_reps[i]['value']['postit_id'] + ', error ' + error;
                 });
             if (msg) {
                 console.error(msg);
@@ -1049,9 +1053,9 @@ clearQueue.process(async (job) => {
             }
         }
 
-        await agaveIO.deleteMetadata(ServiceAccount.accessToken(), cached_reps[i]['uuid'])
+        await tapisIO.deleteMetadata(ServiceAccount.accessToken(), cached_reps[i]['uuid'])
             .catch(function(error) {
-                msg = 'VDJ-API ERROR (clearQueue): agaveIO.deleteMetadata: ' + cached_reps[i]['uuid'] + ', error ' + error;
+                msg = 'VDJ-API ERROR (clearQueue): tapisIO.deleteMetadata: ' + cached_reps[i]['uuid'] + ', error ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -1063,9 +1067,9 @@ clearQueue.process(async (job) => {
     // for study, delete the postit, delete the metadata
     console.log('VDJ-API INFO (clearQueue): deleting ADC study cache record:', study_cache['uuid']);
     if (study_cache['value']['postit_id']) {
-        await agaveIO.deletePostit(study_cache['value']['postit_id'])
+        await tapisIO.deletePostit(study_cache['value']['postit_id'])
             .catch(function(error) {
-                msg = 'VDJ-API ERROR (clearQueue): agaveIO.deletePostit: ' + study_cache['value']['postit_id'] + ', error ' + error;
+                msg = 'VDJ-API ERROR (clearQueue): tapisIO.deletePostit: ' + study_cache['value']['postit_id'] + ', error ' + error;
             });
         if (msg) {
             console.error(msg);
@@ -1074,9 +1078,9 @@ clearQueue.process(async (job) => {
         }
     }
 
-    await agaveIO.deleteMetadata(ServiceAccount.accessToken(), study_cache['uuid'])
+    await tapisIO.deleteMetadata(ServiceAccount.accessToken(), study_cache['uuid'])
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (clearQueue): agaveIO.deleteMetadata: ' + study_cache['uuid'] + ', error ' + error;
+            msg = 'VDJ-API ERROR (clearQueue): tapisIO.deleteMetadata: ' + study_cache['uuid'] + ', error ' + error;
         });
     if (msg) {
         console.error(msg);

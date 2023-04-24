@@ -3,15 +3,8 @@
 
 var _ = require('underscore');
 
-// Models
-var ServiceAccount = require('./serviceAccount');
-
 // Node Libraries
 var moment = require('moment');
-var Q = require('q');
-
-// Processing
-var agaveIO = require('../vendor/agaveIO');
 
 var PendingJob = function(attributes) {
     if (typeof attributes === 'object') {

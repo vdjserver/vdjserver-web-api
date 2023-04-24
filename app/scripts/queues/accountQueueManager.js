@@ -3,13 +3,17 @@
 
 // App
 var app = require('../app');
-var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
-// Models
-var ServiceAccount = require('../models/serviceAccount');
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 
@@ -31,7 +35,7 @@ AccountQueueManager.processNewAccounts = function() {
 
         ServiceAccount.getToken()
             .then(function(token) {
-                return agaveIO.createUserProfile(user, ServiceAccount.accessToken())
+                return tapisIO.createUserProfile(user, ServiceAccount.accessToken())
             })
             .then(function() {
                 console.log(
@@ -77,7 +81,7 @@ AccountQueueManager.processNewAccounts = function() {
 
         var user = createUserJob.data;
 
-        agaveIO.createUserVerificationMetadata(user.username)
+        tapisIO.createUserVerificationMetadata(user.username)
             .then(function(userVerificationMetadata) {
                 console.log(
                     'AccountQueueManager.processNewAccounts createUserVerificationMetadataTask'

@@ -43,10 +43,16 @@ var adcDownloadQueueManager = require('../queues/adcDownloadQueueManager');
 
 // Models
 var User = require('../models/user');
-var ServiceAccount = require('../models/serviceAccount');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
 var mongoIO = require('../vendor/mongoIO');
@@ -68,7 +74,7 @@ ADCController.defaultADCRepositories = async function(request, response) {
     var msg = null;
 
     // get list from metadata
-    var adc = await agaveIO.getSystemADCRepositories()
+    var adc = await tapisIO.getSystemADCRepositories()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCController.defaultADCRepositories, error ' + error;
         });
@@ -96,7 +102,7 @@ ADCController.updateADCRepositories = async function(request, response) {
     var data = request['body'];
 
     // get list from metadata
-    var adc = await agaveIO.getSystemADCRepositories()
+    var adc = await tapisIO.getSystemADCRepositories()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, error ' + error;
         });
@@ -121,7 +127,7 @@ ADCController.updateADCRepositories = async function(request, response) {
         }
 
         // save
-        await agaveIO.updateMetadata(entry['uuid'], entry['name'], value, null)
+        await tapisIO.updateMetadata(entry['uuid'], entry['name'], value, null)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCController.updateADCRepositories, error while updating: ' + error;
             });
@@ -145,7 +151,7 @@ ADCController.getADCDownloadCacheStatus = async function(request, response) {
     var msg = null;
 
     // get list from metadata
-    var cache = await agaveIO.getADCDownloadCache()
+    var cache = await tapisIO.getADCDownloadCache()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheStatus, error ' + error;
         });
@@ -171,7 +177,7 @@ ADCController.updateADCDownloadCacheStatus = async function(request, response) {
     var operation = request.body.operation;
 
     // get singleton metadata entry
-    var cache = await agaveIO.getADCDownloadCache()
+    var cache = await tapisIO.getADCDownloadCache()
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, error ' + error;
         });
@@ -190,7 +196,7 @@ ADCController.updateADCDownloadCacheStatus = async function(request, response) {
         if (operation == 'trigger') value['enable_cache'] = true;
 
         // update
-        await agaveIO.updateMetadata(cache[0]['uuid'], cache[0]['name'], value, null)
+        await tapisIO.updateMetadata(cache[0]['uuid'], cache[0]['name'], value, null)
             .catch(function(error) {
                 msg = 'VDJ-API ERROR: ADCController.updateADCDownloadCacheStatus, error while updating: ' + error;
             });
@@ -221,7 +227,7 @@ ADCController.getADCDownloadCacheForStudies = async function(request, response) 
     var msg = null;
 
     // all cached studies for all repositories
-    var cached_studies = await agaveIO.getStudyCacheEntries(null, null, true, true)
+    var cached_studies = await tapisIO.getStudyCacheEntries(null, null, true, true)
         .catch(function(error) {
             msg = 'VDJ-API ERROR: ADCController.getADCDownloadCacheForStudies, error ' + error;
         });
@@ -284,7 +290,7 @@ ADCController.notifyADCDownloadCache = async function(request, response) {
         return Promise.resolve();
 
     // search for metadata item based on notification id
-    var metadata = await agaveIO.getMetadata(notify_id)
+    var metadata = await tapisIO.getMetadata(notify_id)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): Could not get metadata for notification id: ' + notify_id + ', error: ' + error;
             console.error(msg);
@@ -305,9 +311,9 @@ ADCController.notifyADCDownloadCache = async function(request, response) {
         }
 
         // get study cache metadata
-        var cs = await agaveIO.getStudyCacheEntries(metadata['value']['repository_id'], metadata['value']['study_id'])
+        var cs = await tapisIO.getStudyCacheEntries(metadata['value']['repository_id'], metadata['value']['study_id'])
             .catch(function(error) {
-                msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): agaveIO.getCachedStudies error ' + error;
+                msg = 'VDJ-API ERROR (ADCController.notifyADCDownloadCache): tapisIO.getCachedStudies error ' + error;
             });
         if (msg) {
             console.error(msg);

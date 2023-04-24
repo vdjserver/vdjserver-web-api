@@ -40,15 +40,18 @@ var app = require('../app');
 var apiResponseController = require('./apiResponseController');
 
 // Models
-var ServiceAccount = require('../models/serviceAccount');
 var User = require('../models/user');
 
-// Processing
-var agaveIO = require('../vendor/agaveIO');
-var webhookIO = require('../vendor/webhookIO');
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
 
-// Node Libraries
-var Q = require('q');
+// Processing
+var webhookIO = require('../vendor/webhookIO');
 
 // Extract token from header
 AuthController.extractToken = function(req) {
@@ -93,13 +96,13 @@ AuthController.userAuthorization = function(req, scopes, definition) {
 
     // get my profile and username from the token
     // return a promise
-    return agaveIO.getAgaveUserProfile(token, 'me')
+    return tapisIO.getTapisUserProfile(token, 'me')
         .then(function(userProfile) {
             // save the user profile
             req['user'] = userProfile;
 
             // now check that the user account has been verified
-            return agaveIO.getUserVerificationMetadata(req['user']['username']);
+            return tapisIO.getUserVerificationMetadata(req['user']['username']);
         })
         .then(function(userVerificationMetadata) {
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
@@ -131,7 +134,7 @@ AuthController.adminAuthorization = function(req, scopes, definition) {
 
     // get my profile and username from the token
     // return a promise
-    return agaveIO.getAgaveUserProfile(token, 'me')
+    return tapisIO.getTapisUserProfile(token, 'me')
         .then(function(userProfile) {
             // save the user profile
             req['user'] = userProfile;
@@ -182,13 +185,13 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
             if (!result) return result;
 
             // verify the user has access to project
-            return agaveIO.getProjectMetadata(token, project_uuid);
+            return tapisIO.getProjectMetadata(token, project_uuid);
         })
         .then(function(projectMetadata) {
             // make sure its project metadata and not some random uuid
             // TODO: should disallow old VDJServer V1 projects at some point
             if (projectMetadata && (projectMetadata.name == 'private_project') || (projectMetadata.name == 'public_project') || (projectMetadata.name == 'project') || (projectMetadata.name == 'archive_project')) {
-                return agaveIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
+                return tapisIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
             }
             else {
                 return Promise.reject(new Error('invalid project metadata'));
@@ -219,7 +222,7 @@ AuthController.verifyUser = function(username) {
     if (username == undefined) return false;
 
     // return a promise
-    return agaveIO.getUserVerificationMetadata(username)
+    return tapisIO.getUserVerificationMetadata(username)
         .then(function(userVerificationMetadata) {
             if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
                 // valid
@@ -247,7 +250,7 @@ AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
     if (accessToken == undefined) return false;
     if (username == undefined) return false;
 
-    return agaveIO.getMetadataPermissionsForUser(accessToken, uuid, username)
+    return tapisIO.getMetadataPermissionsForUser(accessToken, uuid, username)
         .then(function(metadataPermissions) {
             // we can read the metadata, but do we have write permission?
             if (metadataPermissions && metadataPermissions.permission.write)
