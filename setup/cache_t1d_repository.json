@@ -1,0 +1,12 @@
+{
+    "repository_set":"staging",
+    "repository_id":"t1d",
+    "repository": {
+        "repository_id":"t1d",
+        "server_host": "t1d-1.ireceptor.org",
+        "base_url": "/airr/v1",
+        "title": "T1D",
+        "enable_cache": true,
+        "disable": false
+    }
+}
