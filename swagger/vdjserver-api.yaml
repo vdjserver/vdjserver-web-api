@@ -204,7 +204,7 @@ paths:
                   status:
                     type: string
                   result:
-                    $ref: '#/components/schemas/ProjectMetadata'
+                    $ref: '#/components/schemas/PrivateProjectMeta'
         '400':
           description: Bad request.
         '401':
@@ -257,7 +257,7 @@ paths:
                   status:
                     type: string
                   result:
-                    $ref: '#/components/schemas/ProjectMetadata'
+                    $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':
@@ -874,7 +874,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Feedback'
+              $ref: '#/components/schemas/FeedbackRequest'
       responses:
         '200':
           description: Success.
@@ -899,7 +899,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PublicFeedback'
+              $ref: '#/components/schemas/PublicFeedbackRequest'
       responses:
         '200':
           description: Success.

@@ -73,7 +73,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
     var accessToken = authController.extractToken(request);
     var username = request.user.username;
 
-    console.log('VDJ-API INFO: PermissionsController.syncMetadataPermissionsWithProject - begin for project ' + projectUuid);
+    console.log('VDJ-API INFO: PermissionsController.syncMetadataPermissionsWithProject - begin for project: ' + projectUuid + ' for metadata: ' + uuid);
 
     // verify the user has write access to metadata object
     return authController.verifyMetadataAccess(uuid, accessToken, username)
@@ -105,21 +105,8 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
             var projectUsernames = metadataPermissions.getUsernamesFromMetadataResponse(projectPermissions);
 
             var promises = [];
-
-            function createAgaveCall(username, token, projectUuid) {
-
-                return function() {
-
-                    return tapisIO.addUsernameToMetadataPermissions(
-                        username,
-                        token,
-                        projectUuid
-                    );
-                };
-            }
-
             for (var i = 0; i < projectUsernames.length; i++) {
-                promises[i] = createAgaveCall(
+                promises[i] = tapisIO.addUsernameToMetadataPermissions(
                     projectUsernames[i],
                     ServiceAccount.accessToken(),
                     uuid
