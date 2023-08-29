@@ -30,6 +30,7 @@
 var JobQueueManager = {};
 module.exports = JobQueueManager;
 
+var app = require('../app');
 var config = require('../config/config');
 
 // Tapis
@@ -48,13 +49,13 @@ var emailIO = require('../vendor/emailIO');
 var Queue = require('bull');
 var fs = require('fs');
 
-var triggerQueue = new Queue('Tapis job queue trigger');
-var createQueue = new Queue('Tapis job queue create');
-var checkQueue = new Queue('Tapis job queue check');
-var jobQueue = new Queue('Tapis job queue submit job');
-var finishQueue = new Queue('Tapis job queue finish');
-var clearQueue = new Queue('Tapis job queue clear');
-var reloadQueue = new Queue('Tapis job queue reload');
+var triggerQueue = new Queue('Tapis job queue trigger', { redis: app.redisConfig });
+var createQueue = new Queue('Tapis job queue create', { redis: app.redisConfig });
+var checkQueue = new Queue('Tapis job queue check', { redis: app.redisConfig });
+var jobQueue = new Queue('Tapis job queue submit job', { redis: app.redisConfig });
+var finishQueue = new Queue('Tapis job queue finish', { redis: app.redisConfig });
+var clearQueue = new Queue('Tapis job queue clear', { redis: app.redisConfig });
+var reloadQueue = new Queue('Tapis job queue reload', { redis: app.redisConfig });
 
 // Models
 // TODO: Put these in vdjserver schema

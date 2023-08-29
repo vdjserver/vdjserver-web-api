@@ -1,5 +1,5 @@
 # Base Image
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 MAINTAINER VDJServer <vdjserver@utsouthwestern.edu>
 
@@ -15,42 +15,16 @@ MAINTAINER VDJServer <vdjserver@utsouthwestern.edu>
 RUN DEBIAN_FRONTEND='noninteractive' apt-get update && DEBIAN_FRONTEND='noninteractive' apt-get install -y \
     make \
     gcc g++ \
-    redis-server \
-    redis-tools \
     sendmail-bin \
     supervisor \
     wget \
-    xz-utils \
-    python3 \
-    python3-pip
-
-RUN pip3 install \
-    requests \
-    python-dotenv
-
-# TODO: Redis should be moved out to docker-compose
-# Turn off THP for redis, warning mentioned latency and memory usage issues when on
-# RUN echo never > /sys/kernel/mm/transparent_hugepage/enabled
-
-##################
-##################
-
-# Setup postfix
-# The postfix install won't respect noninteractivity unless this config is set beforehand.
-RUN mkdir /etc/postfix
-RUN touch /etc/mailname
-COPY docker/postfix/main.cf /etc/postfix/main.cf
-COPY docker/scripts/postfix-config-replace.sh /root/postfix-config-replace.sh
-
-# Debian vociferously complains if you try to install postfix and sendmail at the same time.
-RUN DEBIAN_FRONTEND='noninteractive' apt-get install -y -q \
-    postfix
+    xz-utils
 
 ##################
 ##################
 
 # node
-ENV NODE_VER v14.21.3
+ENV NODE_VER v18.17.1
 RUN wget https://nodejs.org/dist/$NODE_VER/node-$NODE_VER-linux-x64.tar.xz
 RUN tar xf node-$NODE_VER-linux-x64.tar.xz
 RUN cp -rf /node-$NODE_VER-linux-x64/bin/* /usr/bin
@@ -72,10 +46,8 @@ RUN mkdir /home/vdj
 RUN chown vdj /home/vdj
 RUN chgrp G-803419 /home/vdj
 
-# Setup redis
-COPY docker/redis/redis.conf /etc/redis/redis.conf
-
 # Setup supervisor
+COPY docker/scripts/start_supervisor.sh /root/start_supervisor.sh
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 ##################
@@ -84,12 +56,11 @@ COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 # Copy project source
 RUN mkdir /vdjserver-web-api
 COPY . /vdjserver-web-api
+RUN cd /vdjserver-web-api/app/airr-standards/lang/js && npm install && npm run test
+RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install
 RUN cd /vdjserver-web-api && npm install
 
 # ESLint
 RUN cd /vdjserver-web-api && npm run eslint app/scripts app/vdj-tapis-js app/vdjserver-schema
 
-# Install the local airr-standards
-RUN cd /vdjserver-web-api/app/airr-standards/lang/python && pip3 install .
-
-CMD ["/root/postfix-config-replace.sh"]
+CMD ["/root/start_supervisor.sh"]

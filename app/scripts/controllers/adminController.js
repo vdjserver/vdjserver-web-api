@@ -30,10 +30,8 @@
 var AdminController = {};
 module.exports = AdminController;
 
+// config
 var config = require('../config/config');
-
-// App
-var app = require('../app');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
@@ -52,12 +50,6 @@ var ServiceAccount = tapisIO.serviceAccount;
 // Processing
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
-
-// Node Libraries
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
 
 AdminController.queryProjectLoad = async function(request, response) {
     var context = 'AdminController.queryProjectLoad';
