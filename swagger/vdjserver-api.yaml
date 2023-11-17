@@ -425,7 +425,6 @@ paths:
             type: string
             enum:
               - subject
-              - diagnosis
               - sample
       responses:
         '200':

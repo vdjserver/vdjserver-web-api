@@ -1729,19 +1729,30 @@ ProjectController.exportTable = async function(request, response) {
 
     var tsvData = '';
     var schema = null;
-    //if (tableName == 'subject') schema = new airr.SchemaDefinition('Subject');
-    //console.log(schema);
+    //if (tableName == 'subject') schema = airr.getSchema('Subject');
+    if (tableName == 'subject') schema = new airr.SchemaDefinition('Subject');
+    var diagnosisSchema = new airr.SchemaDefinition('Diagnosis');
     //if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
     //if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];
     var columns = [ 'vdjserver_uuid' ];
+    var subject_columns = [ 'vdjserver_uuid' ];
+    var diagnosis_columns = [ 'vdjserver_uuid' ];
+
     for (let i in schema.properties) {
-        //console.log(i);
-        //console.log(schema.properties[i]);
         all_columns.push(i);
         if (schema.type(i) == 'array') continue;
         if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
         columns.push(i);
+        subject_columns.push(i);
+    }
+
+    for(let i in diagnosisSchema.properties) {
+        all_columns.push(i);
+        if (schema.type(i) == 'array') continue;
+        if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+        columns.push(i);
+        diagnosis_columns.push(i);
     }
 
     // default
@@ -1752,6 +1763,7 @@ ProjectController.exportTable = async function(request, response) {
     // convert to TSV format
     for (var i = 0; i < metadataList.length; ++i) {
         var value = metadataList[i].value;
+        var row = "";
 
         // header
         if (i == 0) {
@@ -1759,13 +1771,9 @@ ProjectController.exportTable = async function(request, response) {
             for (var j = 0; j < columns.length; ++j) {
                 var prop = columns[j];
                 if (!first) tsvData += '\t';
-                tsvData += prop;
-                first = false;
-            }
-            for (var prop in value) {
-                if (all_columns.indexOf(prop) >= 0) continue;
-                if (!first) tsvData += '\t';
-                tsvData += prop;
+                if(diagnosis_columns.includes(prop) && prop != 'vdjserver_uuid') { 
+                    tsvData += 'diagnosis.'+prop; 
+                } else tsvData += prop;
                 first = false;
             }
             tsvData += '\n';
@@ -1773,24 +1781,46 @@ ProjectController.exportTable = async function(request, response) {
 
         // values
         var first = true;
-        for (var j = 0; j < columns.length; ++j) {
+        for(var j=0; j<subject_columns.length; j++) {
             var prop = columns[j];
-            if (!first) tsvData += '\t';
-            if (prop == 'vdjserver_uuid') {
-                tsvData += metadataList[i]['uuid'];
-            } else if (prop in value) {
-                if (schema.is_ontology(prop)) {
-                    if (value[prop]['id'] != null) tsvData += value[prop]['id'];
-                } else if (value[prop] != null) tsvData += value[prop];
+            if (!first) { tsvData += '\t'; row += '\t'; }
+            if (prop == 'vdjserver_uuid') { 
+                tsvData += metadataList[i]['uuid']; row += metadataList[i]['uuid'];
+            } else if(prop in value) {
+                if(schema.is_ontology(prop)) {
+                    if(value[prop]['id'] != null) {
+                        tsvData += value[prop]['id'];
+                        row += value[prop]['id'];
+                    }
+                } else if (value[prop] != null) {
+                    tsvData += value[prop];
+                    row += value[prop];
+                }
             }
             first = false;
-        }
-        for (var prop in value) {
-            if (all_columns.indexOf(prop) >= 0) continue;
-            if (!first) tsvData += '\t';
-            tsvData += value[prop];
-            first = false;
-        }
+        } //end for
+
+        tsvData += '\t';
+        var first_diagnosis = true;
+
+        for(let z=0; z<metadataList[i]['value']['diagnosis'].length; z++) {
+            if(z != 0) { tsvData += row; }
+            for(var k=1; k<diagnosis_columns.length; k++) {
+                var diagnosis_name = diagnosis_columns[k];
+                if(metadataList[i]['value']['diagnosis'][z][diagnosis_name] != null) {
+                    if(!first_diagnosis) tsvData += '\t';
+                    if (metadataList[i]['value']['diagnosis'][z][diagnosis_name]['id'] != null) {
+                        tsvData += metadataList[i]['value']['diagnosis'][z][diagnosis_name]['id'];
+                    } else {
+                        if(!(typeof metadataList[i]['value']['diagnosis'][z][diagnosis_name] === 'object'))
+                            tsvData += metadataList[i]['value']['diagnosis'][z][diagnosis_name];
+                    }
+                    first_diagnosis = false;
+                }
+            }
+            if(z != metadataList[i]['value']['diagnosis'].length-1) tsvData += '\n';
+        } 
+        row=null;
         tsvData += '\n';
     }
 
