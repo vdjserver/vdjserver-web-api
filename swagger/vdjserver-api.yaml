@@ -485,6 +485,45 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/visualize:
+    post:
+      description: generate visualization for project
+      operationId: generateVisualization
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/VisualizationRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/publish:
     post:
       description: publish project to community data portal

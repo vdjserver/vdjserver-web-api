@@ -57,16 +57,71 @@ var finishQueue = new Queue('Tapis job queue finish', { redis: app.redisConfig }
 var clearQueue = new Queue('Tapis job queue clear', { redis: app.redisConfig });
 var reloadQueue = new Queue('Tapis job queue reload', { redis: app.redisConfig });
 
+JobQueueManager.clearQueues = async function(queue) {
+    var context = 'JobQueueManager.clearQueues';
+    var repeatableJobs = await triggerQueue.getRepeatableJobs();
+    for (let i in repeatableJobs) {
+        await triggerQueue.removeRepeatableByKey(repeatableJobs[i].key);
+    }
+    config.log.info(context, repeatableJobs.length + ' jobs cleared from triggerQueue', true);
+
+    repeatableJobs = await checkQueue.getRepeatableJobs();
+    for (let i in repeatableJobs) {
+        await checkQueue.removeRepeatableByKey(repeatableJobs[i].key);
+    }
+    config.log.info(context, repeatableJobs.length + ' jobs cleared from checkQueue', true);
+}
+
+//
+// Trigger the job queue process
+// This is called by app initialization
+//
+JobQueueManager.triggerQueue = async function() {
+    var context = 'JobQueueManager.triggerQueue';
+    var msg = null;
+
+    config.log.info(context, 'begin');
+
+    if (! config.enable_job_queues) {
+        msg = config.log.error(context, 'Job queues are not enabled in configuration, cannot trigger');
+
+        JobQueueManager.clearQueues();
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    // TODO: do we need to do anything here?
+
+    // trigger the create queue
+    config.log.info(context, 'Job queues enabled, creating jobs', true);
+
+    // submit to check every 3600secs/1hour
+    triggerQueue.add({}, { repeat: { every: 3600000 }});
+
+    // testing, every 2 mins
+    //triggerQueue.add({}, { repeat: { every: 120000 }});
+
+    // trigger the job queue
+    // submit to check every 3600secs/1hour
+    //checkQueue.add({}, { repeat: { every: 3600000 }});
+
+    // testing, every 10 mins
+    checkQueue.add({}, { repeat: { every: 600000 }});
+
+    config.log.info(context, 'end');
+    return Promise.resolve();
+}
+
 // Models
 // TODO: Put these in vdjserver schema
 //var FilePermissions = require('../models/filePermissions');
 //var MetadataPermissions = require('../models/metadataPermissions');
 //var Job = require('../models/job');
 
-JobQueueManager.processJobs = function() {
-    var context = 'JobQueueManager.processJobs';
-    config.log.info(context, 'nothing to be done');
-}
+//JobQueueManager.processJobs = function() {
+//    var context = 'JobQueueManager.processJobs';
+//    config.log.info(context, 'nothing to be done');
+//}
 
 /* --- OLD V1
 

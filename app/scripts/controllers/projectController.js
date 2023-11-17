@@ -39,12 +39,14 @@ var mongoSettings = require('../config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
+var authController = require('./authController');
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
 var AnalysisDocument = require('../models/AnalysisDocument');
 
 var airr = require('airr-js');
+var vdj_schema = require('vdjserver-schema');
 
 // Queues
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
@@ -64,6 +66,8 @@ var tapisSettings = tapisIO.tapisSettings;
 var ServiceAccount = tapisIO.serviceAccount;
 
 // Node Libraries
+const axios = require('axios');
+var requestLib = require('request');
 var yaml = require('js-yaml');
 var d3 = require('d3');
 var kue = require('kue');
@@ -210,7 +214,7 @@ ProjectController.executeWorkflow = async function(request, response) {
     config.log.info(context, 'start, project: ' + projectUuid);
 
     var doc = new AnalysisDocument(request.body.workflow);
-    config.log.info(context, 'document:' + JSON.stringify(doc, null, 2));
+    config.log.info(context, 'analysis document:' + JSON.stringify(doc, null, 2));
 
     // validate
     var valid = await doc.validate(projectUuid, request.body.use_alternate_app)
@@ -221,12 +225,12 @@ ProjectController.executeWorkflow = async function(request, response) {
             return apiResponseController.sendError(msg, 500, response);
         });
     if (!valid) return apiResponseController.sendError('Workflow is not valid.', 400, response);
-    else if (request.body.audit_only) {
+    else if (request.body.audit_only === true) {
         return apiResponseController.sendSuccess('Workflow is valid.', response);
     }
 
     // create meta for analysis document
-    /*
+    config.log.info(context, 'create metadata:', vdj_schema.tapisName('AnalysisDocument'))
     var result = await tapisIO.createMetadataForType(projectUuid, vdj_schema.tapisName('AnalysisDocument'), doc)
         .catch(function(error) {
             let msg = 'Error while saving analysis document.\n' + error;
@@ -235,12 +239,13 @@ ProjectController.executeWorkflow = async function(request, response) {
             return apiResponseController.sendError(msg, 500, response);
         });
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
-*/
+
     //tapisIO.createMetadata(vdj_schema.tapisName('AnalysisDocument'));
     //tapisIO.updateMetadata(vdj_schema.tapisName('ProvRequest'), obj);
     //tapisIO.queryMetadata(vdj_schema.tapisName('ProvRequest'), obj);
 
     // 1. set file set as initial input files
+
     // 2. get set of non-executed activities that have all of their inputs
     // 2a. if none, then perform error checks and exit
     // 3. execute those activities
@@ -258,6 +263,64 @@ ProjectController.getPendingPROV = function(request, response) {
     // query list of pending PROV executions
 
     return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
+
+//
+// Generate visualizations
+//
+
+// This end point is a proxy for the plumber API to generate R visualizations.
+// Instead of worrying about how to secure the plumber API end points and/or
+// do authorization in R, we keep the API private. The plumber API is only
+// accessible by docker services and not the public client/browser.
+
+ProjectController.generateVisualization = async function(request, response) {
+    var context = 'ProjectController.generateVisualization';
+    var projectUuid = request.params.project_uuid;
+
+    config.log.info(context, 'start, project: ' + projectUuid);
+
+//    var accessToken = authController.extractToken();
+//    console.log(accessToken);
+/*
+    var postData = {
+        a: 5,
+        b: 7
+    };
+
+    var requestSettings = {
+        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/sum',
+        method: 'POST',
+        data: postData,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }; */
+
+    var requestSettings = {
+        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/plot',
+        method: 'GET',
+        //decompress: false
+    };
+
+    return requestLib(requestSettings).pipe(response);
+
+    //console.log(requestSettings);
+
+//     tapisV3.sendRequest(requestSettings);
+
+/*    var resp = await axios(requestSettings);
+    console.log(resp.headers);
+
+    //const { status, headers, data: bodyStream } = await axios(requestSettings);
+    //console.log(headers);
+    response.status(resp.status);
+    response.set(resp.headers);
+
+    //return bodyStream.pipe(response);
+    return response.pipe(resp.data); */
+//    return apiResponseController.sendError('Not implemented.', 500, response);
 };
 
 
@@ -1666,7 +1729,8 @@ ProjectController.exportTable = async function(request, response) {
 
     var tsvData = '';
     var schema = null;
-    //if (tableName == 'subject') schema = airr.getSchema('Subject');
+    //if (tableName == 'subject') schema = new airr.SchemaDefinition('Subject');
+    //console.log(schema);
     //if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
     //if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];

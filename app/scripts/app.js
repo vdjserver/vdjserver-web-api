@@ -257,6 +257,7 @@ ServiceAccount.getToken()
                 exportTable: async function(req, res) { return try_function(req, res, projectController.exportTable); },
                 importTable: async function(req, res) { return try_function(req, res, projectController.importTable); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
+                generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
                 unpublishProject: async function(req, res) { return try_function(req, res, projectController.unpublishProject); },
                 loadProject: async function(req, res) { return try_function(req, res, projectController.loadProject); },
@@ -309,6 +310,15 @@ ServiceAccount.getToken()
     .then(function() {
         // Initialize queues
 
+        // Manage Tapis jobs
+        if (config.enable_job_queues) {
+            config.log.info(context, 'Tapis job queues are enabled, triggering.');
+            jobQueueManager.triggerQueue();
+        } else {
+            config.log.info(context, 'Tapis job queues are disabled, clearing queues.');
+            jobQueueManager.clearQueues();
+        }
+
         // ADC download cache queues
         if (config.enableADCDownloadCache) {
             config.log.info(context, 'ADC download cache is enabled, triggering cache.');
@@ -350,7 +360,7 @@ var accountQueueManager = require('./queues/accountQueueManager');
 accountQueueManager.processNewAccounts();
 
 var jobQueueManager = require('./queues/jobQueueManager');
-jobQueueManager.processJobs();
+//jobQueueManager.processJobs();
 
 var projectQueueManager = require('./queues/projectQueueManager');
 projectQueueManager.processProjects();
