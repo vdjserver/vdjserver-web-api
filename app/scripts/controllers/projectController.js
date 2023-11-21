@@ -66,10 +66,11 @@ var tapisSettings = tapisIO.tapisSettings;
 var ServiceAccount = tapisIO.serviceAccount;
 
 // Node Libraries
-const axios = require('axios');
 var requestLib = require('request');
 var yaml = require('js-yaml');
 var d3 = require('d3');
+const { v4: uuidv4 } = require('uuid');
+
 var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
@@ -278,11 +279,36 @@ ProjectController.getPendingPROV = function(request, response) {
 ProjectController.generateVisualization = async function(request, response) {
     var context = 'ProjectController.generateVisualization';
     var projectUuid = request.params.project_uuid;
+    var visualization = request.body.visualization;
+    var uuid = uuidv4();
+    var repertoire_id = request.body.repertoire_id;
+    var repertoire_group_id = request.body.repertoire_group_id;
+    var processing_stage = request.body.processing_stage;
 
-    config.log.info(context, 'start, project: ' + projectUuid);
+    config.log.info(context, 'start ' + visualization['name'] + ', project: ' + projectUuid
+        + ' with uuid: ' + uuid);
+    config.log.info(context, 'repertoire_id: ' + repertoire_id);
+    config.log.info(context, 'repertoire_group_id: ' + repertoire_group_id);
+    config.log.info(context, 'processing_stage: ' + processing_stage);
 
 //    var accessToken = authController.extractToken();
 //    console.log(accessToken);
+
+    var requestSettings = {
+        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/',
+        method: 'GET'
+    };
+
+    switch (visualization['name']) {
+        case 'mutational_hedgehog':
+            requestSettings['url'] += visualization['name'] + '?uuid=' + uuid;
+            return requestLib(requestSettings).pipe(response);
+        case 'heartbeat':
+        default:
+            requestSettings['url'] += 'mean';
+            return requestLib(requestSettings).pipe(response);
+    }
+
 /*
     var postData = {
         a: 5,
@@ -298,29 +324,8 @@ ProjectController.generateVisualization = async function(request, response) {
         }
     }; */
 
-    var requestSettings = {
-        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/plot',
-        method: 'GET',
-        //decompress: false
-    };
 
-    return requestLib(requestSettings).pipe(response);
-
-    //console.log(requestSettings);
-
-//     tapisV3.sendRequest(requestSettings);
-
-/*    var resp = await axios(requestSettings);
-    console.log(resp.headers);
-
-    //const { status, headers, data: bodyStream } = await axios(requestSettings);
-    //console.log(headers);
-    response.status(resp.status);
-    response.set(resp.headers);
-
-    //return bodyStream.pipe(response);
-    return response.pipe(resp.data); */
-//    return apiResponseController.sendError('Not implemented.', 500, response);
+//    return requestLib(requestSettings).pipe(response);
 };
 
 
