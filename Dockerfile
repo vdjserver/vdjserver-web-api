@@ -56,11 +56,16 @@ COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 # Copy project source
 RUN mkdir /vdjserver-web-api
 COPY . /vdjserver-web-api
+
+# build vdjserver-schema and airr-js from source
+RUN cd /vdjserver-web-api/app/vdjserver-schema/airr-standards/lang/js && npm install --unsafe-perm
+RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install --unsafe-perm
+
 RUN cd /vdjserver-web-api/app/airr-standards/lang/js && npm install && npm run test
-RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install
+#RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install
 RUN cd /vdjserver-web-api && npm install
 
 # ESLint
-RUN cd /vdjserver-web-api && npm run eslint app/scripts app/vdj-tapis-js app/vdjserver-schema
+RUN cd /vdjserver-web-api && npm run eslint app/scripts app/vdj-tapis-js
 
 CMD ["/root/start_supervisor.sh"]
