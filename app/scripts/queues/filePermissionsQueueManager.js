@@ -62,8 +62,8 @@ var moment = require('moment');
 // The import queue waits for the staging to be completed then
 // adds a permissions queue job to setup the metadata.
 
-var importQueue = new Queue('file import staging');
-var fileQueue = new Queue('file import');
+var importQueue = new Queue('file import staging', { redis: app.redisConfig });
+var fileQueue = new Queue('file import', { redis: app.redisConfig });
 
 // add file import queue job that keeps repeating (30secs) until resolved
 FilePermissionsQueueManager.importFile = function(fileNotification) {

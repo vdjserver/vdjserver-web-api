@@ -39,12 +39,14 @@ var mongoSettings = require('../config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
+var authController = require('./authController');
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
 var AnalysisDocument = require('../models/AnalysisDocument');
 
 var airr = require('airr-js');
+var vdj_schema = require('vdjserver-schema');
 
 // Queues
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
@@ -64,8 +66,11 @@ var tapisSettings = tapisIO.tapisSettings;
 var ServiceAccount = tapisIO.serviceAccount;
 
 // Node Libraries
+var requestLib = require('request');
 var yaml = require('js-yaml');
 var d3 = require('d3');
+const { v4: uuidv4 } = require('uuid');
+
 var kue = require('kue');
 var taskQueue = kue.createQueue({
     redis: app.redisConfig,
@@ -210,7 +215,7 @@ ProjectController.executeWorkflow = async function(request, response) {
     config.log.info(context, 'start, project: ' + projectUuid);
 
     var doc = new AnalysisDocument(request.body.workflow);
-    config.log.info(context, 'document:' + JSON.stringify(doc, null, 2));
+    config.log.info(context, 'analysis document:' + JSON.stringify(doc, null, 2));
 
     // validate
     var valid = await doc.validate(projectUuid, request.body.use_alternate_app)
@@ -221,12 +226,12 @@ ProjectController.executeWorkflow = async function(request, response) {
             return apiResponseController.sendError(msg, 500, response);
         });
     if (!valid) return apiResponseController.sendError('Workflow is not valid.', 400, response);
-    else if (request.body.audit_only) {
+    else if (request.body.audit_only === true) {
         return apiResponseController.sendSuccess('Workflow is valid.', response);
     }
 
     // create meta for analysis document
-    /*
+    config.log.info(context, 'create metadata:', vdj_schema.tapisName('AnalysisDocument'))
     var result = await tapisIO.createMetadataForType(projectUuid, vdj_schema.tapisName('AnalysisDocument'), doc)
         .catch(function(error) {
             let msg = 'Error while saving analysis document.\n' + error;
@@ -235,12 +240,13 @@ ProjectController.executeWorkflow = async function(request, response) {
             return apiResponseController.sendError(msg, 500, response);
         });
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
-*/
+
     //tapisIO.createMetadata(vdj_schema.tapisName('AnalysisDocument'));
     //tapisIO.updateMetadata(vdj_schema.tapisName('ProvRequest'), obj);
     //tapisIO.queryMetadata(vdj_schema.tapisName('ProvRequest'), obj);
 
     // 1. set file set as initial input files
+
     // 2. get set of non-executed activities that have all of their inputs
     // 2a. if none, then perform error checks and exit
     // 3. execute those activities
@@ -258,6 +264,68 @@ ProjectController.getPendingPROV = function(request, response) {
     // query list of pending PROV executions
 
     return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
+
+//
+// Generate visualizations
+//
+
+// This end point is a proxy for the plumber API to generate R visualizations.
+// Instead of worrying about how to secure the plumber API end points and/or
+// do authorization in R, we keep the API private. The plumber API is only
+// accessible by docker services and not the public client/browser.
+
+ProjectController.generateVisualization = async function(request, response) {
+    var context = 'ProjectController.generateVisualization';
+    var projectUuid = request.params.project_uuid;
+    var visualization = request.body.visualization;
+    var uuid = uuidv4();
+    var repertoire_id = request.body.repertoire_id;
+    var repertoire_group_id = request.body.repertoire_group_id;
+    var processing_stage = request.body.processing_stage;
+
+    config.log.info(context, 'start ' + visualization['name'] + ', project: ' + projectUuid
+        + ' with uuid: ' + uuid);
+    config.log.info(context, 'repertoire_id: ' + repertoire_id);
+    config.log.info(context, 'repertoire_group_id: ' + repertoire_group_id);
+    config.log.info(context, 'processing_stage: ' + processing_stage);
+
+//    var accessToken = authController.extractToken();
+//    console.log(accessToken);
+
+    var requestSettings = {
+        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/',
+        method: 'GET'
+    };
+
+    switch (visualization['name']) {
+        case 'mutational_hedgehog':
+            requestSettings['url'] += visualization['name'] + '?uuid=' + uuid;
+            return requestLib(requestSettings).pipe(response);
+        case 'heartbeat':
+        default:
+            requestSettings['url'] += 'mean';
+            return requestLib(requestSettings).pipe(response);
+    }
+
+/*
+    var postData = {
+        a: 5,
+        b: 7
+    };
+
+    var requestSettings = {
+        url: 'http://' + 'vdj-plumber:8000' + '/plumber/v1/sum',
+        method: 'POST',
+        data: postData,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }; */
+
+
+//    return requestLib(requestSettings).pipe(response);
 };
 
 
@@ -1667,17 +1735,29 @@ ProjectController.exportTable = async function(request, response) {
     var tsvData = '';
     var schema = null;
     //if (tableName == 'subject') schema = airr.getSchema('Subject');
+    if (tableName == 'subject') schema = new airr.SchemaDefinition('Subject');
+    var diagnosisSchema = new airr.SchemaDefinition('Diagnosis');
     //if (tableName == 'diagnosis') schema = airr.getSchema('Diagnosis');
     //if (tableName == 'sample_processing') schema = airr.getSchema('SampleProcessing');
     var all_columns = [ 'vdjserver_uuid' ];
     var columns = [ 'vdjserver_uuid' ];
+    var subject_columns = [ 'vdjserver_uuid' ];
+    var diagnosis_columns = [ 'vdjserver_uuid' ];
+
     for (let i in schema.properties) {
-        //console.log(i);
-        //console.log(schema.properties[i]);
         all_columns.push(i);
         if (schema.type(i) == 'array') continue;
         if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
         columns.push(i);
+        subject_columns.push(i);
+    }
+
+    for(let i in diagnosisSchema.properties) {
+        all_columns.push(i);
+        if (schema.type(i) == 'array') continue;
+        if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+        columns.push(i);
+        diagnosis_columns.push(i);
     }
 
     // default
@@ -1688,6 +1768,7 @@ ProjectController.exportTable = async function(request, response) {
     // convert to TSV format
     for (var i = 0; i < metadataList.length; ++i) {
         var value = metadataList[i].value;
+        var row = "";
 
         // header
         if (i == 0) {
@@ -1695,13 +1776,9 @@ ProjectController.exportTable = async function(request, response) {
             for (var j = 0; j < columns.length; ++j) {
                 var prop = columns[j];
                 if (!first) tsvData += '\t';
-                tsvData += prop;
-                first = false;
-            }
-            for (var prop in value) {
-                if (all_columns.indexOf(prop) >= 0) continue;
-                if (!first) tsvData += '\t';
-                tsvData += prop;
+                if(diagnosis_columns.includes(prop) && prop != 'vdjserver_uuid') { 
+                    tsvData += 'diagnosis.'+prop; 
+                } else tsvData += prop;
                 first = false;
             }
             tsvData += '\n';
@@ -1709,24 +1786,46 @@ ProjectController.exportTable = async function(request, response) {
 
         // values
         var first = true;
-        for (var j = 0; j < columns.length; ++j) {
+        for(var j=0; j<subject_columns.length; j++) {
             var prop = columns[j];
-            if (!first) tsvData += '\t';
-            if (prop == 'vdjserver_uuid') {
-                tsvData += metadataList[i]['uuid'];
-            } else if (prop in value) {
-                if (schema.is_ontology(prop)) {
-                    if (value[prop]['id'] != null) tsvData += value[prop]['id'];
-                } else if (value[prop] != null) tsvData += value[prop];
+            if (!first) { tsvData += '\t'; row += '\t'; }
+            if (prop == 'vdjserver_uuid') { 
+                tsvData += metadataList[i]['uuid']; row += metadataList[i]['uuid'];
+            } else if(prop in value) {
+                if(schema.is_ontology(prop)) {
+                    if(value[prop]['id'] != null) {
+                        tsvData += value[prop]['id'];
+                        row += value[prop]['id'];
+                    }
+                } else if (value[prop] != null) {
+                    tsvData += value[prop];
+                    row += value[prop];
+                }
             }
             first = false;
-        }
-        for (var prop in value) {
-            if (all_columns.indexOf(prop) >= 0) continue;
-            if (!first) tsvData += '\t';
-            tsvData += value[prop];
-            first = false;
-        }
+        } //end for
+
+        tsvData += '\t';
+        var first_diagnosis = true;
+
+        for(let z=0; z<metadataList[i]['value']['diagnosis'].length; z++) {
+            if(z != 0) { tsvData += row; }
+            for(var k=1; k<diagnosis_columns.length; k++) {
+                var diagnosis_name = diagnosis_columns[k];
+                if(metadataList[i]['value']['diagnosis'][z][diagnosis_name] != null) {
+                    if(!first_diagnosis) tsvData += '\t';
+                    if (metadataList[i]['value']['diagnosis'][z][diagnosis_name]['id'] != null) {
+                        tsvData += metadataList[i]['value']['diagnosis'][z][diagnosis_name]['id'];
+                    } else {
+                        if(!(typeof metadataList[i]['value']['diagnosis'][z][diagnosis_name] === 'object'))
+                            tsvData += metadataList[i]['value']['diagnosis'][z][diagnosis_name];
+                    }
+                    first_diagnosis = false;
+                }
+            }
+            if(z != metadataList[i]['value']['diagnosis'].length-1) tsvData += '\n';
+        } 
+        row=null;
         tsvData += '\n';
     }
 

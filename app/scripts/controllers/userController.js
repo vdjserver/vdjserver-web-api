@@ -52,12 +52,6 @@ var ServiceAccount = tapisIO.serviceAccount;
 // Processing
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
-
-// Node Libraries
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 
 // we use recaptcha to deter user creation bots
@@ -102,9 +96,9 @@ UserController.createUser = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.createUser - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
-    // check username meets requirements
+    // TODO: check username meets requirements
 
-    // check password meets requirements
+    // TODO: check password meets requirements
 
     // BEGIN RECAPTCHA CHECK
     if (config.allowRecaptchaSkip && (recaptchaData['response'] == 'skip_recaptcha')) {

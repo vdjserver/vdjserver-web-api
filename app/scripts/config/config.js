@@ -51,6 +51,8 @@ config.lrqdata_path = process.env.LRQDATA_PATH;
 config.tapis_version = process.env.TAPIS_VERSION;
 
 // Queues
+config.redis_port = 6379;
+config.redis_host = 'vdj-redis';
 config.enable_job_queues = parseBoolean(process.env.ENABLE_JOB_QUEUES);
 
 // Host user and group

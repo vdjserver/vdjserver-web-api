@@ -63,7 +63,7 @@ var taskQueue = kue.createQueue({
 });
 
 // Bull queues
-var unloadQueue = new Queue('ADC project unload');
+var unloadQueue = new Queue('ADC project unload', { redis: app.redisConfig });
 
 //
 // Because loading rearrangement data is resource intensive, we

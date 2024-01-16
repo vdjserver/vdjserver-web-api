@@ -42,25 +42,13 @@ var $RefParser = require("@apidevtools/json-schema-ref-parser");
 var airr = require('airr-js');
 var vdj_schema = require('vdjserver-schema');
 
+
 // Express app
 var app = module.exports = express();
 var context = 'app';
 
 var webhookIO = require('./vendor/webhookIO');
 var mongoSettings = require('./config/mongoSettings');
-
-// Controllers
-var apiResponseController = require('./controllers/apiResponseController');
-var tokenController       = require('./controllers/tokenController');
-var authController       = require('./controllers/authController');
-var projectController = require('./controllers/projectController');
-var feedbackController = require('./controllers/feedbackController');
-var userController = require('./controllers/userController');
-var telemetryController = require('./controllers/telemetryController');
-var permissionsController = require('./controllers/permissionsController');
-var adcController = require('./controllers/adcController');
-var adminController = require('./controllers/adminController');
-var tenantController = require('./controllers/tenantController');
 
 // Server Options
 var config = require('./config/config');
@@ -90,8 +78,21 @@ app.use(allowCrossDomain);
 // redis config
 app.redisConfig = {
     port: 6379,
-    host: 'localhost',
+    host: 'vdj-redis'
 };
+
+// Controllers
+var apiResponseController = require('./controllers/apiResponseController');
+var tokenController       = require('./controllers/tokenController');
+var authController       = require('./controllers/authController');
+var projectController = require('./controllers/projectController');
+var feedbackController = require('./controllers/feedbackController');
+var userController = require('./controllers/userController');
+var telemetryController = require('./controllers/telemetryController');
+var permissionsController = require('./controllers/permissionsController');
+var adcController = require('./controllers/adcController');
+var adminController = require('./controllers/adminController');
+var tenantController = require('./controllers/tenantController');
 
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
@@ -154,7 +155,8 @@ ServiceAccount.getToken()
         config.log.info(context, 'Loaded AIRR Schema version ' + airr.get_info()['version']);
 
         // wait for the VDJServer spec to be dereferenced
-        return vdj_schema.schemaPromise();
+        //return vdj_schema.schemaPromise();
+        return vdj_schema.load_schema();
     })
     .then(function(schema) {
         config.log.info(context, 'Loaded VDJServer Schema version ' + vdj_schema.get_info()['version']);
@@ -165,7 +167,7 @@ ServiceAccount.getToken()
         //console.log(test.template());
         //console.log(vdj_schema.get_schemas());
 
-        //let test = new vdj_schema.SchemaDefinition('AnalysisDocument');
+        //let test = new vdj_schema.SchemaDefinition('AnalysisRequest');
         //console.log(JSON.stringify(test));
         //console.log(test.tapis_name());
         //console.log(test.template());
@@ -201,6 +203,7 @@ ServiceAccount.getToken()
                 await the_function(request, response);
             } catch (e) {
                 console.error(e);
+                console.error(e.stack);
                 throw e;
             }
         };
@@ -217,6 +220,7 @@ ServiceAccount.getToken()
             errorMiddleware: function(err, req, res, next) {
                 console.log('Got an error!');
                 console.log(JSON.stringify(err));
+                console.error(err.stack);
                 //console.trace("Here I am!");
                 if (err.status) res.status(err.status).json(err.errors);
                 else apiResponseController.sendError('Unknown server error.', 500, res);
@@ -253,6 +257,7 @@ ServiceAccount.getToken()
                 exportTable: async function(req, res) { return try_function(req, res, projectController.exportTable); },
                 importTable: async function(req, res) { return try_function(req, res, projectController.importTable); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
+                generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
                 unpublishProject: async function(req, res) { return try_function(req, res, projectController.unpublishProject); },
                 loadProject: async function(req, res) { return try_function(req, res, projectController.loadProject); },
@@ -305,6 +310,15 @@ ServiceAccount.getToken()
     .then(function() {
         // Initialize queues
 
+        // Manage Tapis jobs
+        if (config.enable_job_queues) {
+            config.log.info(context, 'Tapis job queues are enabled, triggering.');
+            jobQueueManager.triggerQueue();
+        } else {
+            config.log.info(context, 'Tapis job queues are disabled, clearing queues.');
+            jobQueueManager.clearQueues();
+        }
+
         // ADC download cache queues
         if (config.enableADCDownloadCache) {
             config.log.info(context, 'ADC download cache is enabled, triggering cache.');
@@ -346,7 +360,7 @@ var accountQueueManager = require('./queues/accountQueueManager');
 accountQueueManager.processNewAccounts();
 
 var jobQueueManager = require('./queues/jobQueueManager');
-jobQueueManager.processJobs();
+//jobQueueManager.processJobs();
 
 var projectQueueManager = require('./queues/projectQueueManager');
 projectQueueManager.processProjects();

@@ -57,12 +57,12 @@ const zlib = require('zlib');
 var stream = require('stream');
 var tar = require('tar');
 
-var triggerQueue = new Queue('ADC download cache trigger');
-var cacheQueue = new Queue('ADC download cache entry');
-var submitQueue = new Queue('ADC download cache submit');
-var finishQueue = new Queue('ADC download cache finish');
-var finishStudyQueue = new Queue('ADC download cache study finish');
-var clearQueue = new Queue('ADC download cache clear');
+var triggerQueue = new Queue('ADC download cache trigger', { redis: app.redisConfig });
+var cacheQueue = new Queue('ADC download cache entry', { redis: app.redisConfig });
+var submitQueue = new Queue('ADC download cache submit', { redis: app.redisConfig });
+var finishQueue = new Queue('ADC download cache finish', { redis: app.redisConfig });
+var finishStudyQueue = new Queue('ADC download cache study finish', { redis: app.redisConfig });
+var clearQueue = new Queue('ADC download cache clear', { redis: app.redisConfig });
 
 //
 // Trigger the download cache process
@@ -205,7 +205,7 @@ triggerQueue.process(async (job) => {
 // 2. Get next study/repertoire to be cached
 // 3. do the caching
 //
-// we attempt to write in a re-entrant fashion
+// we attempt to write in a re-entrant fashion so we can just restart if failure occurs
 //
 submitQueue.process(async (job) => {
     var msg = null;
