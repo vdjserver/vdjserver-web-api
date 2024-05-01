@@ -137,8 +137,3 @@ config.info.contact = {
 config.info.license = {};
 config.info.license.name = info.license;
 
-// get schema info
-var schemaFile = fs.readFileSync(path.resolve(__dirname, '../../airr-standards/specs/airr-schema.yaml'), 'utf8');
-var schemaSpec = yaml.safeLoad(schemaFile);
-config.info.schema = schemaSpec['Info'];
-

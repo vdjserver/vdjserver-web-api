@@ -275,6 +275,9 @@ ProjectController.getPendingPROV = function(request, response) {
 // Instead of worrying about how to secure the plumber API end points and/or
 // do authorization in R, we keep the API private. The plumber API is only
 // accessible by docker services and not the public client/browser.
+//
+// Authorization for the generateVisualization end point is secured in the
+// normal way for project access.
 
 ProjectController.generateVisualization = async function(request, response) {
     var context = 'ProjectController.generateVisualization';
@@ -290,6 +293,8 @@ ProjectController.generateVisualization = async function(request, response) {
     config.log.info(context, 'repertoire_id: ' + repertoire_id);
     config.log.info(context, 'repertoire_group_id: ' + repertoire_group_id);
     config.log.info(context, 'processing_stage: ' + processing_stage);
+
+    // TODO: verify the data requested in the visualization request is accessible by user/project
 
 //    var accessToken = authController.extractToken();
 //    console.log(accessToken);
@@ -1458,7 +1463,7 @@ ProjectController.exportMetadata = async function(request, response) {
 
     // save in file
     var data = {};
-    data['Info'] = config.info.schema;
+    data['Info'] = airr.get_info();
     data['Repertoire'] = repertoireMetadata;
     var buffer = Buffer.from(JSON.stringify(data, null, 2));
     await tapisIO.uploadFileToProjectTempDirectory(projectUuid, 'repertoires.airr.json', buffer)
