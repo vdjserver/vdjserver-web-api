@@ -48,6 +48,7 @@ var tapisV3 = require('vdj-tapis-js/tapisV3');
 var tapisIO = null;
 if (config.tapis_version == 2) tapisIO = tapisV2;
 if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
 var ServiceAccount = tapisIO.serviceAccount;
 
 // Processing
@@ -55,23 +56,26 @@ var webhookIO = require('../vendor/webhookIO');
 
 // Extract token from header
 AuthController.extractToken = function(req) {
+    const context = 'AuthController.extractToken';
+    //config.log.info(context, req['headers']);
+
     // extract the token from the authorization header
     if (! req['headers']['authorization']) {
-        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - missing authorization header';
-        console.error(msg);
+        var msg = 'missing authorization header';
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return false;
     }
     var fields = req['headers']['authorization'].split(' ');
     if (fields.length != 2) {
-        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
-        console.error(msg);
+        var msg = 'invalid authorization header: ' + req['headers']['authorization'];
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return false;
     }
     if (fields[0].toLowerCase() != 'bearer') {
-        var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid authorization header: ' + req['headers']['authorization'];
-        console.error(msg);
+        var msg = 'invalid authorization header: ' + req['headers']['authorization'];
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return false;
     }
@@ -89,7 +93,8 @@ AuthController.extractToken = function(req) {
 // Verify a Tapis token
 // Sets the associated user profile for the token in req.user
 AuthController.userAuthorization = function(req, scopes, definition) {
-    if (config.debug) console.log('VDJ-API INFO: AuthController.userAuthorization');
+    const context = 'AuthController.userAuthorization';
+    //config.log.info(context, 'start');
 
     var token = AuthController.extractToken(req);
     if (!token) return false;
@@ -98,27 +103,31 @@ AuthController.userAuthorization = function(req, scopes, definition) {
     // return a promise
     return tapisIO.getTapisUserProfile(token, 'me')
         .then(function(userProfile) {
+            //config.log.info(context, JSON.stringify(userProfile));
             // save the user profile
-            req['user'] = userProfile;
+            req['user'] = userProfile['result'];
+
+            // service account does not need the verification record
+            if (req['user']['username'] == tapisSettings.serviceAccountKey) return true;
 
             // now check that the user account has been verified
-            return tapisIO.getUserVerificationMetadata(req['user']['username']);
-        })
-        .then(function(userVerificationMetadata) {
-            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
-                // valid
-                return true;
-            }
-            else {
-                var msg = 'VDJ-API ERROR: AuthController.userAuthorization - access by unverified user: ' + req['user']['username'];
-                console.error(msg);
-                webhookIO.postToSlack(msg);
-                return false;
-            }
+            return tapisIO.getUserVerificationMetadata(req['user']['username'])
+                .then(function(userVerificationMetadata) {
+                    if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === true) {
+                        // valid
+                        return true;
+                    }
+                    else {
+                        var msg = 'access by unverified user: ' + req['user']['username'];
+                        msg = config.log.error(context, msg);
+                        webhookIO.postToSlack(msg);
+                        return false;
+                    }
+                });
         })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: AuthController.userAuthorization - invalid token: ' + token + ', error: ' + error;
-            console.error(msg);
+            var msg = 'invalid token: ' + token + ', error: ' + error;
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return false;
         });
@@ -127,7 +136,8 @@ AuthController.userAuthorization = function(req, scopes, definition) {
 // Requires the user account to have admin privileges.
 // Currently, only the service account has that.
 AuthController.adminAuthorization = function(req, scopes, definition) {
-    if (config.debug) console.log('VDJ-API INFO: AuthController.adminAuthorization');
+    const context = 'AuthController.adminAuthorization';
+    //config.log.info(context, 'start');
 
     var token = AuthController.extractToken(req);
     if (!token) return false;
@@ -137,23 +147,23 @@ AuthController.adminAuthorization = function(req, scopes, definition) {
     return tapisIO.getTapisUserProfile(token, 'me')
         .then(function(userProfile) {
             // save the user profile
-            req['user'] = userProfile;
+            req['user'] = userProfile['result'];
 
-            if (userProfile.username == ServiceAccount.username) {
+            if (req['user']['username'] == tapisSettings.serviceAccountKey) {
                 // valid
                 return true;
             }
             else {
-                var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - access by unauthorized user: ' + req['user']['username']
+                var msg = 'access by unauthorized user: ' + req['user']['username']
                     + ', route: ' + JSON.stringify(req.route.path);
-                console.error(msg);
+                msg = config.log.error(context, msg);
                 webhookIO.postToSlack(msg);
                 return false;
             }
         })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: AuthController.adminAuthorization - invalid token: ' + token + ', error: ' + error;
-            console.error(msg);
+            var msg = 'invalid token: ' + token + ', error: ' + error;
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return false;
         });
@@ -161,7 +171,8 @@ AuthController.adminAuthorization = function(req, scopes, definition) {
 
 // Verify a user has access to project
 AuthController.projectAuthorization = function(req, scopes, definition) {
-    if (config.debug) console.log('VDJ-API INFO: AuthController.projectAuthorization');
+    const context = 'AuthController.projectAuthorization';
+    //config.log.info(context, 'start');
 
     var token = AuthController.extractToken(req);
     if (!token) return false;
@@ -172,8 +183,8 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
     if (project_uuid == undefined)
         if (req.params) project_uuid = req.params.project_uuid;
     if (project_uuid == undefined) {
-        var msg = 'VDJ-API ERROR: AuthController.authForProject - missing project uuid, route ' + JSON.stringify(req.route.path);
-        console.error(msg);
+        var msg = 'missing project uuid, route ' + JSON.stringify(req.route.path);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return false;
     }
@@ -185,30 +196,26 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
             if (!result) return result;
 
             // verify the user has access to project
-            return tapisIO.getProjectMetadata(token, project_uuid);
+            return tapisIO.getProjectMetadata(req['user']['username'], project_uuid);
         })
         .then(function(projectMetadata) {
+            //config.log.info(context, JSON.stringify(projectMetadata));
+
             // make sure its project metadata and not some random uuid
             // TODO: should disallow old VDJServer V1 projects at some point
-            if (projectMetadata && (projectMetadata.name == 'private_project') || (projectMetadata.name == 'public_project') || (projectMetadata.name == 'project') || (projectMetadata.name == 'archive_project')) {
-                return tapisIO.getMetadataPermissionsForUser(token, project_uuid, req['user']['username']);
+            if (projectMetadata && (projectMetadata.length == 1) && ((projectMetadata[0].name == 'private_project') || (projectMetadata[0].name == 'public_project') || (projectMetadata[0].name == 'project') || (projectMetadata[0].name == 'archive_project'))) {
+                // save the project metadata
+                req['project_metadata'] = projectMetadata[0];
+                return true;
             }
             else {
                 return Promise.reject(new Error('invalid project metadata'));
             }
         })
-        .then(function(projectPermissions) {
-            // we can read the project metadata, but do we have write permission?
-            if (projectPermissions && projectPermissions.permission.write)
-                return true;
-            else {
-                return Promise.reject(new Error('user does not have write permission for project'));
-            }
-        })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: AuthController.authForProject - project: ' + project_uuid + ', route: '
+            var msg = 'project: ' + project_uuid + ', route: '
                 + JSON.stringify(req.route.path) + ', error: ' + error;
-            console.error(msg);
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return false;
         });
@@ -218,6 +225,7 @@ AuthController.projectAuthorization = function(req, scopes, definition) {
 // verify a valid and active username account
 //
 AuthController.verifyUser = function(username) {
+    const context = 'AuthController.verifyUser';
 
     if (username == undefined) return false;
 
@@ -233,8 +241,8 @@ AuthController.verifyUser = function(username) {
             }
         })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: AuthController.verifyUser - error validating user: ' + username + ', error ' + error;
-            console.error(msg);
+            var msg = 'error validating user: ' + username + ', error ' + error;
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return false;
         })
@@ -245,6 +253,7 @@ AuthController.verifyUser = function(username) {
 // verify user has access to metadata entry
 //
 AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
+    const context = 'AuthController.verifyMetadataAccess';
 
     if (uuid == undefined) return false;
     if (accessToken == undefined) return false;
@@ -260,9 +269,9 @@ AuthController.verifyMetadataAccess = function(uuid, accessToken, username) {
             }
         })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: AuthController.verifyMetadataAccess - uuid: ' + uuid
+            var msg = 'uuid: ' + uuid
                 + ', error validating user: ' + username + ', error ' + error;
-            console.error(msg);
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return false;
         });

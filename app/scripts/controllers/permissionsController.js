@@ -66,6 +66,7 @@ var taskQueue = kue.createQueue({
 // When a new metadata object is created, the permissions need to be
 // synchronized so that all users on the project have access to it.
 //
+/* not needed for tapis v3
 PermissionsController.syncMetadataPermissionsWithProject = function(request, response) {
 
     var uuid        = request.body.metadata_uuid;
@@ -136,7 +137,7 @@ PermissionsController.syncMetadataPermissionsWithProject = function(request, res
             apiResponseController.sendError(error.message, 500, response);
         })
         ;
-};
+}; */
 
 //
 // Add user to a project by giving them permissions on all of the project objects

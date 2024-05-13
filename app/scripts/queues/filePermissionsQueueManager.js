@@ -74,44 +74,46 @@ FilePermissionsQueueManager.importFile = function(fileNotification) {
 // fixed concurrency
 // jobs should repeat until they are resolved
 importQueue.process(10, async (job) => {
-    console.log('VDJ-API INFO (importQueue): begin for ' + JSON.stringify(job.data));
+    const context = 'FilePermissionsQueueManager.importQueue';
+
+    config.log.info(context, 'begin for ' + JSON.stringify(job.data));
 
     var msg = null;
     var fileUploadJob = new FileUploadJob(job.data.file);
 
     // already imported?
-    var fileMetadata = await tapisIO.getProjectFileMetadataByFilename(fileUploadJob.projectUuid, fileUploadJob.fileUuid)
+    var fileMetadata = await tapisIO.getProjectFileMetadataByURL(fileUploadJob.projectUuid, fileUploadJob.fileUuid)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (importQueue): tapisIO.getProjectFileMetadataByFilename, error ' + error;
+            msg = 'tapisIO.getProjectFileMetadataByURL, error ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return Promise.reject(new Error(msg));
     }
 
     if (fileMetadata.length != 0) {
-        console.log('VDJ-API INFO (importQueue): file metadata already exists, skipping import.');
+        config.log.info(context, 'file metadata already exists, skipping import.');
         return Promise.resolve();
     }
 
     var isAvailable = await fileUploadJob.checkFileAvailability()
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (importQueue): fileUploadJob.checkFileAvailability, error ' + error;
+            msg = 'fileUploadJob.checkFileAvailability, error ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
 
     // still staging, this job should repeat after a delay
     if (!isAvailable) {
-        console.log('VDJ-API INFO (importQueue): file still staging: ' + JSON.stringify(job.data));
+        config.log.info(context, 'file still staging: ' + JSON.stringify(job.data));
         return Promise.reject(new Error('still staging'));
     }
 
-    console.log('VDJ-API INFO (importQueue): staging complete: ' + JSON.stringify(job.data));
+    config.log.info(context, 'staging complete: ' + JSON.stringify(job.data));
     fileQueue.add(job.data);
     return Promise.resolve();
 });
@@ -119,11 +121,14 @@ importQueue.process(10, async (job) => {
 // when file is finished staging, create all the metadata entries
 // and set permissions
 fileQueue.process(async (job) => {
-    console.log('VDJ-API INFO (fileQueue): begin for ' + JSON.stringify(job.data));
+    const context = 'FilePermissionsQueueManager.fileQueue';
+
+    config.log.info(context, 'begin for ' + JSON.stringify(job.data));
 
     var msg = null;
     var fileUploadJob = new FileUploadJob(job.data.file);
 
+/*
     // set permissions on file for project users
     var path = fileUploadJob.getRelativeFilePath();
     await tapisIO.setFilePermissionsForProjectUsers(fileUploadJob.projectUuid, path, false)
@@ -139,14 +144,14 @@ fileQueue.process(async (job) => {
 
     // emit notification
     app.emit('fileImportNotification', { fileImportStatus: 'permissions', fileInformation: fileUploadJob });
-
+*/
     // create the file metadata
     var fileMetadata = await fileUploadJob.createAgaveFileMetadata()
         .catch(function(error) {
-            msg = 'VDJ-API ERROR (fileQueue): error ' + error;
+            msg = 'fileUploadJob.createAgaveFileMetadata error ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         app.emit('fileImportNotification', { error: msg, fileInformation: fileUploadJob });
         return Promise.reject(new Error(msg));
@@ -155,6 +160,7 @@ fileQueue.process(async (job) => {
     // emit notification
     app.emit('fileImportNotification', { fileImportStatus: 'metadata', fileInformation: fileUploadJob });
 
+/*
     await tapisIO.addMetadataPermissionsForProjectUsers(fileUploadJob.projectUuid, fileMetadata.uuid)
         .catch(function(error) {
             msg = 'VDJ-API ERROR (fileQueue): tapisIO.addMetadataPermissionsForProjectUsers, error ' + error;
@@ -168,8 +174,9 @@ fileQueue.process(async (job) => {
 
     // emit notification
     app.emit('fileImportNotification', { fileImportStatus: 'metadataPermissions', fileInformation: fileUploadJob });
+*/
     app.emit('fileImportNotification', { fileImportStatus: 'finished', fileInformation: fileUploadJob });
 
-    console.log('VDJ-API INFO (fileQueue): complete for ' + JSON.stringify(job.data));
+    config.log.info(context, 'complete for ' + JSON.stringify(job.data));
     return Promise.resolve();
 });

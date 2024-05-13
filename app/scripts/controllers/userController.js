@@ -83,6 +83,7 @@ var verifyRecaptcha = function(recaptchaData) {
 // 6. create user verification metadata record
 // 7. send user verification email
 UserController.createUser = async function(request, response) {
+    const context = 'UserController.createUser';
     config.injectError(request.body.inject_error);
 
     // The API middleware verifies these are present
@@ -94,7 +95,7 @@ UserController.createUser = async function(request, response) {
     };
     var msg = null;
 
-    console.log('VDJ-API INFO: UserController.createUser - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
+    config.log.info(context, 'begin for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // TODO: check username meets requirements
 
@@ -102,17 +103,17 @@ UserController.createUser = async function(request, response) {
 
     // BEGIN RECAPTCHA CHECK
     if (config.allowRecaptchaSkip && (recaptchaData['response'] == 'skip_recaptcha')) {
-        console.log('VDJ-API INFO: UserController.createUser - WARNING - Recaptcha check is being skipped.');
+        config.log.info(context, 'WARNING - Recaptcha check is being skipped.');
     } else {
         await verifyRecaptcha(recaptchaData)
             .catch(function(errorCode) {
-                msg = 'VDJ-API ERROR: UserController.createUser - recaptcha error for '
+                msg = 'recaptcha error for '
                     + JSON.stringify(user.getSanitizedAttributes())
                     + ' and error code is: ' + errorCode;
             });
 
         if (msg) {
-            console.error(msg);
+            msg = config.log.error(context, msg);
             return apiResponseController.sendError(msg, 400, response);
         }
     }
@@ -122,114 +123,138 @@ UserController.createUser = async function(request, response) {
     var isDuplicate = false;
     if (config.useTestAccount && user.username == config.testAccountUsername) {
         // skip for test account
-        console.log('VDJ-API INFO: UserController.createUser - WARNING - Duplicate username check is being bypassed.');
+        config.log.info(context, 'WARNING - Duplicate username check is being bypassed.');
     } else {
         isDuplicate = await tapisIO.isDuplicateUsername(user.username)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: UserController.createUser - agave duplicate account check got error for ' + JSON.stringify(user.getSanitizedAttributes())
+                msg = 'agave duplicate account check got error for ' + JSON.stringify(user.getSanitizedAttributes())
                     + ', error: ' + error;
             });
     }
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
 
     if (isDuplicate === true) {
-        console.log('VDJ-API INFO: UserController.createUser - duplicate username for ' + JSON.stringify(user.getSanitizedAttributes()));
+        config.log.info(context, 'duplicate username for ' + JSON.stringify(user.getSanitizedAttributes()));
         msg = 'duplicate username';
         return apiResponseController.sendError(msg, 400, response);
     }
-    console.log('VDJ-API INFO: UserController.createUser - agave duplicate account check successful for '
+    config.log.info(context, 'agave duplicate account check successful for '
                 + JSON.stringify(user.getSanitizedAttributes()));
 
     // create agave user
     if (config.useTestAccount && user.username == config.testAccountUsername) {
         // skip for test account
-        console.log('VDJ-API INFO: UserController.createUser - WARNING - Agave account creation is being bypassed.');
+        config.log.info(context, 'WARNING - Agave account creation is being bypassed.');
     } else {
         await tapisIO.createUser(user.getCreateUserAttributes())
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                msg = 'agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
                     + ', error: ' + error;
             });
     }
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log('VDJ-API INFO: UserController.createUser - agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+    config.log.info(context, 'agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // get token for user
     var userToken = await tapisIO.getToken(user)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.createUser - token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes())
+            msg = 'token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log('VDJ-API INFO: UserController.createUser - token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+    config.log.info(context, 'token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // TODO: should we check if user profile exists? It should not for a new user, presumably just for test accounts
 
     // create user profile
     var userProfile = await tapisIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.createUser - create user profile failed for ' + JSON.stringify(user.getSanitizedAttributes())
+            msg = 'create user profile failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log('VDJ-API INFO: UserController.createUser - create user profile (' + userProfile.uuid
+    config.log.info(context, 'create user profile (' + userProfile.uuid
                 + ') successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // create user verification
     var userVerificationMetadata = await tapisIO.createUserVerificationMetadata(user.username)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.createUser - verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes())
+            msg = 'verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes())
                 + ', error: ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log('VDJ-API INFO: UserController.createUser - verification metadata (' + userVerificationMetadata.uuid
+    config.log.info(context, 'verification metadata (' + userVerificationMetadata.uuid
                 + ') successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
     // send verification email
     emailIO.sendWelcomeEmail(user.email, user.username, userVerificationMetadata.uuid);
-    console.log('VDJ-API INFO: UserController.createUser - send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+    config.log.info(context, 'send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
 
-    msg = 'VDJ-API INFO: UserController.createUser - acount creation complete for ' + JSON.stringify(user.getSanitizedAttributes());
-    console.log(msg);
+    msg = 'account creation complete for ' + JSON.stringify(user.getSanitizedAttributes());
+    msg = config.log.info(context, msg);
     webhookIO.postToSlack(msg);
     return apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
 };
 
-// check if username is already being used
-UserController.duplicateUsername = async function(request, response) {
+// get user profile
+UserController.getUserProfile = async function(request, response) {
+    const context = 'UserController.getUserProfile';
     var username = request.params.username;
     var msg = null;
 
-    if (config.debug) console.log('VDJ-API INFO: UserController.duplicateUsername - checking username ' + username);
+    config.log.info(context, 'checking username ' + username);
+
+    // get user profile
+    var profile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(profile, response);
+};
+
+// check if username is already being used
+UserController.duplicateUsername = async function(request, response) {
+    const context = 'UserController.duplicateUsername';
+    var username = request.params.username;
+    var msg = null;
+
+    config.log.info(context, 'checking username ' + username);
 
     // check for duplicate username
     var isDuplicate = await tapisIO.isDuplicateUsername(username)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: UserController.createUser - agave duplicate account check got error for ' + username
+            msg = 'agave duplicate account check got error for ' + username
                 + ', error: ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
