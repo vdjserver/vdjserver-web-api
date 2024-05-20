@@ -37,12 +37,12 @@ CommunityData.prototype.processLinksForCommunityDataMetadata = function(communit
                                              ;
 
                             communityDataMetadata[i].value.experimentProjects[j].igBlastOutput[k] = downloadPath;
-                        };
+                        }
                     }
-                };
+                }
             }
         }
-    };
+    }
 
     return communityDataMetadata;
 };

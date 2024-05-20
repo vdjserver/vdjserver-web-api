@@ -1,0 +1,1850 @@
+#
+# VDJServer Web API specification
+#
+# VDJServer Analysis Portal
+# VDJServer Web API
+# https://vdjserver.org
+#
+# Copyright (C) 2023 The University of Texas Southwestern Medical Center
+#
+# Author: Scott Christley <scott.christley@utsouthwestern.edu>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+openapi: '3.0'
+info:
+  title: VDJServer API
+  version: '2.0.0'
+  contact:
+    name: VDJServer
+    url: 'https://vdjserver.org/'
+    email: vdjserver@utsouthwestern.edu
+  description: >
+    API service for the VDJServer analysis portal.
+
+servers:
+  - url: https://vdjserver.org/api/v2
+    description: Production server
+    variables:
+      basePath:
+        default: /api/v2
+  - url: https://vdj-staging.tacc.utexas.edu/api/v2
+    description: Staging server
+    variables:
+      basePath:
+        default: /api/v2
+
+# Even though we point to the VDJServer Schema, most services replace this with the
+# local copy of the schema.
+components:
+  schemas:
+    $ref: 'https://bitbucket.org/vdjserver/vdjserver-schema/raw/master/vdjserver-schema.yaml'
+
+  securitySchemes:
+    user_authorization:
+      type: http
+      scheme: bearer
+    admin_authorization:
+      type: http
+      scheme: bearer
+    project_authorization:
+      type: apiKey
+      name: project_uuid
+      in: query
+    metadata_authorization:
+      type: http
+      scheme: bearer
+    publish_authorization:
+      type: http
+      scheme: bearer
+
+
+paths:
+  /:
+    get:
+      description: |
+        Service heartbeat.
+      operationId: getStatus
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+            text/html:
+              schema:
+                type: string
+
+  /tenants:
+    get:
+      description: |
+        VDJServer tenants proxy for agave/tapis v2 clients. This only returns VDJServer as a valid tenant and is designed for internal tools like agave-cli which have been modified to point here.
+      operationId: getTenants
+      tags:
+        - agave proxy
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+
+  /token:
+    post:
+      description: create token
+      operationId: createToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                username: 
+                  type: string
+                password: 
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content: 
+            'application/json': {}
+
+    put:
+      description: refresh token
+      operationId: refreshToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                username:
+                  type: string
+                refresh_token:
+                  type: string
+              required:
+                - username
+                - refresh_token
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content: 
+            'application/json': {}
+
+  /project:
+    post:
+      description: create project
+      operationId: createProject
+      tags:
+        - project
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - project
+              properties:
+                project:
+                  $ref: '#/components/schemas/Project'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/PrivateProjectMeta'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/metadata:
+    get:
+      description: get project metadata records
+      operationId: getProjectMetadata
+      tags:
+        - project
+      security:
+        - user_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/name/{name}:
+    get:
+      description: query metadata for project
+      operationId: queryMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: metadata type name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: create metadata for project
+      operationId: createMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: metadata type name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - value
+              properties:
+                value:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/uuid/{uuid}:
+    get:
+      description: get metadata for uuid
+      operationId: getMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: update metadata record for uuid
+      operationId: updateMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - value
+              properties:
+                value:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete metadata record for uuid
+      operationId: deleteMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+
+  /project/{project_uuid}/metadata/import:
+    post:
+      description: import metadata into project
+      operationId: importMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - replace
+                    - append
+                filename:
+                  type: string
+              required:
+                - operation
+                - filename
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/export:
+    get:
+      description: export metadata from project
+      operationId: exportMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/airr-community/airr-standards/v1.4.1/specs/airr-schema-openapi3.yaml#/DataFile'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/import/table/{table_name}:
+    post:
+      description: import metadata table into project
+      operationId: importTable
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: table_name
+          in: path
+          description: table name
+          required: true
+          schema:
+            type: string
+            enum:
+              - subject
+              - diagnosis
+              - sample
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - replace
+                    - append
+                filename:
+                  type: string
+              required:
+                - operation
+                - filename
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/export/table/{table_name}:
+    get:
+      description: export metadata table from project
+      operationId: exportTable
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: table_name
+          in: path
+          description: table name
+          required: true
+          schema:
+            type: string
+            enum:
+              - subject
+              - sample
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/file/import:
+    post:
+      description: Import an uploaded file into project
+      operationId: importFile
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ProjectFile'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/file/name/{name}:
+    get:
+      description: query for project file metadata by file name
+      operationId: getProjectFileMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: URI encoded file name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/execute:
+    post:
+      description: execute analysis workflow for project
+      operationId: executeWorkflow
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/visualize:
+    post:
+      description: generate visualization for project
+      operationId: generateVisualization
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/VisualizationRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/publish:
+    post:
+      description: publish project to community data portal
+      operationId: publishProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/unpublish:
+    post:
+      description: unpublish project from community data portal
+      operationId: unpublishProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/load:
+    post:
+      description: load project data into VDJServer ADC data repository
+      operationId: loadProject
+      tags:
+        - project
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/unload:
+    post:
+      description: unload project data from VDJServer ADC data repository
+      operationId: unloadProject
+      tags:
+        - project
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - load_id
+                - clear_cache
+                - clear_statistics
+              properties:
+                load_id:
+                  type: string
+                clear_cache:
+                  type: boolean
+                  default: true
+                clear_statistics:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/reload:
+    post:
+      description: reload repertoire metadata for project in VDJServer ADC data repository
+      operationId: reloadProject
+      tags:
+        - project
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - load_id
+              properties:
+                load_id:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/archive:
+    post:
+      description: archive (soft delete) project
+      operationId: archiveProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/unarchive:
+    post:
+      description: unarchive project
+      operationId: unarchiveProject
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/purge:
+    post:
+      description: purge (hard delete) project
+      operationId: purgeProject
+      tags:
+        - project
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /permission/user:
+    post:
+      description: add project permissions for user
+      operationId: addPermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserPermission'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: remove project permissions for user
+      operationId: removePermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserPermission'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /feedback:
+    post:
+      description: send feedback message from authenticated user
+      operationId: createFeedback
+      tags:
+        - feedback
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /feedback/public:
+    post:
+      description: send feedback message from public
+      operationId: createPublicFeedback
+      tags:
+        - feedback
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PublicFeedbackRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user:
+    post:
+      description: create new user account
+      operationId: createUser
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserAccountCreation'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAccount'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/profile/{username}:
+    get:
+      description: get user profile
+      operationId: getUserProfile
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/duplicate/{username}:
+    get:
+      description: check for duplicate username
+      operationId: duplicateUsername
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/verify/{verification_id}:
+    post:
+      description: verify new user account
+      operationId: verifyUser
+      tags:
+        - user
+      parameters:
+        - name: verification_id
+          in: path
+          description: verification identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/verify/email/{username}:
+    post:
+      description: resend user verification email
+      operationId: resendVerifyEmail
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/change-password:
+    post:
+      description: change password for user
+      operationId: changePassword
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - password
+                - new_password
+              properties:
+                password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/reset-password:
+    post:
+      description: reset password for user
+      operationId: resetPassword
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/reset-password/verify:
+    post:
+      description: reset password for user
+      operationId: verifyResetPassword
+      tags:
+        - user
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - username
+                - reset_code
+                - new_password
+              properties:
+                username:
+                  type: string
+                reset_code:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/has-admin-role:
+    get:
+      description: check for admin role
+      operationId: userHasAdminRole
+      tags:
+        - user
+      security:
+        - admin_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /telemetry:
+    post:
+      description: record error telemetry
+      operationId: recordErrorTelemetry
+      tags:
+        - telemetry
+      security:
+        - user_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - telemetry
+              properties:
+                telemetry:
+                  $ref: '#/components/schemas/ErrorTelemetry'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse' 
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/status:
+    get:
+      description: get VDJServer ADC repository status
+      operationId: statusADCRepository
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/registry:
+    get:
+      description: get set of default ADC repositories
+      operationId: defaultADCRepositories
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: update set of default ADC repositories
+      operationId: updateADCRepositories
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ADCRepositoryUpdateRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse' 
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/cache:
+    get:
+      description: get ADC download cache status
+      operationId: getADCDownloadCacheStatus
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: change ADC download cache queue
+      operationId: updateADCDownloadCacheStatus
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - operation
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - enable
+                    - disable
+                    - trigger
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/cache/study:
+    get:
+      description: get study cache entries
+      operationId: getADCDownloadCacheForStudies
+      tags:
+        - ADC
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/cache/study/{cache_uuid}:
+    post:
+      description: update cache settings for study
+      operationId: updateADCDownloadCacheForStudy
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete cache for study
+      operationId: deleteADCDownloadCacheForStudy
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/cache/repertoire/{cache_uuid}:
+    post:
+      description: update cache settings for repertoire
+      operationId: updateADCDownloadCacheForRepertoire
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete cache for repertoire
+      operationId: deleteADCDownloadCacheForRepertoire
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /adc/cache/notify/{notify_id}:
+    post:
+      description: >
+        Notifications from an ADC ASYNC query.
+      operationId: notifyADCDownloadCache
+      tags:
+        - async
+      parameters:
+        - name: notify_id
+          in: path
+          description: ID of notification
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |
+            A successful call recognizes the notification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '500':
+          description: Internal service error occurred.
+
+  /admin/project/load:
+    get:
+      description: query project load records
+      operationId: queryProjectLoad
+      tags:
+        - admin
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: project_uuid
+          in: query
+          description: project identifer
+          required: false
+          schema:
+            type: string
+        - name: collection
+          in: query
+          description: collection name
+          required: false
+          schema:
+            type: string
+            enum:
+              - _0
+              - _1
+        - name: should_load
+          in: query
+          description: should load flag
+          required: false
+          schema:
+            type: boolean
+        - name: is_loaded
+          in: query
+          description: is loaded flag
+          required: false
+          schema:
+            type: boolean
+        - name: repertoire_loaded
+          in: query
+          description: is repertoire metadata loaded flag
+          required: false
+          schema:
+            type: boolean
+        - name: rearrangement_loaded
+          in: query
+          description: is rearrangement data loaded flag
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.

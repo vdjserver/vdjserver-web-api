@@ -15,11 +15,11 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
     apiResponse.result = successResultMessage;
 
     if (response) {
-        response.status(200).send(apiResponse);
+        response.status(200).json(apiResponse);
     }
 };
 
-// Sends a response with an error message to the client
+// Sends an error response with a message to the client
 ApiResponseController.sendError = function(errorMessage, errorCode, response) {
 
     var apiResponse = new ApiResponse();
@@ -27,7 +27,20 @@ ApiResponseController.sendError = function(errorMessage, errorCode, response) {
     apiResponse.message = errorMessage;
 
     if (response) {
-        response.status(errorCode).send(apiResponse);
+        response.status(errorCode).json(apiResponse);
+    }
+};
+
+// Sends an error response with a message and message code to the client
+ApiResponseController.sendErrorWithCode = function(errorMessage, messageCode, errorCode, response) {
+
+    var apiResponse = new ApiResponse();
+    apiResponse.setError();
+    apiResponse.message = errorMessage;
+    apiResponse.messageCode = messageCode;
+
+    if (response) {
+        response.status(errorCode).json(apiResponse);
     }
 };
 
@@ -43,7 +56,7 @@ ApiResponseController.send404 = function(request, response) {
     console.error('Error ApiResponseController.send404: ' + JSON.stringify(request.route));
 
     if (response) {
-        response.status(404).send(apiResponse);
+        response.status(404).json(apiResponse);
     }
 };
 
@@ -58,7 +71,7 @@ ApiResponseController.send401 = function(request, response) {
     console.error('Error ApiResponseController.send401: ' + JSON.stringify(request.route));
 
     if (response) {
-        response.status(401).send(apiResponse);
+        response.status(401).json(apiResponse);
     }
 };
 

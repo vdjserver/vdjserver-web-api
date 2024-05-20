@@ -5,8 +5,14 @@
 var Q = require('q');
 var _ = require('underscore');
 
-// Processing
-var agaveIO = require('../vendor/agaveIO');
+var config = require('../config/config');
+
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
 
 var Feedback = function(attributes) {
     this.username = attributes.username || '';
@@ -26,7 +32,7 @@ Feedback.prototype.storeFeedbackInMetadata = function() {
         return deferred.promise;
     }
 
-    return agaveIO.createFeedbackMetadata(
+    return tapisIO.createFeedbackMetadata(
         this.feedback,
         this.username,
         this.email

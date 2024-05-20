@@ -1,28 +1,129 @@
 
 'use strict';
 
-// App
+//
+// jobQueueManager.js
+// Manage Tapis jobs for VDJServer
+//
+// VDJServer Analysis Portal
+// VDJ Web API service
+// https://vdjserver.org
+//
+// Copyright (C) 2023 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var JobQueueManager = {};
+module.exports = JobQueueManager;
+
 var app = require('../app');
-var agaveSettings = require('../config/agaveSettings');
+var config = require('../config/config');
 
-// Models
-var FilePermissions = require('../models/filePermissions');
-var MetadataPermissions = require('../models/metadataPermissions');
-var Job = require('../models/job');
-var ServiceAccount = require('../models/serviceAccount');
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = tapisIO.tapisSettings;
+var ServiceAccount = tapisIO.serviceAccount;
 
-// Processing
-var agaveIO = require('../vendor/agaveIO');
+// App
 var webhookIO = require('../vendor/webhookIO');
 var emailIO = require('../vendor/emailIO');
 
-// Node Libraries
-var jsonApprover = require('json-approver');
-var Q = require('q');
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
+var Queue = require('bull');
+var fs = require('fs');
+
+var triggerQueue = new Queue('Tapis job queue trigger', { redis: app.redisConfig });
+var createQueue = new Queue('Tapis job queue create', { redis: app.redisConfig });
+var checkQueue = new Queue('Tapis job queue check', { redis: app.redisConfig });
+var jobQueue = new Queue('Tapis job queue submit job', { redis: app.redisConfig });
+var finishQueue = new Queue('Tapis job queue finish', { redis: app.redisConfig });
+var clearQueue = new Queue('Tapis job queue clear', { redis: app.redisConfig });
+var reloadQueue = new Queue('Tapis job queue reload', { redis: app.redisConfig });
+
+JobQueueManager.clearQueues = async function(queue) {
+    var context = 'JobQueueManager.clearQueues';
+    var repeatableJobs = await triggerQueue.getRepeatableJobs();
+    for (let i in repeatableJobs) {
+        await triggerQueue.removeRepeatableByKey(repeatableJobs[i].key);
+    }
+    config.log.info(context, repeatableJobs.length + ' jobs cleared from triggerQueue', true);
+
+    repeatableJobs = await checkQueue.getRepeatableJobs();
+    for (let i in repeatableJobs) {
+        await checkQueue.removeRepeatableByKey(repeatableJobs[i].key);
+    }
+    config.log.info(context, repeatableJobs.length + ' jobs cleared from checkQueue', true);
+}
+
+//
+// Trigger the job queue process
+// This is called by app initialization
+//
+JobQueueManager.triggerQueue = async function() {
+    var context = 'JobQueueManager.triggerQueue';
+    var msg = null;
+
+    config.log.info(context, 'begin');
+
+    if (! config.enable_job_queues) {
+        msg = config.log.error(context, 'Job queues are not enabled in configuration, cannot trigger');
+
+        JobQueueManager.clearQueues();
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    // TODO: do we need to do anything here?
+
+    // trigger the create queue
+    config.log.info(context, 'Job queues enabled, creating jobs', true);
+
+    // submit to check every 3600secs/1hour
+    triggerQueue.add({}, { repeat: { every: 3600000 }});
+
+    // testing, every 2 mins
+    //triggerQueue.add({}, { repeat: { every: 120000 }});
+
+    // trigger the job queue
+    // submit to check every 3600secs/1hour
+    //checkQueue.add({}, { repeat: { every: 3600000 }});
+
+    // testing, every 10 mins
+    checkQueue.add({}, { repeat: { every: 600000 }});
+
+    config.log.info(context, 'end');
+    return Promise.resolve();
+}
+
+// Models
+// TODO: Put these in vdjserver schema
+//var FilePermissions = require('../models/filePermissions');
+//var MetadataPermissions = require('../models/metadataPermissions');
+//var Job = require('../models/job');
+
+//JobQueueManager.processJobs = function() {
+//    var context = 'JobQueueManager.processJobs';
+//    config.log.info(context, 'nothing to be done');
+//}
+
+/* --- OLD V1
 
 var fileTypeMapping = {
     'read': 2,
@@ -30,20 +131,17 @@ var fileTypeMapping = {
     'vdjml': 8
 };
 
-var JobQueueManager = {};
-module.exports = JobQueueManager;
-
 JobQueueManager.processJobs = function() {
 
-    /*
-        Initial processing tasks
+    //
+    //    Initial processing tasks
 
-        1. createArchivePath
-        2. Gather current study metadata and put in archive file
-        3. launch job w/ notification embedded
-        4. share job
-        5. share pointer metadata
-    */
+    //    1. createArchivePath
+    //    2. Gather current study metadata and put in archive file
+    //    3. launch job w/ notification embedded
+    //    4. share job
+    //    5. share pointer metadata
+    //
 
     taskQueue.process('createArchivePathDirectoryTask', function(task, done) {
 
@@ -154,12 +252,7 @@ JobQueueManager.processJobs = function() {
                     return null;
             })
             .then(function(jobOutput) {
-                if (jobOutput) {
-                    metadata.jobSelected = jobOutput;
-                    jobData.config.inputs.AIRRMetadata = 
-                    jobData.config.inputs.AIRRMetadata = 'agave://' + agaveSettings.storageSystem + '/' + jobOutput.archivePath + '/study_metadata.airr.json';
-                    console.log(jobData.config.inputs.AIRRMetadata);
-                }
+                if (jobOutput) metadata.jobSelected = jobOutput;
 
                 // secondary inputs provided?
                 if (jobData.config.secondaryInputs) {
@@ -309,21 +402,21 @@ JobQueueManager.processJobs = function() {
             ;
     });
 
-    /*
-      This task gets added to the queue when job FINISHED notification is received
+    //
+    //  This task gets added to the queue when job FINISHED notification is received
 
-      Job finish processing tasks
+    //  Job finish processing tasks
 
-      1. share job output files
-      2. get process metadata job file and insert as agave metadata entry
-      3. create project file metadata for job output files
-      4. share project file metadata for job output files
-      5. emit job complete webhook
-    */
+    //  1. share job output files
+    //  2. get process metadata job file and insert as agave metadata entry
+    //  3. create project file metadata for job output files
+    //  4. share project file metadata for job output files
+    //  5. emit job complete webhook
+    //
 
-    /* We use a redis guard for when duplicate FINISHED notifications are sent, but that
-       only works within a short period of time as the guard expires. For longer term,
-       check the existence of the process metadata. */
+    // We use a redis guard for when duplicate FINISHED notifications are sent, but that
+    //   only works within a short period of time as the guard expires. For longer term,
+    //   check the existence of the process metadata.
 
     taskQueue.process('checkJobTask', function(task, done) {
         var jobData = task.data;
@@ -394,24 +487,9 @@ JobQueueManager.processJobs = function() {
                 });
 
                 return promises.reduce(Q.when, new Q()); // 3.
-/*
-                return agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath)
-                    .then(function(jobFileListings) {
 
-                        var promises = projectUsernames.map(function(username) {
-                            return function() {
-                                return agaveIO.addUsernameToFullFilePermissions(
-                                    username,
-                                    ServiceAccount.accessToken(),
-                                    jobData.projectUuid + '/analyses' + '/' + jobData.relativeArchivePath,
-                                    true
-                                );
-                            };
-                        });
+                //return agaveIO.getJobOutputFileListings(jobData.projectUuid, jobData.relativeArchivePath)
 
-                        return promises.reduce(Q.when, new Q()); // 3.
-                    })
-                    ; */
             })
             .then(function() {
                 taskQueue
@@ -725,4 +803,4 @@ JobQueueManager.processJobs = function() {
             });
     });
 
-};
+}; */

@@ -1,6 +1,35 @@
 
 'use strict';
 
+//
+// userController.js
+// Handle user entry points
+//
+// VDJServer Analysis Portal
+// VDJ API Service
+// https://vdjserver.org
+//
+// Copyright (C) 2020-2022 The University of Texas Southwestern Medical Center
+//
+// Author: Scott Christley <scott.christley@utsouthwestern.edu>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+var UserController = {};
+module.exports = UserController;
+
 var config = require('../config/config');
 
 // App
@@ -12,25 +41,21 @@ var apiResponseController = require('./apiResponseController');
 // Models
 var User = require('../models/user');
 
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
+var ServiceAccount = tapisIO.serviceAccount;
+
 // Processing
-var agaveIO = require('../vendor/agaveIO');
 var emailIO = require('../vendor/emailIO');
 var webhookIO = require('../vendor/webhookIO');
-
-// Node Libraries
-var Q = require('q');
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 
-var UserController = {};
-module.exports = UserController;
-
+// we use recaptcha to deter user creation bots
 var verifyRecaptcha = function(recaptchaData) {
-
-    var deferred = Q.defer();
 
     var recaptcha = new Recaptcha(
         config.recaptchaPublic,
@@ -38,506 +63,531 @@ var verifyRecaptcha = function(recaptchaData) {
         recaptchaData
     );
 
-    recaptcha.verify(function(success, errorCode) {
-        if (!success) {
-	    deferred.reject(errorCode);
-        } else {
-	    deferred.resolve();
-	}
-    });
-
-    return deferred.promise;
-};
-
-UserController.createUser = function(request, response) {
-
-    var user = new User({
-        username:   request.body.username,
-        password:   request.body.password,
-        email:      request.body.email,
-        firstName:  request.body.firstName,
-        lastName:   request.body.lastName,
-        city:       request.body.city,
-        state:      request.body.state,
-        country:    request.body.country,
-        affiliation: request.body.affiliation,
-    });
-
-    if (!user.username) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
-    if (!user.password) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - missing password parameter');
-        apiResponseController.sendError('Password required.', 400, response);
-        return;
-    }
-
-    if (!user.email) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - missing email parameter');
-        apiResponseController.sendError('Email required.', 400, response);
-        return;
-    }
-
-    /*
-    if (!user.firstName) {
-        console.error('Error UserController.createUser: missing firstName parameter');
-        apiResponseController.sendError('First Name required.', 400, response);
-        return;
-    }
-
-    if (!user.lastName) {
-        console.error('Error UserController.createUser: missing lastName parameter');
-        apiResponseController.sendError('Last Name required.', 400, response);
-        return;
-    }
-
-    if (!user.city) {
-        console.error('Error UserController.createUser: missing city parameter');
-        apiResponseController.sendError('City required.', 400, response);
-        return;
-    }
-
-    if (!user.state) {
-        console.error('Error UserController.createUser: missing state parameter');
-        apiResponseController.sendError('State required.', 400, response);
-        return;
-    }
-
-    if (!user.country) {
-        console.error('Error UserController.createUser: missing country parameter');
-        apiResponseController.sendError('Country required.', 400, response);
-        return;
-    }
-
-    if (!user.affiliation) {
-        console.error('Error UserController.createUser: missing affiliation parameter');
-        apiResponseController.sendError('Affiliation required.', 400, response);
-        return;
-    }
-    */
-
-    //console.log(response);
-    // BEGIN RECAPTCHA CHECK
-    //console.log(config.allowRecaptchaSkip);
-    //console.log(request.body['g-recaptcha-response']);
-/*
-    if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
-        console.log('UserController.createUser - WARNING - Recaptcha check is being skipped.');
-    } else {
-        var recaptchaData = {
-            remoteip:  request.connection.remoteAddress,
-            response: request.body['g-recaptcha-response'],
-            secret: config.recaptchaSecret,
-        };
-
-	verifyRecaptcha(recaptchaData)
-	.then(function() {
-	    console.log('passed recaptcha');
-	})
-	.fail(function() {
-	    console.log('failed recaptcha');
-	})
-
-        var recaptcha = new Recaptcha(
-            config.recaptchaPublic,
-            config.recaptchaSecret,
-            recaptchaData
-        );
-
-	var that = response;
+    return new Promise(function(resolve, reject) {
         recaptcha.verify(function(success, errorCode) {
             if (!success) {
-                console.log('UserController.createUser - recaptcha error for '
-                    + JSON.stringify(user.getSanitizedAttributes())
-                    + ' and error code is: ' + errorCode
-                );
-
-		console.log(response);
-		//console.log(JSON.stringify(that));
-                apiResponseController.sendError('Recaptcha response invalid: ' + errorCode, 400, response);
-                return;
+                reject(errorCode);
+            } else {
+                resolve();
             }
         });
-    }
-*/
-    // END RECAPTCHA CHECK
-
-    console.log('VDJ-API INFO: UserController.createUser - begin for ' + JSON.stringify(user.getSanitizedAttributes()));
-
-    Q.fcall(function() {
-        var deferred = Q.defer();
-
-	// BEGIN RECAPTCHA CHECK
-	if (config.allowRecaptchaSkip && (request.body['g-recaptcha-response'] == 'skip_recaptcha')) {
-            console.log('VDJ-API INFO: UserController.createUser - WARNING - Recaptcha check is being skipped.');
-	    deferred.resolve();
-	} else {
-            var recaptchaData = {
-		remoteip:  request.connection.remoteAddress,
-		response: request.body['g-recaptcha-response'],
-		secret: config.recaptchaSecret,
-            };
-
-	    verifyRecaptcha(recaptchaData)
-		.then(function() {
-		    //console.log('passed recaptcha');
-		    deferred.resolve();
-		})
-		.fail(function(errorCode) {
-                    console.log('VDJ-API ERROR: UserController.createUser - recaptcha error for '
-				+ JSON.stringify(user.getSanitizedAttributes())
-				+ ' and error code is: ' + errorCode
-			       );
-		    var error = new Error('Recaptcha response invalid: ' + errorCode);
-		    deferred.reject(error);
-		});
-	}
-	// END RECAPTCHA CHECK
-
-        return deferred.promise;
-    })
-    .then(function() {
-        var deferred = Q.defer();
-
-        agaveIO.isDuplicateUsername(user.username)
-            .then(function(isDuplicate) {
-
-		// skip for test account
-		if (config.useTestAccount && user.username == config.testAccountUsername) {
-		    console.log('VDJ-API INFO: UserController.createUser - WARNING - Duplicate username check is being bypassed.');
-		    deferred.resolve();
-		}
-
-                if (isDuplicate === true) {
-                    var error = new Error(1);
-                    deferred.reject(error);
-                }
-                else {
-                    console.log(
-                        'VDJ-API INFO: UserController.createUser - agave duplicate account check successful for '
-                        + JSON.stringify(user.getSanitizedAttributes())
-                    );
-
-                    deferred.resolve();
-                }
-            })
-            .fail(function() {
-                console.error('VDJ-API ERROR: UserController.createUser - agave duplicate account check failed for ' + JSON.stringify(user.getSanitizedAttributes()));
-                var error = new Error(1);
-                deferred.reject(error);
-            })
-            ;
-
-        return deferred.promise;
-    })
-    .then(function() {
-        var deferred = Q.defer();
-	
-	// skip for test account
-	if (config.useTestAccount && user.username == config.testAccountUsername) {
-	    console.log('VDJ-API INFO: UserController.createUser - WARNING - Agave account creation is being bypassed.');
-	    deferred.resolve();
-	}
-
-        agaveIO.createUser(user.getCreateUserAttributes())
-            .then(function() {
-                console.log('VDJ-API INFO: UserController.createUser - agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-                deferred.resolve();
-            })
-            .fail(function() {
-		var msg = 'VDJ-API ERROR: UserController.createUser - agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes());
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-                var error = new Error(2);
-                deferred.reject(error);
-            })
-            ;
-
-        return deferred.promise;
-    })
-    .then(function() {
-        var deferred = Q.defer();
-
-        agaveIO.getToken(user)
-            .then(function(userToken) {
-                console.log('VDJ-API INFO: UserController.createUser - token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-                deferred.resolve(userToken);
-            })
-            .fail(function() {
-                console.error('VDJ-API ERROR: UserController.createUser - token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes()));
-                var error = new Error(3);
-                deferred.reject(error);
-            })
-            ;
-
-        return deferred.promise;
-    })
-    .then(function(userToken) {
-        var deferred = Q.defer();
-
-        agaveIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
-            .then(function() {
-                console.log('VDJ-API INFO: UserController.createUser - vdj profile successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-
-                deferred.resolve();
-            })
-            .fail(function() {
-                var msg = 'VDJ-API ERROR: UserController.createUser - vdj profile failed for ' + JSON.stringify(user.getSanitizedAttributes());
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-                var error = new Error(4);
-                deferred.reject(error);
-            })
-            ;
-
-        return deferred.promise;
-    })
-    .then(function() {
-        var deferred = Q.defer();
-
-        agaveIO.createUserVerificationMetadata(user.username)
-            .then(function(userVerificationMetadata) {
-                console.log('VDJ-API INFO: UserController.createUser - verification metadata successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-                deferred.resolve(userVerificationMetadata);
-            })
-            .fail(function() {
-                var msg = 'VDJ-API ERROR: UserController.createUser - verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes());
-		console.error(msg);
-		webhookIO.postToSlack(msg);
-                var error = new Error(5);
-                deferred.reject(error);
-            })
-            ;
-
-        return deferred.promise;
-    })
-    .then(function(userVerificationMetadata) {
-        emailIO.sendWelcomeEmail(user.email, user.username, userVerificationMetadata.uuid);
-        console.log('VDJ-API INFO: UserController.createUser - send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
-    })
-    .then(function() {
-        console.log('VDJ-API INFO: UserController.createUser - acount creation complete for ' + JSON.stringify(user.getSanitizedAttributes()));
-        apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
-    })
-    .fail(function(error) {
-        console.error('VDJ-API ERROR: UserController.createUser - error - user ' + JSON.stringify(user.getSanitizedAttributes()) + ', error ' + error);
-
-        // Insert into appropriate place in queue
-        switch (error.message) {
-
-            case '4': {
-                Q.fcall(function() {
-                    taskQueue
-                        .create('createUserProfileMetadataTask', user.getSanitizedAttributes())
-                        .removeOnComplete(true)
-                        .attempts(10)
-                        .backoff({
-                            delay: 60 * 1000,
-                            type: 'fixed',
-                        })
-                        .save()
-                        ;
-                })
-                ;
-
-                break;
-            }
-
-            case '5': {
-                Q.fcall(function() {
-                    taskQueue
-                        .create('createUserVerificationMetadataTask', user.getSanitizedAttributes())
-                        .removeOnComplete(true)
-                        .attempts(10)
-                        .backoff({
-                            delay: 60 * 1000,
-                            type: 'fixed',
-                        })
-                        .save()
-                        ;
-                })
-                ;
-
-                break;
-            }
-
-            default: {
-                break;
-            }
-        }
-
-        apiResponseController.sendError(error.message, 500, response);
-    })
-    ;
+    });
 };
 
-UserController.changePassword = function(request, response) {
+// create new user account
+// 1. verify recaptcha
+// 2. verify not duplicate username
+// 3. create the tapis/agave user account
+// 4. verify we can get token with username/password
+// 5. create user profile metadata record
+// 6. create user verification metadata record
+// 7. send user verification email
+UserController.createUser = async function(request, response) {
+    const context = 'UserController.createUser';
+    config.injectError(request.body.inject_error);
+
+    // The API middleware verifies these are present
+    var user = new User(request.body);
+    var recaptchaData = {
+        remoteip:  request.connection.remoteAddress,
+        response: request.body['g-recaptcha-response'],
+        secret: config.recaptchaSecret,
+    };
+    var msg = null;
+
+    config.log.info(context, 'begin for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    // TODO: check username meets requirements
+
+    // TODO: check password meets requirements
+
+    // BEGIN RECAPTCHA CHECK
+    if (config.allowRecaptchaSkip && (recaptchaData['response'] == 'skip_recaptcha')) {
+        config.log.info(context, 'WARNING - Recaptcha check is being skipped.');
+    } else {
+        await verifyRecaptcha(recaptchaData)
+            .catch(function(errorCode) {
+                msg = 'recaptcha error for '
+                    + JSON.stringify(user.getSanitizedAttributes())
+                    + ' and error code is: ' + errorCode;
+            });
+
+        if (msg) {
+            msg = config.log.error(context, msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
+    }
+    // END RECAPTCHA CHECK
+
+    // check for duplicate username
+    var isDuplicate = false;
+    if (config.useTestAccount && user.username == config.testAccountUsername) {
+        // skip for test account
+        config.log.info(context, 'WARNING - Duplicate username check is being bypassed.');
+    } else {
+        isDuplicate = await tapisIO.isDuplicateUsername(user.username)
+            .catch(function(error) {
+                msg = 'agave duplicate account check got error for ' + JSON.stringify(user.getSanitizedAttributes())
+                    + ', error: ' + error;
+            });
+    }
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (isDuplicate === true) {
+        config.log.info(context, 'duplicate username for ' + JSON.stringify(user.getSanitizedAttributes()));
+        msg = 'duplicate username';
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    config.log.info(context, 'agave duplicate account check successful for '
+                + JSON.stringify(user.getSanitizedAttributes()));
+
+    // create agave user
+    if (config.useTestAccount && user.username == config.testAccountUsername) {
+        // skip for test account
+        config.log.info(context, 'WARNING - Agave account creation is being bypassed.');
+    } else {
+        await tapisIO.createUser(user.getCreateUserAttributes())
+            .catch(function(error) {
+                msg = 'agave account creation failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                    + ', error: ' + error;
+            });
+    }
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    config.log.info(context, 'agave account creation successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    // get token for user
+    var userToken = await tapisIO.getToken(user)
+        .catch(function(error) {
+            msg = 'token fetch failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    config.log.info(context, 'token fetch successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    // TODO: should we check if user profile exists? It should not for a new user, presumably just for test accounts
+
+    // create user profile
+    var userProfile = await tapisIO.createUserProfile(user.getSanitizedAttributes(), userToken.access_token)
+        .catch(function(error) {
+            msg = 'create user profile failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    config.log.info(context, 'create user profile (' + userProfile.uuid
+                + ') successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    // create user verification
+    var userVerificationMetadata = await tapisIO.createUserVerificationMetadata(user.username)
+        .catch(function(error) {
+            msg = 'verification metadata failed for ' + JSON.stringify(user.getSanitizedAttributes())
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    config.log.info(context, 'verification metadata (' + userVerificationMetadata.uuid
+                + ') successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    // send verification email
+    emailIO.sendWelcomeEmail(user.email, user.username, userVerificationMetadata.uuid);
+    config.log.info(context, 'send email successful for ' + JSON.stringify(user.getSanitizedAttributes()));
+
+    msg = 'account creation complete for ' + JSON.stringify(user.getSanitizedAttributes());
+    msg = config.log.info(context, msg);
+    webhookIO.postToSlack(msg);
+    return apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
+};
+
+// get user profile
+UserController.getUserProfile = async function(request, response) {
+    const context = 'UserController.getUserProfile';
+    var username = request.params.username;
+    var msg = null;
+
+    config.log.info(context, 'checking username ' + username);
+
+    // get user profile
+    var profile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(profile, response);
+};
+
+// check if username is already being used
+UserController.duplicateUsername = async function(request, response) {
+    const context = 'UserController.duplicateUsername';
+    var username = request.params.username;
+    var msg = null;
+
+    config.log.info(context, 'checking username ' + username);
+
+    // check for duplicate username
+    var isDuplicate = await tapisIO.isDuplicateUsername(username)
+        .catch(function(error) {
+            msg = 'agave duplicate account check got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (isDuplicate === true)
+        return apiResponseController.sendSuccess('duplicate', response);
+    else
+        return apiResponseController.sendSuccess('not duplicate', response);
+};
+
+
+// Change user password
+// Only for authenticated user, plus have to send original password
+//
+// 0.  Verify old password
+// 1.  Get user profile
+// 2.  Reset password
+// 3.  Response
+// 3a. Success
+// 3b. Fail
+UserController.changePassword = async function(request, response) {
+
     var username = request.user.username;
     var password = request.body.password;
-    var newPassword = request.body.newPassword;
-
-    if (!username) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing username parameter');
-        apiResponseController.sendError('Username required.', 400, response);
-        return;
-    }
-
-    if (!password) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing password parameter');
-        apiResponseController.sendError('Password required.', 400, response);
-        return;
-    }
-
-    if (!newPassword) {
-        console.error('VDJ-API ERROR: UserController.changePassword - error - missing newPassword parameter');
-        apiResponseController.sendError('New Password required.', 400, response);
-        return;
-    }
+    var newPassword = request.body.new_password;
+    var msg = null;
 
     console.log('VDJ-API INFO: UserController.changePassword - begin for ' + username);
 
-    // 0.  Verify old password
-    // 1.  Get user profile
-    // 2.  Reset password
-    // 3.  Response
-    // 3a. Success
-    // 3b. Fail
     var auth = {
         username: username,
         password: password,
     };
 
-    agaveIO.getToken(auth) // 0.
-        .then(function(/*token*/) {
-            console.log('VDJ-API INFO: UserController.changePassword - token verify success for ' + username);
+    // verify old password
+    await tapisIO.getToken(auth)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'incorrect password', 400, response);
+    }
 
-            // current password verified
-            return agaveIO.getUserProfile(username); // 1.
-        })
-        .then(function(profile) {
-            console.log('VDJ-API INFO: UserController.changePassword - profile fetch success for ' + username);
+    console.log('VDJ-API INFO: UserController.changePassword - token verify success for ' + username);
 
-            if (profile && profile[0] && profile[0].value && profile[0].value.email) {
-                return agaveIO.updateUserPassword({ // 2.
-                    'username': username,
-                    'email': profile[0].value.email,
-                    'password': newPassword,
-                });
-            }
-            else {
-                return Q.reject(
-                    new Error('UserController.changePassword - error - password change fail for ' + username + '. User profile not found.')
-                );
-            }
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: UserController.changePassword - change password complete for ' + username);
-            apiResponseController.sendSuccess('Password changed successfully.', response); // 3a.
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error);
-            apiResponseController.sendError('Invalid authorization', 401, response); // 3b.
-        })
-        ;
+    // get user profile
+    var profile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.changePassword - error - username ' + username + ', error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.changePassword - profile fetch success for ' + username);
+
+    // change password
+    if (profile && profile[0] && profile[0].value && profile[0].value.email) {
+        await tapisIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + ', error ' + error;
+            });
+    } else {
+        msg = 'VDJ-API ERROR: UserController.changePassword - error - password change fail for ' + username + '. User profile is not valid.';
+    }
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.changePassword - change password complete for ' + username);
+    apiResponseController.sendSuccess('Password changed successfully.', response);
 };
 
-UserController.verifyUser = function(request, response) {
-
-    var verificationId = request.params.verificationId.trim();
-
-    if (!verificationId || verificationId.length == 0) {
-        console.error('VDJ-API ERROR: UserController.verifyUser - error - missing verificationId parameter');
-        apiResponseController.sendError('Verification Id required.', 400, response);
-    }
+// verify the user given the verification code sent by email
+UserController.verifyUser = async function(request, response) {
+    var verificationId = request.params.verification_id;
+    var msg = null;
 
     console.log('VDJ-API INFO: UserController.verifyUser - begin for ' + verificationId);
 
-    // First, check to see if this verificationId corresponds to this username
-    agaveIO.getMetadata(verificationId)
-        .then(function(userVerificationMetadata) {
-
-            console.log('VDJ-API INFO: UserController.verifyUser - getMetadata for ' + verificationId);
-
-	    if (userVerificationMetadata.name != 'userVerification') {
-                console.error('VDJ-API ERROR: UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId);
-                return Q.reject(new Error('UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId));
-	    }
-
-            if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
-                var username = userVerificationMetadata.value.username;
-
-		if (!username) {
-                    console.error('VDJ-API ERROR: UserController.verifyUser - error - metadata missing username: ' + verificationId);
-                    return Q.reject(new Error('UserController.verifyUser - error - metadata missing username: ' + verificationId));
-		}
-
-                return agaveIO.verifyUser(username, verificationId);
-            }
-            else {
-                return Q.reject(new Error('UserController.verifyUser - error - verification metadata failed comparison for ' + verificationId));
-            }
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: UserController.verifyUser - verification complete for ' + verificationId);
-            apiResponseController.sendSuccess('', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error);
-            apiResponseController.sendError('Invalid verification id: ' + verificationId, 500, response);
-        })
-        ;
-};
-
-UserController.resendVerificationEmail = function(request, response) {
-
-    var username = request.params.username;
-
-    if (!username) {
-        console.error('VDJ-API ERROR: UserController.resendVerificationEmail - error - missing username parameter for ' + username);
-        apiResponseController.sendError('Username required.', 400, response);
+    var userVerificationMetadata = await tapisIO.getMetadata(verificationId)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
     }
 
-    console.log('VDJ-API INFO: UserController.resendVerificationEmail - begin for ' + username);
+    if (userVerificationMetadata.name != 'userVerification') {
+        msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not a userVerification item: ' + verificationId;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 
-    var verificationId = '';
+    if (userVerificationMetadata.owner != ServiceAccount.username) {
+        msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata is not owned by service account: ' + verificationId;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 
-    agaveIO.getUserVerificationMetadata(username)
-        .then(function(userVerificationMetadata) {
-            console.log('VDJ-API INFO: UserController.resendVerificationEmail - get verification metadata for ' + username);
+    if (userVerificationMetadata && verificationId === userVerificationMetadata.uuid) {
+        var username = userVerificationMetadata.value.username;
 
-            if (userVerificationMetadata && userVerificationMetadata[0] && userVerificationMetadata[0].value.isVerified === false) {
-                verificationId = userVerificationMetadata[0].uuid;
+        if (!username) {
+            msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadata missing username: ' + verificationId;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
 
-                return agaveIO.getUserProfile(username);
-            }
-            else {
-                return Q.reject(
-                    new Error('Non-existent verification for username: ' + username)
-                );
-            }
-        })
-        .then(function(profileMetadata) {
-            console.log('VDJ-API INFO: UserController.resendVerificationEmail - get profile for ' + username);
+        await tapisIO.verifyUser(username, verificationId)
+            .catch(function(error) {
+                msg = 'VDJ-API ERROR: UserController.verifyUser - error - metadataId ' + verificationId + ', error ' + error;
+            });
+        if (msg) {
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+    }
+    else {
+        msg = 'UserController.verifyUser - error - verification metadata failed comparison for ' + verificationId;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 
-            if (profileMetadata && profileMetadata[0] && profileMetadata[0].value && profileMetadata[0].value.email) {
-                return emailIO.sendWelcomeEmail(profileMetadata[0].value.email, username, verificationId);
-            }
-            else {
-                return Q.reject(
-                    new Error('UserController.resendVerificationEmail - error - user profile could not be found for ' + username)
-                );
-            }
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: UserController.resendVerificationEmail - complete for ' + username);
-            apiResponseController.sendSuccess('', response);
-        })
-        .fail(function(error) {
-            console.error('VDJ-API ERROR: UserController.resendVerificationEmail - error - username ' + username + ', error ' + error);
-            apiResponseController.sendError(error.message, 500, response);
-        })
-        ;
+    console.log('VDJ-API INFO: UserController.verifyUser - verification complete for ' + verificationId);
+    apiResponseController.sendSuccess('', response);
 };
+
+// resend verification email for given username
+UserController.resendVerificationEmail = async function(request, response) {
+    var username = request.params.username;
+    var msg = null;
+
+    console.log('VDJ-API INFO: UserController.resendVerificationEmail - begin for ' + username);
+    console.log('VDJ-API INFO: UserController.resendVerificationEmail - get verification metadata for ' + username);
+
+    var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: Non-existent verification for username: ' + username;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
+    }
+
+    if (!userVerificationMetadata || userVerificationMetadata.length != 1) {
+        msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - invalid verification metadata for ' + username;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    if (userVerificationMetadata[0].value.isVerified === true) {
+        msg = 'VDJ-API INFO: UserController.resendVerificationEmail - user is already verified';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.resendVerificationEmail - get profile for ' + username);
+    var verificationId = userVerificationMetadata[0].uuid;
+    var profileMetadata = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - user profile could not be found for ' + username;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.resendVerificationEmail - send verification email for ' + username);
+    if (profileMetadata && profileMetadata[0] && profileMetadata[0].value && profileMetadata[0].value.email) {
+        await emailIO.sendWelcomeEmail(profileMetadata[0].value.email, username, verificationId);
+    } else {
+        msg = 'VDJ-API ERROR: UserController.resendVerificationEmail - error - invalid user profile for ' + username;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.resendVerificationEmail - complete for ' + username);
+    apiResponseController.sendSuccess('', response);
+};
+
+// 1.  Get confirm username, email address from user profile
+// 2.  Generate random key by posting to metadata
+// 3.  Send email
+// 4.  Send response success
+// TODO: this should be protected by a recaptcha
+UserController.createResetPasswordRequest = async function(request, response) {
+
+    var username = request.body.username;
+    var msg = null;
+
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
+
+    var userProfile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
+    }
+
+    if (userProfile && userProfile[0]) userProfile = userProfile[0];
+    else {
+        msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error - username unknown for ' + username;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'invalid username', 400, response);
+    }
+
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - createPasswordResetMetadata for user ' + username);
+    var passwordReset = await tapisIO.createPasswordResetMetadata(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: PasswordResetController.createResetPasswordRequest - error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
+    await emailIO.sendPasswordResetEmail(userProfile.value.email, username, passwordReset.uuid)
+
+    webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
+
+    apiResponseController.sendSuccess('Password reset email sent.', response);
+};
+
+// 1.  Get password reset metadata for given uuid
+// 2.  Verify password reset uuid and matching username
+// 3.  Get user profile
+// 4.  Update user with new password
+// 5.  Delete password reset metadata
+// 5a. Report error if delete fails
+// 6.  Response
+UserController.processResetPasswordRequest = async function(request, response) {
+
+    var username = request.body.username;
+    var uuid = request.body.reset_code;
+    var newPassword = request.body.new_password;
+    var msg = null;
+
+    console.log('VDJ-API INFO: UserController.processResetPasswordRequest - begin for user ' + username);
+    console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
+
+    var passwordResetMetadata = await tapisIO.getPasswordResetMetadata(uuid)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (passwordResetMetadata.length == 0) {
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, Invalid reset code: ' + uuid;
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'invalid reset code', 400, response);
+    }
+
+    if (username != passwordResetMetadata[0].value.username) {
+        msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest, reset code and username does not match.';
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendErrorWithCode(msg, 'incorrect username', 400, response);
+    }
+
+    console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getUserProfile for user ' + username);
+    var passwordReset = passwordResetMetadata[0];
+    var profile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - getUserProfile for user ' + username + ', error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
+    await tapisIO.updateUserPassword({'username': username, 'email': profile[0].value.email, 'password': newPassword})
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - updateUserPassword for user ' + username + ', error: ' + error;
+        });
+    if (msg) {
+        console.error(msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    //    while metadata is deleted, service returns 500 error;
+    //    don't let this short-circuit the process
+    console.log('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - deleteMetadata for user ' + username);
+    await tapisIO.deleteMetadata(ServiceAccount.accessToken(), passwordReset.uuid)
+        .catch(function(error) {
+            msg = 'VDJ-API ERROR: UserController.processResetPasswordRequest - deleteMetadata for user ' + username + ', error: ' + error;
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+        });
+
+    webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
+
+    apiResponseController.sendSuccess('Password reset successfully.', response);
+};
+
+// admin security so must be considered admin to get this far
+UserController.userHasAdminRole = async function(request, response) {
+    var username = request['user']['username'];
+
+    console.log('VDJ-API INFO: UserController.userHasAdminRole - begin for user ' + username);
+
+    apiResponseController.sendSuccess('User has admin role.', response);
+}

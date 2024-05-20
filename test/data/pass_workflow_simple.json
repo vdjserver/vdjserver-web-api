@@ -1,0 +1,73 @@
+{
+  "audit_only": true,
+  "workflow": {
+    "prefix": {
+      "airr": "https://airr-community.org/",
+      "orcid": "https://orcid.org/",
+      "vdjserver": "https://vdjserver.org/",
+      "foaf": "http://xmlns.com/foaf/0.1/"
+    },
+    "agent": {
+      "orcid:0000-0002-9889-1221": {
+        "prov:type": {
+          "$": "prov:Person",
+          "type": "prov:QUALIFIED_NAME"
+        },
+        "foaf:givenName": "Scott",
+        "foaf:mbox": "<mailto:scott.christley@utsouthwestern.edu>"
+      }
+    },
+    "entity": {
+      "airr:Repertoire:9135128879355662826-242ac113-0001-012": {
+        "airr:type": "Repertoire",
+        "vdjserver:type": "app:inputs",
+        "vdjserver:uuid": "9135128879355662826-242ac113-0001-012"
+      },
+      "airr:DataFile:1": {
+        "airr:type": "DataFile",
+        "vdjserver:type": "app:inputs",
+        "vdjserver:uuid": "9135128879355662826-242ac113-0001-012",
+        "metadata_file": ""
+      },
+      "airr:Rearrangement:1": {
+        "airr:type": "Rearrangement",
+        "vdjserver:type": "app:inputs",
+        "airr_tsv_file": ""
+      },
+      "vdjserver:app:parameters:1": {
+        "vdjserver:type": "app:parameters",
+        "file_type": "rearrangement",
+        "creator": "scott_test1",
+        "repertoire_id": "9135128879355662826-242ac113-0001-012"
+      },
+      "vdjserver:statistics:1": {
+        "vdjserver:type": "statistics"
+      }
+    },
+    "activity": {
+      "vdjserver:activity:1": {
+          "vdjserver:app": "irplus-statistics-ls6-0.1u2"
+      }
+    },
+    "uses": {
+      "vdjserver:app:input:1": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "airr:DataFile:1"
+      },
+      "vdjserver:app:input:2": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "airr:Rearrangement:1"
+      },
+      "vdjserver:app:parameters:1": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "vdjserver:app:parameters:1"
+      }
+    },
+    "isGeneratedBy": {
+      "vdjserver:app:output:1": {
+        "prov:activity": "vdjserver:activity:1",
+        "prov:entity": "vdjserver:statistics:1"
+      }
+    }
+  }
+}
