@@ -63,6 +63,7 @@ RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install --unsafe-perm
 
 #RUN cd /vdjserver-web-api/app/airr-standards/lang/js && npm install && npm run test
 #RUN cd /vdjserver-web-api/app/vdjserver-schema && npm install
+
 RUN cd /vdjserver-web-api && npm install
 
 # ESLint
