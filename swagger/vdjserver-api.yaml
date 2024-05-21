@@ -212,40 +212,14 @@ paths:
         '500':
           description: Internal service error occurred.
 
-  /project/{project_uuid}/file/import:
-    post:
-      description: Import an uploaded file into project
-      operationId: importFile
+  /project/metadata:
+    get:
+      description: get project metadata records
+      operationId: getProjectMetadata
       tags:
         - project
       security:
-        - project_authorization: []
-      parameters:
-        - name: project_uuid
-          in: path
-          description: project identifer
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          'application/json':
-            schema:
-              required:
-                - path
-              properties:
-                event:
-                  type: string
-                type:
-                  type: string
-                path:
-                  type: string
-                system:
-                  type: string
-                readDirection:
-                  type: string
-                tags:
-                  type: string
+        - user_authorization: []
       responses:
         '200':
           description: Success.
@@ -264,6 +238,224 @@ paths:
           description: Not authorized.
         '500':
           description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/name/{name}:
+    get:
+      description: query metadata for project
+      operationId: queryMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: metadata type name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: create metadata for project
+      operationId: createMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: metadata type name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - value
+              properties:
+                value:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/metadata/uuid/{uuid}:
+    get:
+      description: get metadata for uuid
+      operationId: getMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: update metadata record for uuid
+      operationId: updateMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - value
+              properties:
+                value:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete metadata record for uuid
+      operationId: deleteMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: uuid
+          in: path
+          description: metadata identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
 
   /project/{project_uuid}/metadata/import:
     post:
@@ -343,7 +535,7 @@ paths:
         '500':
           description: Internal service error occurred.
 
-  /project/{project_uuid}/{table_name}/import:
+  /project/{project_uuid}/metadata/import/table/{table_name}:
     post:
       description: import metadata table into project
       operationId: importTable
@@ -402,7 +594,7 @@ paths:
         '500':
           description: Internal service error occurred.
 
-  /project/{project_uuid}/{table_name}/export:
+  /project/{project_uuid}/metadata/export/table/{table_name}:
     get:
       description: export metadata table from project
       operationId: exportTable
@@ -426,6 +618,85 @@ paths:
             enum:
               - subject
               - sample
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/file/import:
+    post:
+      description: Import an uploaded file into project
+      operationId: importFile
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ProjectFile'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/file/name/{name}:
+    get:
+      description: query for project file metadata by file name
+      operationId: getProjectFileMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: URI encoded file name
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Success.
@@ -873,33 +1144,6 @@ paths:
         '500':
           description: Internal service error occurred.
 
-  /permission/metadata:
-    post:
-      description: synchronize permissions on metadata object for all project users
-      operationId: syncMetadataPermissionsWithProject
-      tags:
-        - permission
-      security:
-        - project_authorization: []
-      requestBody:
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/MetadataPermission'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BasicResponse'
-        '400':
-          description: Bad request.
-        '401':
-          description: Not authorized.
-        '500':
-          description: Internal service error occurred.
-
   /feedback:
     post:
       description: send feedback message from authenticated user
@@ -970,6 +1214,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserAccount'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /user/profile/{username}:
+    get:
+      description: get user profile
+      operationId: getUserProfile
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':

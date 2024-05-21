@@ -49,6 +49,14 @@ NotificationsController.processFileImportNotifications = function(request, respo
     };
 
     console.log('VDJ-API INFO: NotificationsController.processFileImportNotifications - event - begin for file uuid ' + fileNotification.fileUuid);
+    console.log(fileNotification);
+    // temporary fix for tapis bug, path is missing starting /
+    // gonna try to hack it here instead of in the GUI code
+    console.log(fileNotification.filePath.search('vdjZprojects'));
+    if (fileNotification.filePath.search('vdjZprojects') == 1) {
+	fileNotification.filePath = fileNotification.filePath.replace('vdjZprojects', 'vdjZ/projects');
+    }
+    console.log(fileNotification);
 
     // verify file notification
     var fileUploadJob = new FileUploadJob(fileNotification);

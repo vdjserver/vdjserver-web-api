@@ -80,6 +80,7 @@ var taskQueue = kue.createQueue({
 // Creates a project and all initial directories
 //
 ProjectController.createProject = function(request, response) {
+    const context = 'ProjectController.createProject';
 
     var project = request.body.project;
     var projectName = project['study_title'];
@@ -89,89 +90,248 @@ ProjectController.createProject = function(request, response) {
     var uuid;
 
     // set the username as the project owner
-    project['owner'] = username;
+    //project['owner'] = username;
 
-    console.log('VDJ-API INFO: ProjectController.createProject - event - begin for username: ' + username + ', project name: ' + projectName);
+    config.log.info(context, 'username: ' + username + ', project name: ' + projectName);
 
     ServiceAccount.getToken()
         .then(function(token) {
-            return tapisIO.createProjectMetadata(project);
+            return tapisIO.createProjectMetadata(username, project);
         })
         .then(function(_projectMetadata) {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - metadata for username: ' + username + ', project name: ' + projectName);
-
             // Save these for later
             projectMetadata = _projectMetadata;
             uuid = projectMetadata.uuid;
 
-            return tapisIO.addUsernameToMetadataPermissions(username, ServiceAccount.accessToken(), uuid);
-        })
-        // create project/files directory
-        .then(function() {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - metadata pems for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
+            config.log.info(context, 'created project metadata for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
+            // create project/files directory
             return tapisIO.createProjectDirectory(uuid + '/files');
         })
         // create project/analyses directory
         .then(function() {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - files dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
+            config.log.info(context, 'created files dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
             return tapisIO.createProjectDirectory(uuid + '/analyses');
         })
         // create project/deleted directory
         .then(function() {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - analyses dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
+            config.log.info(context, 'created analyses dir for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
             return tapisIO.createProjectDirectory(uuid + '/deleted');
         })
-        // set project directory permissions recursively
+        // set permissions on project directories
         .then(function() {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - dir pems for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
+            config.log.info(context, 'set file permissions for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
-            return tapisIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), uuid, true);
+            return tapisIO.grantProjectFilePermissions(username, uuid, '');
         })
         .then(function() {
-            console.log('VDJ-API INFO: ProjectController.createProject - event - complete for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
+            return tapisIO.grantProjectFilePermissions(username, uuid, 'files');
+        })
+        .then(function() {
+            return tapisIO.grantProjectFilePermissions(username, uuid, 'analyses');
+        })
+        .then(function() {
+            return tapisIO.grantProjectFilePermissions(username, uuid, 'deleted');
+        })
+        .then(function() {
+            config.log.info(context, 'complete for username: ' + username + ', project name: ' + projectName + ' uuid: ' + uuid);
 
             // End user should only see standard Agave meta output
             apiResponseController.sendSuccess(projectMetadata, response);
         })
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: ProjectController.createProject - error - username ' + username + ', project name ' + projectName + ', error ' + error;
-            console.error(msg);
-            webhookIO.postToSlack(msg);            
+            var msg = 'error - username ' + username + ', project name ' + projectName + ', error ' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
             apiResponseController.sendError(msg, 500, response);
         });
 };
 
 //
+// Project metadata operations
+//
+ProjectController.getProjectMetadata = async function(request, response) {
+    const context = 'ProjectController.getProjectMetadata';
+    var msg = null;
+    var username = request['user']['username'];
+
+    config.log.info(context, 'user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.getProjectMetadata(username)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.queryMetadata = async function(request, response) {
+    const context = 'ProjectController.queryMetadata';
+    var project_uuid = request.params.project_uuid;
+    var meta_name = request.params.name;
+    var username = request['user']['username'];
+    var msg = null;
+
+    config.log.info(context, 'project: ' + project_uuid + ' with name: ' + meta_name + ' by user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.queryMetadataForProject(project_uuid, meta_name)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' with name: ' + meta_name + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.createMetadata = async function(request, response) {
+    const context = 'ProjectController.createMetadata';
+    var project_uuid = request.params.project_uuid;
+    var meta_name = request.params.name;
+    var obj = request.body;
+    var username = request['user']['username'];
+    var msg = null;
+
+    config.log.info(context, 'project: ' + project_uuid + ' with name: ' + meta_name + ' by user: ' + username);
+
+    // create metadata
+    var metadata = await tapisIO.createMetadataForProject(project_uuid, meta_name, obj)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' with name: ' + meta_name + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.getMetadata = async function(request, response) {
+    const context = 'ProjectController.getMetadata';
+    var project_uuid = request.params.project_uuid;
+    var meta_uuid = request.params.uuid;
+    var username = request['user']['username'];
+    var msg = null;
+    var metadata = null;
+
+    config.log.info(context, 'project: ' + project_uuid + ' with uuid: ' + meta_uuid);
+
+    // the project metadata does not have associationIds set to itself, so handle it specially
+    if (project_uuid == meta_uuid) {
+        metadata = await tapisIO.getProjectMetadata(username, meta_uuid)
+            .catch(function(error) {
+                msg = 'got error for project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+    } else {
+        metadata = await tapisIO.getMetadataForProject(project_uuid, meta_uuid)
+            .catch(function(error) {
+                msg = 'got error for project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+    }
+
+    // record with uuid not found, so return 404
+    if (!metadata) return apiResponseController.sendError('Not found', 404, response);
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+// security: project authorization has confirmed user has write access for project
+ProjectController.updateMetadata = async function(request, response) {
+    const context = 'ProjectController.updateMetadata';
+    var project_uuid = request.params.project_uuid;
+    var meta_uuid = request.params.uuid;
+    var obj = request.body;
+    var username = request['user']['username'];
+    var msg = null;
+
+    config.log.info(context, 'project: ' + project_uuid + ' with uuid: ' + meta_uuid);
+
+    // if object uuid is provided, it must match
+    if (obj['uuid'] && obj['uuid'] != meta_uuid)
+        return apiResponseController.sendError('Metadata uuid: ' + meta_uuid + ' does not match object uuid: ' + obj['uuid'], 400, response);
+
+    var metadata = await tapisIO.updateMetadataForProject(project_uuid, meta_uuid, obj)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // record with uuid not found, so return 404
+    if (!metadata) return apiResponseController.sendError('Not found', 404, response);
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.deleteMetadata = async function(request, response) {
+    var project_uuid = request.params.project_uuid;
+    var meta_uuid = request.params.uuid;
+    var msg = null;
+
+    console.log('VDJ-API INFO: ProjectController.deleteMetadata for project: ' + project_uuid + ' with uuid: ' + meta_uuid);
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
+//
 // Attach an uploaded file to the project
+// security: project authorization has confirmed user has write access for project
 //
 ProjectController.importFile = async function(request, response) {
+    const context = 'ProjectController.importFile';
     var projectUuid = request.params.project_uuid;
     var msg = null;
 
-    console.log('VDJ-API INFO: ProjectController.importFile - start, project: ' + projectUuid);
+    config.log.info(context, 'start, project: ' + projectUuid);
 
     console.log(request.body);
     var fileNotification = {
-        fileEvent:   request.body.event,
-        fileType:    request.body.type,
+        project_file: request.body,
         filePath:    request.body.path,
-        fileSystem:  request.body.system,
-        projectUuid: projectUuid,
-        readDirection: request.body.readDirection,
-        tags: request.body.tags
+        projectUuid: projectUuid
     };
 
     // verify file notification
     var fileUploadJob = new FileUploadJob(fileNotification);
     await fileUploadJob.verifyFileNotification()
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.importFile - fileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
+            msg = 'failed verifyFileNotification: ' + JSON.stringify(fileNotification) + ', error: ' + error;
         });
     if (msg) {
-        console.error(msg);
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
@@ -179,10 +339,41 @@ ProjectController.importFile = async function(request, response) {
 
     filePermissionsQueueManager.importFile(fileUploadJob);
 
-    console.log('VDJ-API INFO: ProjectController.importFile - event - queued for file uuid ' + fileUploadJob.fileUuid);
+    config.log.info(context,'queued for file uuid ' + fileUploadJob.fileUuid);
     return apiResponseController.sendSuccess('Importing file', response);
 };
 
+// get project file metadata by file name
+// security: project authorization has confirmed user has write access for project
+ProjectController.getProjectFileMetadata = async function(request, response) {
+    const context = 'ProjectController.getProjectFileMetadata';
+    var project_uuid = request.params.project_uuid;
+    var filename = decodeURIComponent(request.params.name);
+    var username = request['user']['username'];
+    var msg = null;
+
+    var filter = { "value.name": filename };
+    var metadata = await tapisIO.queryMetadataForProject(project_uuid, 'project_file', filter)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // record with uuid not found, so return 404
+    if (!metadata) return apiResponseController.sendError('Not found', 404, response);
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+
+//
+//
+//
 ProjectController.validatePROV = function(request, response) {
     var context = 'ProjectController.validatePROV';
     var projectUuid = request.params.project_uuid;

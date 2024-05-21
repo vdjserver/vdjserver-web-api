@@ -29,7 +29,7 @@
 
 // Express Modules
 var express      = require('express');
-var morgan       = require('morgan');
+//var morgan       = require('morgan');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
 var openapi      = require('express-openapi');
@@ -72,7 +72,7 @@ var allowCrossDomain = function(request, response, next) {
 
 // Server Settings
 // Puts an Apache-style log line into stdout
-app.use(morgan('combined'));
+//app.use(morgan('combined'));
 // Allow cross-origin resource sharing
 app.use(allowCrossDomain);
 // redis config
@@ -155,7 +155,6 @@ ServiceAccount.getToken()
         config.log.info(context, 'Loaded AIRR Schema version ' + airr.get_info()['version']);
 
         // wait for the VDJServer spec to be dereferenced
-        //return vdj_schema.schemaPromise();
         return vdj_schema.load_schema();
     })
     .then(function(schema) {
@@ -180,6 +179,9 @@ ServiceAccount.getToken()
 
         // Drop in the VDJServer schema
         api_spec['components']['schemas'] = vdj_schema.get_schemas();
+
+        // Connect schema to vdj-tapis
+        if (tapisIO == tapisV3) tapisV3.init_with_schema(vdj_schema);
 
         // Put the AIRR objects into the API
         //api_spec['components']['schemas']['Study'] = schema['Study'];
@@ -241,6 +243,7 @@ ServiceAccount.getToken()
 
                 // user
                 createUser: async function(req, res) { return try_function(req, res, userController.createUser); },
+                getUserProfile: async function(req, res) { return try_function(req, res, userController.getUserProfile); },
                 duplicateUsername: async function(req, res) { return try_function(req, res, userController.duplicateUsername); },
                 verifyUser: async function(req, res) { return try_function(req, res, userController.verifyUser); },
                 resendVerifyEmail: async function(req, res) { return try_function(req, res, userController.resendVerificationEmail); },
@@ -251,11 +254,18 @@ ServiceAccount.getToken()
 
                 // project
                 createProject: async function(req, res) { return try_function(req, res, projectController.createProject); },
-                importFile: async function(req, res) { return try_function(req, res, projectController.importFile); },
+                getProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectMetadata); },
+                getMetadata: async function(req, res) { return try_function(req, res, projectController.getMetadata); },
+                createMetadata: async function(req, res) { return try_function(req, res, projectController.createMetadata); },
+                updateMetadata: async function(req, res) { return try_function(req, res, projectController.updateMetadata); },
+                queryMetadata: async function(req, res) { return try_function(req, res, projectController.queryMetadata); },
+                deleteMetadata: async function(req, res) { return try_function(req, res, projectController.deleteMetadata); },
                 exportMetadata: async function(req, res) { return try_function(req, res, projectController.exportMetadata); },
                 importMetadata: async function(req, res) { return try_function(req, res, projectController.importMetadata); },
                 exportTable: async function(req, res) { return try_function(req, res, projectController.exportTable); },
                 importTable: async function(req, res) { return try_function(req, res, projectController.importTable); },
+                importFile: async function(req, res) { return try_function(req, res, projectController.importFile); },
+                getProjectFileMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectFileMetadata); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
                 generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
@@ -270,7 +280,7 @@ ServiceAccount.getToken()
                 // permissions
                 addPermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.addPermissionsForUsername); },
                 removePermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.removePermissionsForUsername); },
-                syncMetadataPermissionsWithProject: async function(req, res) { return try_function(req, res, permissionsController.syncMetadataPermissionsWithProject); },
+                //syncMetadataPermissionsWithProject: async function(req, res) { return try_function(req, res, permissionsController.syncMetadataPermissionsWithProject); },
 
                 // feedback
                 createFeedback: async function(req, res) { return try_function(req, res, feedbackController.createFeedback); },

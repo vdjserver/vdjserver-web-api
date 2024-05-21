@@ -68,10 +68,12 @@ config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
 config.log = {};
 config.log.info = function(context, msg, ignore_debug = false) {
     var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    var full_msg = date + ' - ' + config.name + ' INFO (' + context + '): ' + msg;
     if (ignore_debug)
-        console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+        console.log(full_msg);
     else
-        if (config.debug) console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+        if (config.debug) console.log(full_msg);
+    return full_msg;
 }
 
 config.log.error = function(context, msg) {
@@ -136,4 +138,3 @@ config.info.contact = {
 };
 config.info.license = {};
 config.info.license.name = info.license;
-

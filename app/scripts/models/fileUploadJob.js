@@ -29,19 +29,15 @@
 
 var FileUploadJob = function(kueAttributes) {
     if (typeof kueAttributes === 'object') {
-        this.fileUuid  = kueAttributes.fileUuid  || '';
-        this.fileEvent = kueAttributes.fileEvent || '';
-        this.fileType  = kueAttributes.fileType  || '';
-        this.filePath  = kueAttributes.filePath  || '';
-        this.fileSystem = kueAttributes.fileSystem || '';
+        this.project_file = kueAttributes.project_file  || {};
+        this.fileUuid = kueAttributes.fileUuid  || '';
+        this.filePath = kueAttributes.filePath  || '';
         this.projectUuid = kueAttributes.projectUuid || '';
-        this.readDirection = kueAttributes.readDirection || '';
-        this.tags = kueAttributes.tags || '';
     }
 
-    if (_.isEmpty(this.tags) === false) {
-        this.tags = decodeURIComponent(this.tags);
-    }
+//    if (_.isEmpty(this.tags) === false) {
+//        this.tags = decodeURIComponent(this.tags);
+//    }
 };
 module.exports = FileUploadJob;
 
@@ -54,6 +50,9 @@ let moment = require('moment');
 
 var config = require('../config/config');
 
+// schema
+var vdj_schema = require('vdjserver-schema');
+
 // Tapis
 var tapisV2 = require('vdj-tapis-js/tapis');
 var tapisV3 = require('vdj-tapis-js/tapisV3');
@@ -63,7 +62,8 @@ if (config.tapis_version == 3) tapisIO = tapisV3;
 var ServiceAccount = tapisIO.serviceAccount;
 
 var extractFileUUID = function(metadata) {
-    var file_uuid = null;
+    return metadata.url;
+/*    var file_uuid = null;
 
     try {
         file_uuid = decodeURIComponent(metadata['_links']['metadata']['href']);
@@ -74,7 +74,7 @@ var extractFileUUID = function(metadata) {
         return file_uuid;
     } catch (e) {
         return file_uuid;
-    }
+    } */
 }
 
 FileUploadJob.prototype.getRelativeFilePath = function() {
@@ -90,7 +90,7 @@ FileUploadJob.prototype.getRelativeFilePath = function() {
 
 FileUploadJob.prototype.createAgaveFileMetadata = async function() {
 
-    var fileMetadata = await tapisIO.getProjectFileMetadataByFilename(this.projectUuid, this.fileUuid)
+    var fileMetadata = await tapisIO.getProjectFileMetadataByURL(this.projectUuid, this.fileUuid)
         .catch(function(error) {
             return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - tapisIO.getProjectFileMetadataByFilename, error ' + error));
         });
@@ -104,12 +104,23 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
         return Promise.resolve(fileMetadata[0]);
     }
 
-    var fileDetail = await tapisIO.getFileDetail(this.getRelativeFilePath())
+    var path = this.getRelativeFilePath();
+    var detail = await tapisIO.getProjectFileDetail(path)
         .catch(function(error) {
             return Promise.reject(new Error('FileUploadJob.createAgaveFileMetadata - tapisIO.getFileDetail, error ' + error));
         });
+    if (!detail) {
+        return Promise.reject(new Error('Could not get file detail for path: ' + path));
+    }
+    if (detail.length != 1) {
+        return Promise.reject(new Error('Invalid length (!= 1) for file detail query for path: ' + path));
+    }
+    detail = detail[0];
+    if (detail.type == 'dir') {
+        return Promise.reject(new Error('file path: ' + path + ' is a directory.'))
+    }
 
-    var length = fileDetail[0].length;
+/*    var length = fileDetail[0].size;
     var name = fileDetail[0].name;
 
     // TODO: these file types need to be consistent with GUI
@@ -143,9 +154,16 @@ FileUploadJob.prototype.createAgaveFileMetadata = async function() {
             return tag.trim();
         });
         this.tags = tags;
-    }
+    } */
 
-    return tapisIO.createFileMetadata(this.fileUuid, this.projectUuid, this.fileType, name, length, this.readDirection, this.tags);
+//    return tapisIO.createFileMetadata(this.fileUuid, this.projectUuid, this.fileType, name, length, this.readDirection, this.tags);
+
+    this.project_file['name'] = detail.name;
+    this.project_file['path'] = '/' + detail.path;
+    this.project_file['url'] = detail.url;
+    this.project_file['size'] = detail.size;
+    var obj = { value: this.project_file };
+    return tapisIO.createMetadataForProject(this.projectUuid, 'project_file', obj);
 };
 
 FileUploadJob.prototype.checkFileAvailability = async function() {
@@ -156,7 +174,7 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
 
     // if the file was manually copied to the storage system, requesting the file details
     // will cause Tapis to create the file uuid and an empty history
-    var detail = await tapisIO.getFileDetail(path)
+    var detail = await tapisIO.getProjectFileDetail(path)
         .catch(function(error) {
             return Promise.reject(new Error('Could not get file detail for path: ' + path));
         });
@@ -167,7 +185,7 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
         return Promise.reject(new Error('Invalid length (!= 1) for file detail query for path: ' + path));
     }
     detail = detail[0];
-    if (detail.format == 'folder') {
+    if (detail.type == 'dir') {
         return Promise.reject(new Error('file path: ' + path + ' is a directory.'))
     }
 
@@ -180,13 +198,13 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
         return Promise.reject(new Error('fileUuid: ' + this.fileUuid + ' does not match uuid ' + file_uuid + ' for filePath: ' + path));
     }
 
-    var fileHistory = await tapisIO.getFileHistory(path)
+/*    var fileHistory = await tapisIO.getFileHistory(path)
         .catch(function(error) {
             return Promise.reject(new Error('Could not get file history for path: ' + path));
         });
 
     // empty history suggest file was manually copied
-    if (fileHistory.length == 0) {        
+    if (fileHistory.length == 0) {
         return Promise.resolve(true);
     }
 
@@ -196,9 +214,9 @@ FileUploadJob.prototype.checkFileAvailability = async function() {
         if (history.hasOwnProperty('status') && history.status === 'STAGING_COMPLETED') {
             return Promise.resolve(true);
         }
-    }
+    } */
 
-    return Promise.resolve(false);
+    return Promise.resolve(true);
 }
 
 // Initial check when a file import notification is received
@@ -209,7 +227,7 @@ FileUploadJob.prototype.verifyFileNotification = async function() {
 
     var retry = false;
     var path = this.getRelativeFilePath();
-    var detail = await tapisIO.getFileDetail(path)
+    var detail = await tapisIO.getProjectFileDetail(path)
         .catch(function(error) {
             // if we get an error, Tapis might be slow in staging, wait and retry
             retry = true;
@@ -220,11 +238,12 @@ FileUploadJob.prototype.verifyFileNotification = async function() {
         console.log('Retry get file detail for path: ' + path);
         const timer = ms => new Promise(res => setTimeout(res, ms));
         await timer(30000);
-        detail = await tapisIO.getFileDetail(path)
+        detail = await tapisIO.getProjectFileDetail(path)
             .catch(function(error) {
                 return Promise.reject(new Error('Could not get file detail for path: ' + path));
             });
     }
+    console.log(detail);
 
     if (!detail) {
         return Promise.reject(new Error('Could not get file detail for path: ' + path));
@@ -233,7 +252,7 @@ FileUploadJob.prototype.verifyFileNotification = async function() {
         return Promise.reject(new Error('Invalid length (!= 1) for file detail query for path: ' + path));
     }
     detail = detail[0];
-    if (detail.format == 'folder') {
+    if (detail.type == 'dir') {
         return Promise.reject(new Error('file path: ' + path + ' is a directory.'))
     }
 
