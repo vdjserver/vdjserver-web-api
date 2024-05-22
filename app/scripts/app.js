@@ -29,7 +29,7 @@
 
 // Express Modules
 var express      = require('express');
-var morgan       = require('morgan');
+//var morgan       = require('morgan');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
 var openapi      = require('express-openapi');
@@ -72,7 +72,7 @@ var allowCrossDomain = function(request, response, next) {
 
 // Server Settings
 // Puts an Apache-style log line into stdout
-app.use(morgan('combined'));
+//app.use(morgan('combined'));
 // Allow cross-origin resource sharing
 app.use(allowCrossDomain);
 // redis config
