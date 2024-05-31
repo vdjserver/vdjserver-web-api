@@ -70,6 +70,7 @@ var requestLib = require('request');
 var yaml = require('js-yaml');
 var d3 = require('d3');
 const { v4: uuidv4 } = require('uuid');
+var moment = require('moment');
 
 var kue = require('kue');
 var taskQueue = kue.createQueue({
@@ -297,13 +298,47 @@ ProjectController.updateMetadata = async function(request, response) {
 };
 
 ProjectController.deleteMetadata = async function(request, response) {
+    const context = 'ProjectController.deleteMetadata';
     var project_uuid = request.params.project_uuid;
     var meta_uuid = request.params.uuid;
+    var username = request['user']['username'];
     var msg = null;
 
-    console.log('VDJ-API INFO: ProjectController.deleteMetadata for project: ' + project_uuid + ' with uuid: ' + meta_uuid);
+    config.log.info(context,'project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username);
 
-    return apiResponseController.sendError('Not implemented.', 500, response);
+    if (project_uuid == meta_uuid)
+        return apiResponseController.sendError('Project uuid matches metadata uuid, cannot delete project, use archive endpoint instead.', 400, response);
+
+    var metadata = await tapisIO.getMetadataForProject(project_uuid, meta_uuid)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // record with uuid not found, so return 404
+    if (!metadata) return apiResponseController.sendError('Not found', 404, response);
+
+    // don't use for deleting project files
+    if (metadata['name'] == 'project_file')
+        return apiResponseController.sendError('Cannot delete project file, use deleteProjectFileMetadata endpoint instead.', 400, response);
+
+    var metadata = await tapisIO.deleteMetadataForProject(project_uuid, meta_uuid)
+        .catch(function(error) {
+            msg = 'got error for project: ' + project_uuid + ' with uuid: ' + meta_uuid + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess('Deleted', response);
 };
 
 //
@@ -343,6 +378,59 @@ ProjectController.importFile = async function(request, response) {
     return apiResponseController.sendSuccess('Importing file', response);
 };
 
+//
+// Generate postit for project fil
+// security: project authorization has confirmed user has write access for project
+//
+ProjectController.postitFile = async function(request, response) {
+    const context = 'ProjectController.postitFile';
+    var project_uuid = request.params.project_uuid;
+    var obj = request.body;
+    var path = request.body.path;
+    var msg = null;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' path:' + path);
+
+    // TODO: can .. be in the path?
+
+    // get file detail, the path should be relative to the project directory
+    var detail = await tapisIO.getProjectFileDetail(project_uuid + '/' + path)
+        .catch(function(error) {
+            msg = 'Cannot get file detail, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    if (!detail) {
+        return Promise.reject(new Error('Could not get file detail for path: ' + path));
+    }
+    if (detail.length != 1) {
+        return Promise.reject(new Error('Invalid length (!= 1) for file detail query for path: ' + path));
+    }
+    detail = detail[0];
+    if (detail.type != 'file') {
+        return Promise.reject(new Error('file path: ' + path + ' is not a file.'))
+    }
+
+    // create postit
+    var postit = await tapisIO.createProjectFilePostit(project_uuid, obj)
+        .catch(function(error) {
+            msg = 'Could not create postit, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    //console.log(postit);
+
+    config.log.info(context,'created postit: ' + postit['result']['id'] + ' url: ' + postit['result']['redeemUrl']);
+
+    return apiResponseController.sendSuccess(postit['result'], response);
+};
+
 // get project file metadata by file name
 // security: project authorization has confirmed user has write access for project
 ProjectController.getProjectFileMetadata = async function(request, response) {
@@ -366,6 +454,87 @@ ProjectController.getProjectFileMetadata = async function(request, response) {
 
     // record with uuid not found, so return 404
     if (!metadata) return apiResponseController.sendError('Not found', 404, response);
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+// delete project file and metadata by file name
+// security: project authorization has confirmed user has write access for project
+ProjectController.deleteProjectFileMetadata = async function(request, response) {
+    const context = 'ProjectController.deleteProjectFileMetadata';
+    var project_uuid = request.params.project_uuid;
+    var filename = decodeURIComponent(request.params.name);
+    var username = request['user']['username'];
+    var msg = null;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username);
+
+    // we do a soft delete by moving the file and changing metadata name
+    // rough provenance for jobs and such that might reference the file
+
+    // first get the metadata entry
+    var filter = { "value.name": filename };
+    var metadata = await tapisIO.queryMetadataForProject(project_uuid, 'project_file', filter)
+        .catch(function(error) {
+            msg = 'tapisIO.queryMetadataForProject error for project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // this shouldn't happen
+    if (!metadata) return Promise.reject(new Error('empty query response.'));
+    // 404 not found
+    if (metadata.length == 0) return apiResponseController.sendError('Not found', 404, response);
+    // yikes!
+    if (metadata.length != 1) return Promise.reject(new Error('internal error, multiple records have the same filename.'));
+    // eliminate array
+    metadata = metadata[0];
+
+    // a time-based directory allows for soft deletion of files with the same name
+    var fromPath = metadata['value']['path'];
+    var datetimeDir = moment().format('YYYY-MM-DD-HH-mm-ss-SS');
+    var moveDir = project_uuid + '/deleted/' + datetimeDir;
+    await tapisIO.createProjectDirectory(moveDir)
+        .catch(function(error) {
+            msg = 'tapisIO.createProjectDirectory error for project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // update the metadata entry
+    metadata['name'] = 'deleted_file';
+    metadata['value']['path'] = '/projects/' + moveDir + '/' + metadata['value']['name'];
+    metadata['value']['url'] = 'tapis://' + tapisSettings.storageSystem + metadata['value']['path'];
+    await tapisIO.updateMetadataForProject(project_uuid, metadata['uuid'], metadata)
+        .catch(function(error) {
+            msg = 'tapisIO.updateMetadata error for project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // move the file
+    await tapisIO.moveProjectFile(fromPath, metadata['value']['path'])
+        .catch(function(error) {
+            msg = 'tapisIO.moveProjectFile error for project: ' + project_uuid + ' filename: ' + filename + ' by user: ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
 
     return apiResponseController.sendSuccess(metadata, response);
 };

@@ -456,7 +456,6 @@ paths:
         '500':
           description: Internal service error occurred.
 
-
   /project/{project_uuid}/metadata/import:
     post:
       description: import metadata into project
@@ -676,10 +675,87 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/file/postit:
+    post:
+      description: Generate postit for project file
+      operationId: postitFile
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/FilePostitRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/file/name/{name}:
     get:
       description: query for project file metadata by file name
       operationId: getProjectFileMetadata
+      tags:
+        - project
+      security:
+        - project_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: URI encoded file name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: delete project file and metadata
+      operationId: deleteProjectFileMetadata
       tags:
         - project
       security:
