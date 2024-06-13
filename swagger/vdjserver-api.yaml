@@ -557,7 +557,6 @@ paths:
             type: string
             enum:
               - subject
-              - diagnosis
               - sample
       requestBody:
         content:
