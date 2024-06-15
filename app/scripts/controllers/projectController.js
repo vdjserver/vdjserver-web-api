@@ -1763,6 +1763,8 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
             }
         })
         .then(function() {
+            var dpschema = airr.get_schema('DataProcessing');
+
             // put into AIRR format
             for (var i in repertoireMetadata) {
                 var rep = repertoireMetadata[i];
@@ -1788,15 +1790,20 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
 
                 var dps = [];
                 for (var j in rep['data_processing']) {
-                    var dp = dpMetadata[rep['data_processing'][j]['vdjserver_uuid']];
-                    if (! dp) {
-                        console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect data_processing: '
-                                      + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                    // can be null if no analysis has been done
+                    if (rep['data_processing'][j]['vdjserver_uuid']) {
+                        var dp = dpMetadata[rep['data_processing'][j]['vdjserver_uuid']];
+                        if (! dp) {
+                            console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect data_processing: '
+                                          + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
+                        }
+                        if (!keep_uuids) delete dp['value']['vdjserver'];
+                        dps.push(dp);
                     }
-                    if (!keep_uuids) delete dp['value']['vdjserver'];
-                    dps.push(dp);
                 }
-                rep['data_processing'] = dps;
+                if (dps.length == 0) {
+                    rep['data_processing'] = [ dpschema.template() ];
+                } else rep['data_processing'] = dps;
             }
 
             return repertoireMetadata;
@@ -1854,6 +1861,7 @@ ProjectController.exportMetadata = async function(request, response) {
 ProjectController.importTable = async function(request, response) {
     var context = 'ProjectController.importTable';
     var projectUuid = request.params.project_uuid;
+    var username = request['user']['username'];
     var tableName = request.params.table_name;
     var filename = request.body.filename;
     var op = request.body.operation;
@@ -1878,10 +1886,17 @@ ProjectController.importTable = async function(request, response) {
     config.log.info(context, 'import file has ' + data.length + ' rows.');
     //console.log(data);
 
-    var checkDiagnosis = function(row, idx, cols) {
+    if (data.length > 1000) {
+        msg = config.log.error(context, 'Data file exceeds 1000 records! Use force parameter or import smaller files.');
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // used to determine if an array entry flattened as columns has any data
+    var checkFlatArray = function(name, row, idx, cols) {
         let hasData = false;
         for (let i in cols) {
-            let col_name = 'diagnosis.' + idx + '.' + cols[i];
+            let col_name = name + '.' + idx + '.' + cols[i];
             if (row[col_name] == null) continue;
             if (row[col_name] == '') continue;
             hasData = true;
@@ -1892,6 +1907,7 @@ ProjectController.importTable = async function(request, response) {
 
     var validation_errors = [];
     var ontology_errors = [];
+    var curie_cache = {};
 
     // convert to object form
     if (tableName == 'subject') {
@@ -1908,8 +1924,81 @@ ProjectController.importTable = async function(request, response) {
 
         // TODO: no support for custom fields beyond the schema
 
+        var manualTranslation = function(field, value) {
+            if (value == '') return value;
+            if (value == null) return null;
+            if (value == undefined) return null;
+            switch (field) {
+                case 'species':
+                    switch (value.toLowerCase()) {
+                        case 'human':
+                        case 'h':
+                        case 'homo':
+                        case 'homo sapiens':
+                            return 'NCBITAXON:9606';
+                        case 'mouse':
+                        case 'm':
+                        case 'mice':
+                        case 'mus':
+                        case 'mus musculus':
+                            return 'NCBITAXON:10088';
+                        case 'monkey':
+                        case 'macaque':
+                        case 'macaca mulatta':
+                            return 'NCBITAXON:9544';
+                        default:
+                            return value;
+                    }
+                case 'age_unit':
+                    switch(value.toLowerCase()) {
+                        case 'h':
+                        case 'hr':
+                        case 'hrs':
+                        case 'hour':
+                        case 'hours':
+                            return 'UO:0000032';
+                        case 'd':
+                        case 'day':
+                        case 'days':
+                        case 'dy':
+                            return 'UO:0000033';
+                        case 'w':
+                        case 'week':
+                        case 'weeks':
+                        case 'wk':
+                            return 'UO:0000034';
+                        case 'm':
+                        case 'mth':
+                        case 'mths':
+                        case 'mnth':
+                        case 'month':
+                        case 'months':
+                            return 'UO:0000035';
+                        case 'y':
+                        case 'yr':
+                        case 'yrs':
+                        case 'year':
+                        case 'years':
+                            return 'UO:0000036';
+                        default:
+                            return value;
+                    }
+                case 'sex':
+                    switch(value.toLowerCase()) {
+                        case 'm':
+                            return 'male';
+                        case 'f':
+                            return 'female';
+                        default:
+                            return value.toLowerCase();
+                    }
+            }
+            return value;
+        }
+
         // simple fields
         let subject_columns = [];
+        let airr_schema = new airr.SchemaDefinition('Subject');
         let schema = new vdj_schema.SchemaDefinition('Subject');
         for (let i in schema.properties) {
             if (schema.type(i) == 'array') continue;
@@ -1941,48 +2030,13 @@ ProjectController.importTable = async function(request, response) {
 
                 // assign subject values
                 for (let j in subject_columns) {
+                    let data_value = manualTranslation(subject_columns[j], dataRow[subject_columns[j]]);
                     if (schema.is_ontology(subject_columns[j])) {
-                        if (dataRow[subject_columns[j]] != '') {
-                            let term_url = schema.resolve_curie(subject_columns[j], dataRow[subject_columns[j]]);
-                            if (!term_url) ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved.'});
+                        if (data_value != '') {
+                            if (curie_cache[data_value]) subject[subject_columns[j]] = curie_cache[data_value];
                             else {
-                                let requestSettings = {
-                                    url: term_url,
-                                    method: 'GET',
-                                    headers: {
-                                        'Accept': 'application/json'
-                                    }
-                                };
-                                let term = await tapisIO.sendRequest(requestSettings)
-                                    .catch(function(error) {
-                                        config.log.error(context, 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error);
-                                        ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error});
-                                    });
-                                if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
-                                    subject[subject_columns[j]] = { id: dataRow[subject_columns[j]], label: term['_embedded']['terms'][0]['label'] };
-                                }
-                            }
-                        }
-                    } else
-                        subject[subject_columns[j]] = schema.map_value({header: subject_columns[j], value: dataRow[subject_columns[j]]});
-                }
-                //console.log(JSON.stringify(subject));
-
-                // at least 1 diagnosis, add more if data
-                for (let idx = 0; idx <= max_diagnosis; ++idx) {
-                    let hasData = checkDiagnosis(dataRow, idx, diagnosis_columns);
-                    if (!hasData) continue;
-                    let diag = subject['diagnosis'][0];
-                    if (idx != 0) {
-                        diag = diagnosisSchema.template();
-                        subject['diagnosis'].push(diag);
-                    }
-                    for (let j in diagnosis_columns) {
-                        let col_name = 'diagnosis.' + idx + '.' + diagnosis_columns[j];
-                        if (diagnosisSchema.is_ontology(diagnosis_columns[j])) {
-                            if (dataRow[col_name] != '') {
-                                let term_url = diagnosisSchema.resolve_curie(diagnosis_columns[j], dataRow[col_name]);
-                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved.'});
+                                let term_url = airr_schema.resolve_curie(subject_columns[j], data_value);
+                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved.'});
                                 else {
                                     let requestSettings = {
                                         url: term_url,
@@ -1993,16 +2047,60 @@ ProjectController.importTable = async function(request, response) {
                                     };
                                     let term = await tapisIO.sendRequest(requestSettings)
                                         .catch(function(error) {
-                                            config.log.error(context, 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error);
-                                            ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error});
+                                            config.log.error(context, 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error);
+                                            ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error});
                                         });
                                     if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
-                                        diag[diagnosis_columns[j]] = { id: dataRow[col_name], label: term['_embedded']['terms'][0]['label'] };
+                                        subject[subject_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
+                                        curie_cache[data_value] = subject[subject_columns[j]];
+                                    }
+                                }
+                            }
+                        }
+                    } else
+                        subject[subject_columns[j]] = schema.map_value({header: subject_columns[j], value: data_value});
+                }
+                //console.log(JSON.stringify(subject));
+
+                // at least 1 diagnosis, add more if data
+                for (let idx = 0; idx <= max_diagnosis; ++idx) {
+                    let hasData = checkFlatArray('diagnosis', dataRow, idx, diagnosis_columns);
+                    if (!hasData) continue;
+                    let diag = subject['diagnosis'][0];
+                    if (idx != 0) {
+                        diag = diagnosisSchema.template();
+                        subject['diagnosis'].push(diag);
+                    }
+                    for (let j in diagnosis_columns) {
+                        let col_name = 'diagnosis.' + idx + '.' + diagnosis_columns[j];
+                        if (diagnosisSchema.is_ontology(diagnosis_columns[j])) {
+                            if (dataRow[col_name] != '') {
+                                if (curie_cache[dataRow[col_name]]) diag[diagnosis_columns[j]] = curie_cache[dataRow[col_name]];
+                                else {
+                                    let term_url = diagnosisSchema.resolve_curie(diagnosis_columns[j], dataRow[col_name]);
+                                    if (!term_url) ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved.'});
+                                    else {
+                                        let requestSettings = {
+                                            url: term_url,
+                                            method: 'GET',
+                                            headers: {
+                                                'Accept': 'application/json'
+                                            }
+                                        };
+                                        let term = await tapisIO.sendRequest(requestSettings)
+                                            .catch(function(error) {
+                                                config.log.error(context, 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error);
+                                                ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error});
+                                            });
+                                        if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
+                                            diag[diagnosis_columns[j]] = { id: dataRow[col_name], label: term['_embedded']['terms'][0]['label'] };
+                                            curie_cache[dataRow[col_name]] = diag[diagnosis_columns[j]];
+                                        }
                                     }
                                 }
                             }
                         } else
-                         diag[diagnosis_columns[j]] = diagnosisSchema.map_value({header: diagnosis_columns[j], value: dataRow[col_name]});
+                            diag[diagnosis_columns[j]] = diagnosisSchema.map_value({header: diagnosis_columns[j], value: dataRow[col_name]});
                     }
                 }
                 //console.log(JSON.stringify(subject));
@@ -2011,7 +2109,7 @@ ProjectController.importTable = async function(request, response) {
             // validate
             for (let i in new_subjects) {
                 let error = schema.validate_object(new_subjects[i]);
-                if (error) validation_errors.push({ message: 'row ' + i + ', validation error: ' + error['message'] });
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
             }
 
             // TODO: we are missing VDJServer specific validation
@@ -2066,48 +2164,262 @@ ProjectController.importTable = async function(request, response) {
                 return apiResponseController.sendError(msg, 500, response);
             }
 
+            return apiResponseController.sendError('merge/append not implemented.', 500, response);
         }
         //console.log(JSON.stringify(new_subjects, null, 2));
 
-    }
+    } else if (tableName == 'sample_processing') {
+        // get the project metadata
+        let projectMetadata = await tapisIO.getProjectMetadata(username, projectUuid)
+            .catch(function(error) {
+                msg = config.log.error(context, 'tapisIO.getProjectMetadata, error: ' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
 
+        // get current subjects
+        let subjectMetadata = await tapisIO.queryMetadataForProject(projectUuid, 'subject')
+            .catch(function(error) {
+                msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+        let current_subjects = {};
+        for (let i in subjectMetadata) {
+            current_subjects[subjectMetadata[i]['value']['subject_id']] = subjectMetadata[i];
+        }
 
-/*
-    if (op == 'replace') {
-        // delete existing metadata if requested
-        config.log.info(context, 'delete existing metadata entries');
-        await tapisIO.deleteAllMetadataForType(projectUuid, type);
-    }
-*/
+        // determine max number of pcr target entries from column names
+        let max_pcr = 0;
+        for (let i = 0; i < data.columns.length; ++i) {
+            let fields = data.columns[i].split('.');
+            if (fields.length < 3) continue;
+            if (fields[0] != 'pcr_target') continue;
+            let idx = parseInt(fields[1]);
+            if (idx > max_pcr) max_pcr = idx;
+        }
+        config.log.info(context, 'max_pcr: ' + max_pcr);
 
+        // TODO: no support for custom fields beyond the schema
 
-/*        .then(function() {
-            console.log('VDJ-API INFO: ProjectController.importMetadata - get columns');
-            return tapisIO.getMetadataColumnsForType(projectUuid, type)
-                .then(function(responseObject) {
-                    //console.log(responseObject);
-                    if (responseObject.length == 0) {
-                        // no existing columns defined
-                        var value = { columns: data.columns };
-                        return tapisIO.createMetadataColumnsForType(projectUuid, type, value, null);
-                    } else {
-                        if (op == 'replace') {
-                            // replace existing columns
-                            value = responseObject[0].value;
-                            value.columns = data.columns;
-                            return tapisIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
-                        } else {
-                            // merge with existing colums
-                            value = responseObject[0].value;
-                            for (var i = 0; i < data.columns.length; ++i) {
-                                if (value.columns.indexOf(data.columns[i]) < 0) value.columns.push(data.columns[i]);
-                            }
-                            return tapisIO.createMetadataColumnsForType(projectUuid, type, value, responseObject[0].uuid);
-                        }
+        // simple fields
+        let sample_columns = [];
+        let airr_schema = new airr.SchemaDefinition('SampleProcessing');
+        let schema = new vdj_schema.SchemaDefinition('SampleProcessing');
+        for (let i in schema.properties) {
+            if (schema.type(i) == 'array') continue;
+            if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+            if (data.columns.indexOf(i) < 0) continue;
+            sample_columns.push(i);
+        }
+        let pcr_columns = [];
+        let pcrSchema = new airr.SchemaDefinition('PCRTarget');
+        for (let i in pcrSchema.properties) {
+            if (pcrSchema.type(i) == 'array') continue;
+            if ((pcrSchema.type(i) == 'object') && (! pcrSchema.is_ontology(i))) continue;
+            let col_name = 'pcr_target.0.' + i;
+            if (data.columns.indexOf(col_name) < 0) continue;
+            pcr_columns.push(i);
+        }
+        var sd_columns = [];
+        var sdSchema = new airr.SchemaDefinition('SequencingData');
+        for (let i in sdSchema.properties) {
+            if (schema.type(i) == 'array') continue;
+            if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+            let col_name = 'sequencing_files.' + i;
+            if (data.columns.indexOf(col_name) < 0) continue;
+            sd_columns.push(i);
+        }
+
+        // standard import is one repertoire per sample processing row
+        // multiple samples per repertoire should be multiple rows with same repertoire_id
+
+        let airr_rep_schema = new airr.SchemaDefinition('Repertoire');
+        let rep_schema = new vdj_schema.SchemaDefinition('Repertoire');
+
+        let match_repertoires = {};
+        let new_repertoires = [];
+        let new_samples = [];
+        if (op == 'replace') {
+            // delete and replace
+            for (let i = 0; i < data.length; ++i) {
+                let dataRow = data[i];
+
+                // repertoire entry
+                let rep = null;
+                if (dataRow['repertoire_id'] && dataRow['repertoire_id'] != '') {
+                    rep = match_repertoires[dataRow['repertoire_id']];
+                    if (!rep) {
+                        rep = rep_schema.template();
+                        rep['sample'] = [];
+                        match_repertoires[dataRow['repertoire_id']] = rep;
+                        new_repertoires.push(rep);
                     }
+                } else {
+                    rep = rep_schema.template();
+                    rep['sample'] = [];
+                    new_repertoires.push(rep);
+                }
+                rep['study']['vdjserver_uuid'] = projectUuid;
+
+                // assign subject
+                if (dataRow['subject_id'] && dataRow['subject_id'] != '') {
+                    let s = current_subjects[dataRow['subject_id']];
+                    if (!s) validation_errors.push({ message: 'row ' + i + ', cannot find existing subject with subject_id: ' + dataRow['subject_id'] });
+                    else rep['subject']['vdjserver_uuid'] = s['uuid'];
+                } else validation_errors.push({ message: 'row ' + i + ', missing subject_id' });
+
+                let sample = schema.template();
+                new_samples.push(sample);
+                rep['sample'].push(i);
+
+                // assign sample values
+                for (let j in sample_columns) {
+                    let data_value = dataRow[sample_columns[j]];
+                    if (schema.is_ontology(sample_columns[j])) {
+                        if (data_value != '') {
+                            if (curie_cache[data_value]) sample[sample_columns[j]] = curie_cache[data_value];
+                            else {
+                                let term_url = airr_schema.resolve_curie(sample_columns[j], data_value);
+                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved.'});
+                                else {
+                                    let requestSettings = {
+                                        url: term_url,
+                                        method: 'GET',
+                                        headers: {
+                                            'Accept': 'application/json'
+                                        }
+                                    };
+                                    let term = await tapisIO.sendRequest(requestSettings)
+                                        .catch(function(error) {
+                                            config.log.error(context, 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error);
+                                            ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error});
+                                        });
+                                    if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
+                                        sample[sample_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
+                                        curie_cache[data_value] = sample[sample_columns[j]];
+                                    }
+                                }
+                            }
+                        }
+                    } else
+                        sample[sample_columns[j]] = schema.map_value({header: sample_columns[j], value: data_value});
+                }
+                //console.log(JSON.stringify(sample));
+
+                // assign sequencing files values, no ontology fields
+                for (let j in sd_columns) {
+                    let col_name = 'sequencing_files.' + sd_columns[j];
+                    sample['sequencing_files'][sd_columns[j]] = sdSchema.map_value({header: sd_columns[j], value: dataRow[col_name]});
+                }
+
+                // at least 1 pcr target, add more if data, no ontology fields
+                for (let idx = 0; idx <= max_pcr; ++idx) {
+                    let hasData = checkFlatArray('pcr_target', dataRow, idx, pcr_columns);
+                    if (!hasData) continue;
+                    let pcr = sample['pcr_target'][0];
+                    if (idx != 0) {
+                        pcr = pcrSchema.template();
+                        sample['pcr_target'].push(pcr);
+                    }
+                    for (let j in pcr_columns) {
+                        let col_name = 'pcr_target.' + idx + '.' + pcr_columns[j];
+                        pcr[pcr_columns[j]] = pcrSchema.map_value({header: pcr_columns[j], value: dataRow[col_name]});
+                    }
+                }
+                //console.log(JSON.stringify(sample));
+            }
+
+            // validate
+            for (let i in new_samples) {
+                let error = schema.validate_object(new_samples[i]);
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
+            }
+
+            // TODO: we are missing VDJServer specific validation
+
+            // abort if any errors
+            if (ontology_errors.length > 0) validation_errors.concat(ontology_errors);
+            if (validation_errors.length > 0) {
+                config.log.error(context, 'import table has validation errors.');
+                return apiResponseController.sendError(validation_errors, 400, response);
+            }
+
+            if (new_samples.length == 0) {
+                msg = config.log.error(context, 'import table has no entries.');
+                return apiResponseController.sendError(msg, 400, response);
+            }
+
+            // no errors so delete existing sample and repertoire metadata
+            config.log.info(context, 'delete existing sample entries.');
+            var resp = await tapisIO.deleteAllProjectMetadataForName(projectUuid, tableName)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'tapisIO.deleteAllProjectMetadataForName, error: ' + error);
                 });
-        })
-*/
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
+            config.log.info(context, 'deleted ' + resp + ' sample entries.');
+
+            config.log.info(context, 'delete existing repertoire entries.');
+            var resp = await tapisIO.deleteAllProjectMetadataForName(projectUuid, 'repertoire')
+                .catch(function(error) {
+                    msg = config.log.error(context, 'tapisIO.deleteAllProjectMetadataForName, error: ' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
+            config.log.info(context, 'deleted ' + resp + ' repertoire entries.');
+
+            // insert the samples
+            let created_samples = [];
+            for (let i in new_samples) {
+                let cs = await tapisIO.createMetadataForProject(projectUuid, tableName, { value: new_samples[i] })
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+                created_samples.push(cs);
+            }
+            config.log.info(context, 'inserted ' + new_samples.length + ' sample entries');
+
+            // assign sample uuids to repertoires, we rely upon the index number
+            for (let i in new_repertoires) {
+                let s = [];
+                for (let j in new_repertoires[i]['sample']) {
+                    s.push({ vdjserver_uuid: created_samples[new_repertoires[i]['sample'][j]].uuid });
+                }
+                new_repertoires[i]['sample'] = s;
+            }
+            //console.log(JSON.stringify(new_repertoires, null, 2));
+
+            // insert the repertoires
+            for (let i in new_repertoires) {
+                let cs = await tapisIO.createMetadataForProject(projectUuid, 'repertoire', { value: new_repertoires[i] })
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'inserted ' + new_repertoires.length + ' repertoire entries');
+
+        } else {
+            // merge/append
+            return apiResponseController.sendError('merge/append not implemented.', 500, response);
+        }
+    }
 
     config.log.info(context, 'Successfully imported table');
     apiResponseController.sendSuccess('Successfully imported table', response);
@@ -2117,9 +2429,10 @@ ProjectController.exportTable = async function(request, response) {
     var context = 'ProjectController.exportTable';
     var projectUuid = request.params.project_uuid;
     var tableName = request.params.table_name;
+    var username = request['user']['username'];
     var msg = null;
 
-    config.log.info(context, 'start, project: ' + projectUuid + ' table: ' + tableName);
+    config.log.info(context, 'start, project: ' + projectUuid + ' table: ' + tableName + ' by user: ' + username);
 
     var metadataList = await tapisIO.queryMetadataForProject(projectUuid, tableName)
         .catch(function(error) {
@@ -2132,21 +2445,11 @@ ProjectController.exportTable = async function(request, response) {
 
     var tsvData = '';
     if (tableName == 'subject') {
-        // determine max diagnosis entries
-        let max_diag = 1;
-        for (let i = 0; i < metadataList.length; ++i) {
-            let value = metadataList[i].value;
-            if (value['diagnosis'] && value['diagnosis'].length > max_diag)
-                max_diag = value['diagnosis'].length;
-        }
-        var schema = new vdj_schema.SchemaDefinition('Subject');
-        var diagnosisSchema = new airr.SchemaDefinition('Diagnosis');
-
         // determine columns to be exported from the schema
         var columns = [ 'vdjserver_uuid' ];
-        var subject_columns = [ 'vdjserver_uuid' ];
-        var diagnosis_columns = [ ];
 
+        var schema = new vdj_schema.SchemaDefinition('Subject');
+        var subject_columns = [ 'vdjserver_uuid' ];
         for (let i in schema.properties) {
             if (schema.type(i) == 'array') continue;
             if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
@@ -2154,10 +2457,20 @@ ProjectController.exportTable = async function(request, response) {
             subject_columns.push(i);
         }
 
+        var diagnosisSchema = new airr.SchemaDefinition('Diagnosis');
+        var diagnosis_columns = [ ];
         for (let i in diagnosisSchema.properties) {
             if (schema.type(i) == 'array') continue;
             if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
             diagnosis_columns.push(i);
+        }
+
+        // determine max diagnosis entries
+        let max_diag = 1;
+        for (let i = 0; i < metadataList.length; ++i) {
+            let value = metadataList[i].value;
+            if (value['diagnosis'] && value['diagnosis'].length > max_diag)
+                max_diag = value['diagnosis'].length;
         }
         for (let j = 0; j < max_diag; ++j) {
             for (let i in diagnosis_columns) columns.push('diagnosis.' + j + '.' + diagnosis_columns[i]);
@@ -2215,6 +2528,71 @@ ProjectController.exportTable = async function(request, response) {
             }
             tsvData += '\n';
         }
+    } else if (tableName == 'sample_processing') {
+        // sample table is a simplified version of the repertoires
+        // with sample actually being the sample processing record
+
+        // gather the repertoire objects
+        var repertoireMetadata = await ProjectController.gatherRepertoireMetadataForProject(username, projectUuid, true)
+            .catch(function(error) {
+                msg = config.log.error(context, 'tapisIO.gatherRepertoireMetadataForProject, error: ' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        config.log.info(context, 'gathered ' + repertoireMetadata.length + ' repertoire metadata for project: ' + projectUuid);
+
+        // determine columns to be exported from the schema
+        var columns = [ 'repertoire_id', 'subject_id' ];
+
+        var schema = new vdj_schema.SchemaDefinition('SampleProcessing');
+        var sample_columns = [];
+        for (let i in schema.properties) {
+            if (schema.type(i) == 'array') continue;
+            if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+            columns.push(i);
+            sample_columns.push(i);
+        }
+
+        // we handle the pcr target and sequencing data files specially
+        var pcrSchema = new airr.SchemaDefinition('PCRTarget');
+        var pcr_columns = [];
+        for (let i in pcrSchema.properties) {
+            if (schema.type(i) == 'array') continue;
+            if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+            pcr_columns.push(i);
+        }
+
+        // determine max pcr target entries
+        let max_pcr = 1;
+        for (let i = 0; i < repertoireMetadata.length; ++i) {
+            let rep = repertoireMetadata[i];
+            for (let j = 0; j < rep['sample']; ++j) {
+                if (rep['sample'][j]['pcr_target'].length > max_pcr)
+                    max_pcr = rep['sample'][j]['pcr_target'].length;
+            }
+        }
+        for (let j = 0; j < max_pcr; ++j) {
+            for (let i in pcr_columns) columns.push('pcr_target.' + j + '.' + pcr_columns[i]);
+        }
+
+        var sdSchema = new airr.SchemaDefinition('SequencingData');
+        var sd_columns = [];
+        for (let i in sdSchema.properties) {
+            if (schema.type(i) == 'array') continue;
+            if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
+            columns.push('sequencing_files.' + i);
+            sd_columns.push(i);
+        }
+        console.log(sample_columns);
+        console.log(pcr_columns);
+        console.log(sd_columns);
+
+        // header
+        tsvData = columns.join('\t') + '\n';
+
     }
 
     var buffer = Buffer.from(tsvData);
