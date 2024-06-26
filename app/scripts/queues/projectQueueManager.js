@@ -57,13 +57,234 @@ var emailIO = require('../vendor/emailIO');
 // Node Libraries
 var Queue = require('bull');
 var jsonApprover = require('json-approver');
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
+//var kue = require('kue');
+//var taskQueue = kue.createQueue({
+//    redis: app.redisConfig,
+//});
 
 // Bull queues
+var addUserQueue = new Queue('Add user to project', { redis: app.redisConfig });
+var removeUserQueue = new Queue('Remove user from project', { redis: app.redisConfig });
 var unloadQueue = new Queue('ADC project unload', { redis: app.redisConfig });
+
+
+//
+// Add user to a project by giving them permissions on all of the project objects.
+// Set project metadata last so the project doesn't show up in the user's project
+// list until all other permissions have been set.
+//
+// 1. project files and subdirectories
+// 2. project file metadata
+// 3. project jobs
+// 4. project metadata
+// 5. send emails
+//
+
+ProjectQueueManager.addUserToProject = function(data) {
+    addUserQueue.add(data);
+};
+
+addUserQueue.process(async (job) => {
+    var context = 'ProjectQueueManager.addUserQueue';
+    var msg = null;
+    var username = job['data']['username'];
+    var project_uuid = job['data']['project_uuid'];
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' for user: ' + username);
+
+    // Promise.reject() will leave the job in the queue to try again
+    // Promise.resolve() considers the job done
+
+    // set permissions on project directories
+    config.log.info(context, 'grant file permissions.');
+
+    await tapisIO.grantProjectFilePermissions(username, project_uuid, '')
+        .catch(function(error) {
+            msg = 'tapisIO.grantProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.grantProjectFilePermissions(username, project_uuid, 'files')
+        .catch(function(error) {
+            msg = 'tapisIO.grantProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.grantProjectFilePermissions(username, project_uuid, 'analyses')
+        .catch(function(error) {
+            msg = 'tapisIO.grantProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.grantProjectFilePermissions(username, project_uuid, 'deleted')
+        .catch(function(error) {
+            msg = 'tapisIO.grantProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    // TODO: do we need to iterate through the analyses directory?
+    // TODO: add permissions to jobs
+    config.log.info(context, 'TODO: grant job permissions.');
+
+    // add permission to project
+    config.log.info(context, 'grant project permission.');
+    var metadata = await tapisIO.addProjectPermissionForUser(project_uuid, username)
+        .catch(function(error) {
+            msg = 'tapisIO.addProjectPermissionForUser error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    // send emails
+    config.log.info(context, 'send emails.');
+    for (let i in metadata['permission']) {
+        let user = metadata['permission'][i]['username'];
+        let userProfileList = await tapisIO.getUserProfile(user);
+        if (userProfileList.length == 0) return;
+        if (username == tapisSettings.guestAccountKey) return;
+        let userProfile = userProfileList[0];
+        if (!userProfile.value.disableUserEmail) {
+            var vdjWebappUrl = tapisSettings.vdjBackbone + '/project/' + project_uuid;
+            emailIO.sendGenericEmail(userProfile.value.email,
+                                     'VDJServer user added to project',
+                                     'VDJServer user "' + username + '" has been added to project "' + metadata['value']['study_title'] + '".'
+                                     + '<br>'
+                                     + 'You can view the project with the link below:'
+                                     + '<br>'
+                                     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+                                    );
+        }
+    }
+
+    config.log.info(context, 'complete, project: ' + project_uuid + ' for user: ' + username);
+    return Promise.resolve();
+});
+
+
+ProjectQueueManager.removeUserFromProject = function(data) {
+    removeUserQueue.add(data);
+};
+
+removeUserQueue.process(async (job) => {
+    var context = 'ProjectQueueManager.removeUserQueue';
+    var msg = null;
+    var username = job['data']['username'];
+    var project_uuid = job['data']['project_uuid'];
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' for user: ' + username);
+
+    // Promise.reject() will leave the job in the queue to try again
+    // Promise.resolve() considers the job done
+
+    // remove permissions on project directories
+    config.log.info(context, 'revoke file permissions.');
+
+    await tapisIO.removeProjectFilePermissions(username, project_uuid, 'files')
+        .catch(function(error) {
+            msg = 'tapisIO.removeProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.removeProjectFilePermissions(username, project_uuid, 'analyses')
+        .catch(function(error) {
+            msg = 'tapisIO.removeProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.removeProjectFilePermissions(username, project_uuid, 'deleted')
+        .catch(function(error) {
+            msg = 'tapisIO.removeProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    await tapisIO.removeProjectFilePermissions(username, project_uuid, '')
+        .catch(function(error) {
+            msg = 'tapisIO.removeProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    // TODO: do we need to iterate through the analyses directory?
+    // TODO: add permissions to jobs
+    config.log.info(context, 'TODO: revoke job permissions.');
+
+    // add permission to project
+    config.log.info(context, 'revoke project permission.');
+    var orig_metadata = await tapisIO.getProjectMetadata(username, project_uuid);
+
+    var metadata = await tapisIO.removeProjectPermissionForUser(project_uuid, username)
+        .catch(function(error) {
+            msg = 'tapisIO.grantProjectFilePermissions error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return Promise.reject(new Error(msg));
+    }
+
+    // send emails
+    config.log.info(context, 'send emails.');
+    for (let i in orig_metadata['permission']) {
+        let user = orig_metadata['permission'][i]['username'];
+        let userProfileList = await tapisIO.getUserProfile(user);
+        if (userProfileList.length == 0) return;
+        if (username == tapisSettings.guestAccountKey) return;
+        let userProfile = userProfileList[0];
+        if (!userProfile.value.disableUserEmail) {
+            var vdjWebappUrl = tapisSettings.vdjBackbone + '/project/' + project_uuid;
+            emailIO.sendGenericEmail(userProfile.value.email,
+                                     'VDJServer user removed from project',
+                                     'VDJServer user "' + username + '" has been removed from project "' + metadata['value']['study_title'] + '".'
+                                     + '<br>'
+                                     + 'You can view the project with the link below:'
+                                     + '<br>'
+                                     + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
+                                    );
+        }
+    }
+
+    config.log.info(context, 'complete, project: ' + project_uuid + ' for user: ' + username);
+    return Promise.resolve();
+});
+
+
+/*
+  OLD CODE
+
 
 //
 // Because loading rearrangement data is resource intensive, we
@@ -114,6 +335,7 @@ ProjectQueueManager.checkRearrangementLoad = function() {
         });
 };
 
+
 //
 // Trigger queue process to load for projects to be loaded
 //
@@ -126,6 +348,7 @@ ProjectQueueManager.triggerProjectLoad = function() {
         .backoff({delay: 60 * 1000, type: 'fixed'})
         .save();
 }
+
 
 ProjectQueueManager.processProjects = function() {
 
@@ -553,13 +776,14 @@ ProjectQueueManager.processProjects = function() {
 
         ServiceAccount.getToken()
             .then(function() {
-                /* HOTFIX: Agave bug AH-207 is preventing recursive file permissions from working, so manually recurse the tree
+                // HOTFIX: Agave bug AH-207 is preventing recursive file permissions from working, so manually recurse the tree
                 // set project file directory + subdirectory permissions recursively
-                .then(function(fileListings) {
-                console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
-                
-                return tapisIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid, true);
-                }) */
+                //.then(function(fileListings) {
+                //console.log('VDJ-API INFO: PermissionsController.addPermissionsForUsername - addUsernameToMetadataPermissions for project ' + projectUuid);
+                //
+                //return tapisIO.addUsernameToFullFilePermissions(username, ServiceAccount.accessToken(), projectUuid, true);
+                //})
+
                 // enumerate file list
                 console.log('VDJ-API INFO: ProjectQueueManager - addUsernameToMetadataPermissions for project ' + projectUuid);
                         
@@ -1595,6 +1819,8 @@ ProjectQueueManager.processProjects = function() {
 
     });
 };
+*/
+
 
 ProjectQueueManager.triggerProjectUnload = function(projectUuid, loadMetadata) {
     console.log('VDJ-API INFO (ProjectQueueManager.triggerProjectUnload):');

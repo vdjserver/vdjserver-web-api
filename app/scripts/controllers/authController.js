@@ -228,6 +228,7 @@ AuthController.verifyUser = function(username) {
     const context = 'AuthController.verifyUser';
 
     if (username == undefined) return false;
+    if (!username) return false;
 
     // return a promise
     return tapisIO.getUserVerificationMetadata(username)
