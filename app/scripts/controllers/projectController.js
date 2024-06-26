@@ -539,6 +539,77 @@ ProjectController.deleteProjectFileMetadata = async function(request, response) 
     return apiResponseController.sendSuccess(metadata, response);
 };
 
+// Add user to a project by giving them permissions on all of the project objects
+// security: project authorization has confirmed user has write access for project
+ProjectController.addPermissionsForUsername = async function(request, response) {
+    const context = 'ProjectController.addPermissionsForUsername';
+    var project_uuid = request.params.project_uuid;
+    var username    = request.body.username;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' for user: ' + username);
+
+    // verify the user
+    var result = await authController.verifyUser(username)
+        .catch(function(error) {
+            msg = 'error attempting to validate user: ' + username + ' error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (!result) {
+        var msg = 'attempt to add invalid user: ' + username;
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // submit job to queue
+    var projectData = { username: username, project_uuid: project_uuid };
+    projectQueueManager.addUserToProject(projectData);
+
+    return apiResponseController.sendSuccess('ok', response);
+};
+
+//
+// Remove user frome a project by removing permissions on all of the project objects
+// Verify the user then kick off task to queue
+// The task processing code is in queues/projectQueueManager.js
+//
+// security: project authorization has confirmed user has write access for project
+ProjectController.removePermissionsForUsername = async function(request, response) {
+    var context = 'ProjectController.removePermissionsForUsername';
+    var project_uuid = request.params.project_uuid;
+    var username    = request.body.username;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' for user: ' + username);
+
+    // verify the user
+    var result = await authController.verifyUser(username)
+        .catch(function(error) {
+            msg = 'error attempting to validate user: ' + username + ' error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    if (!result) {
+        var msg = 'attempt to remove invalid user: ' + username;
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // submit job to queue
+    var projectData = { username: username, project_uuid: project_uuid };
+    projectQueueManager.removeUserFromProject(projectData);
+
+    return apiResponseController.sendSuccess('ok', response);
+};
 
 //
 //

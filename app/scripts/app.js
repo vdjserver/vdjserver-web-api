@@ -268,6 +268,8 @@ ServiceAccount.getToken()
                 postitFile: async function(req, res) { return try_function(req, res, projectController.postitFile); },
                 getProjectFileMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectFileMetadata); },
                 deleteProjectFileMetadata: async function(req, res) { return try_function(req, res, projectController.deleteProjectFileMetadata); },
+                addPermissionsForUsername: async function(req, res) { return try_function(req, res, projectController.addPermissionsForUsername); },
+                removePermissionsForUsername: async function(req, res) { return try_function(req, res, projectController.removePermissionsForUsername); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
                 generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
@@ -280,8 +282,8 @@ ServiceAccount.getToken()
                 purgeProject: async function(req, res) { return try_function(req, res, projectController.purgeProject); },
 
                 // permissions
-                addPermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.addPermissionsForUsername); },
-                removePermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.removePermissionsForUsername); },
+                //addPermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.addPermissionsForUsername); },
+                //removePermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.removePermissionsForUsername); },
                 //syncMetadataPermissionsWithProject: async function(req, res) { return try_function(req, res, permissionsController.syncMetadataPermissionsWithProject); },
 
                 // feedback
@@ -375,6 +377,6 @@ var jobQueueManager = require('./queues/jobQueueManager');
 //jobQueueManager.processJobs();
 
 var projectQueueManager = require('./queues/projectQueueManager');
-projectQueueManager.processProjects();
+//projectQueueManager.processProjects();
 
 var adcDownloadQueueManager = require('./queues/adcDownloadQueueManager');

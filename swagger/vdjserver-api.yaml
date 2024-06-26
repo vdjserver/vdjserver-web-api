@@ -791,6 +791,58 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/user:
+    post:
+      description: add project permissions for user
+      operationId: addPermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ProjectPermissionRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    delete:
+      description: remove project permissions for user
+      operationId: removePermissionsForUsername
+      tags:
+        - permission
+      security:
+        - project_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ProjectPermissionRequest'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/execute:
     post:
       description: execute analysis workflow for project
@@ -1160,58 +1212,6 @@ paths:
                     type: string
                   result:
                     $ref: '#/components/schemas/BasicResponse'
-        '400':
-          description: Bad request.
-        '401':
-          description: Not authorized.
-        '500':
-          description: Internal service error occurred.
-
-  /permission/user:
-    post:
-      description: add project permissions for user
-      operationId: addPermissionsForUsername
-      tags:
-        - permission
-      security:
-        - project_authorization: []
-      requestBody:
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/UserPermission'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BasicResponse'
-        '400':
-          description: Bad request.
-        '401':
-          description: Not authorized.
-        '500':
-          description: Internal service error occurred.
-    delete:
-      description: remove project permissions for user
-      operationId: removePermissionsForUsername
-      tags:
-        - permission
-      security:
-        - project_authorization: []
-      requestBody:
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/UserPermission'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BasicResponse'
         '400':
           description: Bad request.
         '401':
