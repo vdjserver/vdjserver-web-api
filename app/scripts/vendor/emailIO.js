@@ -29,13 +29,18 @@
 var emailSettings = require('../config/emailSettings');
 var nodemailer    = require('nodemailer');
 var sendmailTransport = require('nodemailer-sendmail-transport');
+var config = require('../config/config');
+var webhookIO = require('./webhookIO');
 
-var transporter = nodemailer.createTransport(sendmailTransport());
+var transporter = null;
+if (!emailSettings.relayHost) {
+    config.log.info('WARNING', 'emailSettings.relayHost is not defined, mail cannot be sent.');
+} else {
+    transporter = nodemailer.createTransport({ host: emailSettings.relayHost, port: emailSettings.relayPort, secure: false });
+}
 
 var emailIO = {};
 module.exports = emailIO;
-
-var config = require('../config/config');
 
 // Tapis
 var tapisV2 = require('vdj-tapis-js/tapis');
@@ -45,7 +50,14 @@ if (config.tapis_version == 2) tapisIO = tapisV2;
 if (config.tapis_version == 3) tapisIO = tapisV3;
 var tapisSettings = tapisIO.tapisSettings;
 
-emailIO.sendPasswordResetEmail = function(recipientEmail, username, passwordResetCode) {
+emailIO.sendPasswordResetEmail = async function(recipientEmail, username, passwordResetCode) {
+    var context = 'emailIO.sendPasswordResetEmail';
+    var msg = null;
+
+    if (!transporter) {
+        config.log.info(context, 'no mail transporter, ignoring send email request.', true);
+        return Promise.resolve();
+    }
 
     var passwordResetUrl = tapisSettings.vdjBackbone + '/password-reset/' + passwordResetCode;
 
@@ -68,17 +80,29 @@ emailIO.sendPasswordResetEmail = function(recipientEmail, username, passwordRese
 
     };
 
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending password reset email.', error);
-            }
-        }
-    );
+    var info = await transporter.sendMail(mailOptions)
+        .catch(function(error) {
+            msg = 'could not send email, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+    } else {
+        config.log.info(context, 'email sent: ' + info.messageId);
+    }
+
+    return Promise.resolve();
 };
 
-emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
+emailIO.sendFeedbackEmail = async function(recipientEmail, feedback) {
+    var context = 'emailIO.sendFeedbackEmail';
+    var msg = null;
+
+    if (!transporter) {
+        config.log.info(context, 'no mail transporter, ignoring send email request.', true);
+        return Promise.resolve();
+    }
+
     var mailOptions = {
         to: recipientEmail,
         from: emailSettings.fromAddress,
@@ -87,17 +111,29 @@ emailIO.sendFeedbackEmail = function(recipientEmail, feedback) {
         text: feedback,
     };
 
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending feedback email.', error);
-            }
-        }
-    );
+    var info = await transporter.sendMail(mailOptions)
+        .catch(function(error) {
+            msg = 'could not send email, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+    } else {
+        config.log.info(context, 'email sent: ' + info.messageId);
+    }
+
+    return Promise.resolve();
 };
 
-emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
+emailIO.sendFeedbackAcknowledgementEmail = async function(recipientEmail, feedback) {
+    var context = 'emailIO.sendFeedbackAcknowledgementEmail';
+    var msg = null;
+
+    if (!transporter) {
+        config.log.info(context, 'no mail transporter, ignoring send email request.', true);
+        return Promise.resolve();
+    }
+
     var mailOptions = {
         to: recipientEmail,
         from: emailSettings.fromAddress,
@@ -106,17 +142,28 @@ emailIO.sendFeedbackAcknowledgementEmail = function(recipientEmail, feedback) {
         text: 'Thank you for your feedback! Someone will respond shortly. Your feedback text is shown below\n\n-----\n\n' + feedback,
     };
 
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending feedback email.', error);
-            }
-        }
-    );
+    var info = await transporter.sendMail(mailOptions)
+        .catch(function(error) {
+            msg = 'could not send email, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+    } else {
+        config.log.info(context, 'email sent: ' + info.messageId);
+    }
+
+    return Promise.resolve();
 };
 
-emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
+emailIO.sendWelcomeEmail = async function(recipientEmail, username, verificationId) {
+    var context = 'emailIO.sendWelcomeEmail';
+    var msg = null;
+
+    if (!transporter) {
+        config.log.info(context, 'no mail transporter, ignoring send email request.', true);
+        return Promise.resolve();
+    }
 
     var vdjWebappUrl = tapisSettings.vdjBackbone
                      + '/account'
@@ -139,17 +186,28 @@ emailIO.sendWelcomeEmail = function(recipientEmail, username, verificationId) {
               + '<a href="' + vdjWebappUrl + '">' + vdjWebappUrl + '</a>.'
     };
 
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending account verification email.', error);
-            }
-        }
-    );
+    var info = await transporter.sendMail(mailOptions)
+        .catch(function(error) {
+            msg = 'could not send email, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+    } else {
+        config.log.info(context, 'email sent: ' + info.messageId);
+    }
+
+    return Promise.resolve();
 };
 
-emailIO.sendGenericEmail = function(recipientEmail, subject, message) {
+emailIO.sendGenericEmail = async function(recipientEmail, subject, message) {
+    var context = 'emailIO.sendGenericEmail';
+    var msg = null;
+
+    if (!transporter) {
+        config.log.info(context, 'no mail transporter, ignoring send email request.', true);
+        return Promise.resolve();
+    }
 
     var mailOptions = {
         to: recipientEmail,
@@ -160,12 +218,16 @@ emailIO.sendGenericEmail = function(recipientEmail, subject, message) {
         html: message
     };
 
-    transporter.sendMail(
-        mailOptions,
-        function(error /*, info*/) {
-            if (error) {
-                console.log('Error sending email.', error);
-            }
-        }
-    );
+    var info = await transporter.sendMail(mailOptions)
+        .catch(function(error) {
+            msg = 'could not send email, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+    } else {
+        config.log.info(context, 'email sent: ' + info.messageId);
+    }
+
+    return Promise.resolve();
 };
