@@ -34,6 +34,7 @@ module.exports = {
     replyToAddress: process.env.REPLYTO_EMAIL_ADDRESS,
     feedbackAddress: process.env.FEEDBACK_EMAIL_ADDRESS,
     hostname: process.env.POSTFIX_HOSTNAME,
-    relayHost: process.env.POSTFIX_RELAYHOST
+    relayHost: process.env.POSTFIX_RELAYHOST,
+    relayPort: process.env.POSTFIX_RELAYPORT
 
 };
