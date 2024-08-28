@@ -240,6 +240,8 @@ ServiceAccount.getToken()
                 // authentication
                 createToken: async function(req, res) { return try_function(req, res, tokenController.getToken); },
                 refreshToken: async function(req, res) { return try_function(req, res, tokenController.refreshToken); },
+                createOAuthToken: async function(req, res) { return try_function(req, res, tokenController.getOAuthToken); },
+                refreshOAuthToken: async function(req, res) { return try_function(req, res, tokenController.refreshOAuthToken); },
 
                 // user
                 createUser: async function(req, res) { return try_function(req, res, userController.createUser); },
