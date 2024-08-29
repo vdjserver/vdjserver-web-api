@@ -176,6 +176,71 @@ paths:
           content: 
             'application/json': {}
 
+  /oauth2/token:
+    post:
+      description: create token
+      operationId: createOAuthToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                code:
+                  type: string
+                client_id:
+                  type: string
+              required:
+                - code
+                - client_id
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content:
+            'application/json': {}
+
+    put:
+      description: refresh token
+      operationId: refreshOAuthToken
+      tags:
+        - authentication
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                username:
+                  type: string
+                refresh_token:
+                  type: string
+              required:
+                - username
+                - refresh_token
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+        '401':
+          description: Not authorized.
+          content:
+            'application/json': {}
+
   /project:
     post:
       description: create project

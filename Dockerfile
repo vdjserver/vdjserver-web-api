@@ -1,7 +1,7 @@
 # Base Image
 FROM ubuntu:22.04
 
-MAINTAINER VDJServer <vdjserver@utsouthwestern.edu>
+LABEL MAINTAINER="VDJServer <vdjserver@utsouthwestern.edu>"
 
 # PROXY: uncomment these lines if building behind UTSW proxy
 # PROXY: DO NOT COMMIT WITH PROXY ON
