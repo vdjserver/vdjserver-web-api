@@ -1,5 +1,46 @@
 # Setup VDJ API v2.0
 
+# Setup clients for OAuth authentication
+
+The OAuth redirect workflow requires clients to be defined and the redirect URL is part
+of the client definition. Therefore, we need to create a client for each of the
+different environments. The client ID needs to be defined in `environment-config.js`
+for vdjserver-web-backbone so that the GUI constructs the correct redirect URL. That
+client ID is also passed to the VDJ API to get a token after successful authentication.
+
+TODO: update to use vdjserver python tool
+
+To list the current clients:
+
+```
+curl -H "X-Tapis-Token: $JWT" https://vdjserver.tapis.io/v3/oauth2/clients
+```
+
++ Production server (production)
+
+
+
++ Staging server (staging)
+
+```
+curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_id": "staging", "callback_url": "https://vdj-staging.tacc.utexas.edu/oauth2/callback"}' https://vdjserver.tapis.io/v3/oauth2/clients
+```
+
++ Dev server (develop)
+
+```
+curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_id": "develop", "callback_url": "https://vdj-dev.tacc.utexas.edu/oauth2/callback"}' https://vdjserver.tapis.io/v3/oauth2/clients
+```
+
++ Localhost at port 8080 (localhost8080)
+
+```
+curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_id": "localhost8080", "callback_url": "http://localhost:8080/oauth2/callback"}' https://vdjserver.tapis.io/v3/oauth2/clients
+```
+
++ Localhost at port 9001
+
+
 # ADC Download Cache
 
 ```
@@ -24,7 +65,6 @@ curl --data @cache_covid19-1_repository.json -H 'content-type:application/json' 
 curl --data @cache_covid19-2_repository.json -H 'content-type:application/json' -H 'Authorization: Bearer TOKEN' http://localhost:8080/api/v2/adc/registry
 curl --data @cache_covid19-3_repository.json -H 'content-type:application/json' -H 'Authorization: Bearer TOKEN' http://localhost:8080/api/v2/adc/registry
 curl --data @cache_covid19-4_repository.json -H 'content-type:application/json' -H 'Authorization: Bearer TOKEN' http://localhost:8080/api/v2/adc/registry
-
 ```
 
 # Tapis Meta V3 API
