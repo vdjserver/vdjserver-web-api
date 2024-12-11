@@ -51,6 +51,9 @@ var verifyRecaptcha = function(recaptchaData) {
 
 UserController.createUser = function(request, response) {
 
+    apiResponseController.sendError('VDJServer V1 is being decommissioned. Account creation has been disabled.', 400, response);
+    return;
+
     var user = new User({
         username:   request.body.username,
         password:   request.body.password,
