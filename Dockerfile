@@ -56,6 +56,7 @@ COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 # Install npm dependencies (optimized for cache)
 COPY package.json /vdjserver-web-api/
+COPY package-lock.json /vdjserver-web-api/
 RUN cd /vdjserver-web-api && npm install
 
 # Copy project source
