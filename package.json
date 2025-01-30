@@ -47,6 +47,7 @@
     "request": ">=2.68.0",
     "sinon": "1.17.4",
     "socket.io": ">=2.4.0",
+    "swagger-ui-express": "^4.1.6",
     "tar": "^6.1.2",
     "uuid": "^9.0.1",
     "vdj-tapis-js": "file:app/vdj-tapis-js",

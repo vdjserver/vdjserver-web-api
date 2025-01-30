@@ -41,6 +41,7 @@ var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
 var airr = require('airr-js');
 var vdj_schema = require('vdjserver-schema');
+const swaggerUi = require('swagger-ui-express');
 
 
 // Express app
@@ -96,6 +97,7 @@ var tenantController = require('./controllers/tenantController');
 
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
+app.use('/api/v2/api-docs', swaggerUi.serve, swaggerUi.setup(api_spec));
 // load AIRR Standards spec, openapi v3
 //var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema-openapi3.yaml'), 'utf8'));
 // fix up swagger v2 spec for openapi v3
