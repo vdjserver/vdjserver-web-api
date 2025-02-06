@@ -21,7 +21,7 @@
     "@apidevtools/json-schema-ref-parser": "^10.1.0",
     "airr-js": "file:app/vdjserver-schema/airr-standards/lang/js",
     "axios": ">=1.6.0",
-    "body-parser": "1.10.2",
+    "body-parser": "1.10.3",
     "bull": "^3.20.0",
     "chai": "3.5.0",
     "csv-parser": "^2.3.2",
