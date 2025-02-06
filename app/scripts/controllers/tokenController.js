@@ -124,7 +124,7 @@ TokenController.getOAuthToken = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(client);
+    //console.log(client);
 
     var token = await tapisIO.getOAuthToken(client, request.body.code)
         .catch(function(error) {
@@ -135,11 +135,11 @@ TokenController.getOAuthToken = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(token);
+    //console.log(token);
     let access_token = token['access_token']['access_token'];
 
     // get my profile and username from the token
-    var userProfile = await tapisIO.getTapisUserProfile(access_token, 'me')
+    var tapisProfile = await tapisIO.getTapisUserProfile(access_token, 'me')
         .catch(function(error) {
             msg = 'error getting tapis profile, error: ' + error;
         });
@@ -148,8 +148,8 @@ TokenController.getOAuthToken = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(userProfile);
-    var username = userProfile['result']['username'];
+    //console.log(tapisProfile);
+    var username = tapisProfile['result']['username'];
 
     // does this user have a verification record?
     var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
@@ -161,11 +161,12 @@ TokenController.getOAuthToken = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(userVerificationMetadata);
+    //console.log(userVerificationMetadata);
     if (!userVerificationMetadata || userVerificationMetadata.length == 0) {
         config.log.info(context, 'first login? No user verification record, creating for user: ' + username);
 
         // create user verification
+        // TODO: this verify needs to be shifted to email verification
         userVerificationMetadata = await tapisIO.createUserVerificationMetadata(username, true)
             .catch(function(error) {
                 msg = 'verification metadata failed for user: ' + username + ', error: ' + error;
@@ -190,7 +191,7 @@ TokenController.getOAuthToken = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(userProfile);
+    //console.log(userProfile);
     if (!userProfile || userProfile.length == 0) {
         config.log.info(context, 'first login? No user profile record, creating for user: ' + username);
 
@@ -207,6 +208,19 @@ TokenController.getOAuthToken = async function(request, response) {
 
         config.log.info(context, 'create user profile (' + userProfile.uuid
                 + ') successful for user: ' + username);
+
+        // Give read access to the tapis storage system
+        tapisIO.grantStorageSystemPermissions(username)
+            .catch(function(error) {
+                msg = 'grant storage system permission failed for user: ' + username + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+
+        config.log.info(context, 'granted read access to storage system for user: ' + username);
     }
 
     token['username'] = username;
