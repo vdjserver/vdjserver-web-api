@@ -35,13 +35,18 @@ info:
     API service for the VDJServer analysis portal.
 
 servers:
-  - url: http://localhost:8080/api/v2
+  - url: https://vdjserver.org/api/v2
     description: Production server
     variables:
       basePath:
         default: /api/v2
   - url: https://vdj-staging.tacc.utexas.edu/api/v2
     description: Staging server
+    variables:
+      basePath:
+        default: /api/v2
+  - url: http://localhost:8080/api/v2
+    description: Local development server
     variables:
       basePath:
         default: /api/v2
@@ -91,6 +96,37 @@ paths:
             text/html:
               schema:
                 type: string
+
+# These are handled internally so not expected to be defined,
+# but left here as documentation
+#
+#   /api-docs:
+#     get:
+#       operationId: getDocs
+#       description: |
+#         API documentation.
+#       responses:
+#         '200':
+#           description: |
+#             Success.
+#           content:
+#             application/json:
+#               schema:
+#                 type: object
+# 
+#   /api-ui:
+#     get:
+#       operationId: getDocsUI
+#       description: |
+#         API swagger ui.
+#       responses:
+#         '200':
+#           description: |
+#             Success.
+#           content:
+#             test/html:
+#               schema:
+#                 type: string
 
   /tenants:
     get:
