@@ -98,10 +98,6 @@ var tenantController = require('./controllers/tenantController');
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
 
-// enable swagger ui
-config.log.info(context, 'API swagger ui available at /api/v2/api-ui');
-app.use('/api/v2/api-ui', swaggerUi.serve, swaggerUi.setup(api_spec));
-
 config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
 config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
 
@@ -187,6 +183,10 @@ ServiceAccount.getToken()
     })
     .then(function(api_schema) {
         //console.log(JSON.stringify(api_schema,null,2));
+
+        // enable swagger ui
+        config.log.info(context, 'API swagger ui available at /api/v2/api-ui');
+        app.use('/api/v2/api-ui', swaggerUi.serve, swaggerUi.setup(api_schema));
 
         // wrap the operations functions to catch syntax errors and such
         // we do not get a good stack trace with the middleware error handler
