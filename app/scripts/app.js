@@ -41,6 +41,7 @@ var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
 var airr = require('airr-js');
 var vdj_schema = require('vdjserver-schema');
+const swaggerUi = require('swagger-ui-express');
 
 
 // Express app
@@ -96,21 +97,6 @@ var tenantController = require('./controllers/tenantController');
 
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
-// load AIRR Standards spec, openapi v3
-//var airr_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../airr-standards/specs/airr-schema-openapi3.yaml'), 'utf8'));
-// fix up swagger v2 spec for openapi v3
-/* for (var obj in airr_spec) {
-    // discriminator is an object vs string
-    if (airr_spec[obj]['discriminator'])
-        airr_spec[obj]['discriminator'] = { propertyName: airr_spec[obj]['discriminator'] };
-    // add nullable flags
-    for (var prop in airr_spec[obj]['properties']) {
-        var p = airr_spec[obj]['properties'][prop];
-        if ((p['x-airr']) && (p['x-airr']['nullable'])) {
-            p['nullable'] = true;
-        }
-    }
-} */
 
 config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
 config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
@@ -198,6 +184,10 @@ ServiceAccount.getToken()
     .then(function(api_schema) {
         //console.log(JSON.stringify(api_schema,null,2));
 
+        // enable swagger ui
+        config.log.info(context, 'API swagger ui available at /api/v2/api-ui');
+        app.use('/api/v2/api-ui', swaggerUi.serve, swaggerUi.setup(api_schema));
+
         // wrap the operations functions to catch syntax errors and such
         // we do not get a good stack trace with the middleware error handler
         var try_function = async function (request, response, the_function) {
@@ -235,6 +225,8 @@ ServiceAccount.getToken()
             operations: {
                 //getStatus: function(req, res) { res.send('{"result":"success"}'); }
                 getStatus: async function(req, res) { return try_function(req, res, apiResponseController.confirmUpStatus); },
+                //getDocs: async function(req, res) { return Promise.resolve(); },
+                //getDocsUI: async function(req, res) { return Promise.resolve(); },
                 getTenants: async function(req, res) { return try_function(req, res, tenantController.getTenants); },
 
                 // authentication
