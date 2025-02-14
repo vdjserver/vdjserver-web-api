@@ -239,6 +239,34 @@ UserController.getUserProfile = async function(request, response) {
     return apiResponseController.sendSuccess(profile, response);
 };
 
+// get all user profiles
+// we only return the usernames for this endpoint
+UserController.getUserIdentity = async function(request, response) {
+    const context = 'UserController.getUserIdentity';
+    var msg = null;
+
+    config.log.info(context, 'querying all user profiles.');
+
+    // get user profile
+    var profiles = await tapisIO.getAllUserProfiles()
+        .catch(function(error) {
+            msg = 'got error retrieving user profiles, error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    //console.log(JSON.stringify(profiles, null, 2));
+
+    var names = [];
+    for (let i in profiles)
+        if (profiles[i]['value']['username'])
+            names.push({ username: profiles[i]['value']['username'] });
+
+    return apiResponseController.sendSuccess(names, response);
+};
+
 // check if username is already being used
 UserController.duplicateUsername = async function(request, response) {
     const context = 'UserController.duplicateUsername';
