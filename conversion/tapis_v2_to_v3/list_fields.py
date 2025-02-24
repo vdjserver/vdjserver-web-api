@@ -14,13 +14,21 @@ if (__name__=="__main__"):
     with open(args.json_file, 'r') as fp:
         line = fp.readline()
         while line:
-            obj = json.loads(line)
-            if obj['name'] == args.object_name:
-                for field in obj['value'].keys():
-                    if names.get(field) is None:
-                        names[field] = 1
+            try:
+                obj = json.loads(line)
+                for item in obj:
+                    if isinstance(item, dict) and 'name' in item:
+                        if item['name'] == args.object_name:
+                            for field in item['value'].keys():
+                                if names.get(field) is None:
+                                    names[field] = 1
+                                else:
+                                    names[field] += 1
                     else:
-                        names[field] += 1
+                        print("Item is not a dictionary or 'name' key not found")
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+
             line = fp.readline()
 
         print(json.dumps(names, indent=2))
