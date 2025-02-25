@@ -1269,13 +1269,13 @@ ProjectController.purgeProject = async function(request, response) {
 //
 // Importing is complicated as we need to normalize the objects in the AIRR metadata file
 //
-ProjectController.importMetadata = function(request, response) {
+ProjectController.importMetadata = async function(request, response) {
     var context = 'ProjectController.importMetadata';
     var projectUuid = request.params.project_uuid;
     var fileName = request.body.filename;
     var operation = request.body.operation;
 
-    console.log('VDJ-API INFO: ProjectController.importMetadata - start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + operation);
+    config.log.info(context, 'start, project: ' + projectUuid + ' file: ' + fileName + ' operation: ' + operation);
 
     var json_parse_msg, yaml_parse_msg;
     var msg = null;
@@ -1292,471 +1292,416 @@ ProjectController.importMetadata = function(request, response) {
     var samples = [];
     var data_processes = [];
 
-    ServiceAccount.getToken()
-        .then(function(token) {
-            // get metadata to import
-            return tapisIO.getProjectFileContents(projectUuid, fileName)
-        })
-        .then(function(fileData) {
-            console.log('VDJ-API INFO: ProjectController.importMetadata - parse file contents');
-            if (fileData) {
-                // try to parse as JSON
-                try {
-                    var doc = JSON.parse(fileData);
-                    if (doc) data = doc;
-                } catch (e) {
-                    json_parse_msg = 'Attempt to parse as JSON document generated error: ' + e;
-                    data = null;
-                }
-                if (! data) {
-                    // try to parse as yaml
-                    try {
-                        var doc = yaml.safeLoad(fileData);
-                        if (doc) data = doc;
-                    } catch (e) {
-                        yaml_parse_msg = 'Attempt to parse as YAML document generated error: ' + e;
-                        data = null;
-                    }
-                }
-
-                if (! data) {
-                    console.error('VDJ-API ERROR: ProjectController.importMetadata, could not parse file: ' + fileName
-                                + ' JSON parse error: ' + json_parse_msg + ', YAML parse error: ' + yaml_parse_msg);
-                }
-
-                return data;
-            }
-        })
-        .then(function() {
-            if (! data) return null;
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - parsed file');
-
-            // get existing repertoires
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
-        })
-        .then(function(_reps) {
-            if (! data) return null;
-
-            for (var r in _reps) {
-                existingRepertoires[_reps[r]['uuid']] = _reps[r]['value'];
-            }
-
-            // get existing jobs
-            return tapisIO.getJobsForProject(projectUuid);
-        })
-        .then(function(_jobs) {
-            if (! data) return null;
-
-            for (var r in _jobs) {
-                existingJobs[_jobs[r]['id']] = _jobs[r];
-            }
-
-            // get existing data processing objects
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'data_processing');
-        })
-        .then(function(_dps) {
-            if (! data) return null;
-
-            for (var r in _dps) {
-                existingDPs[_dps[r]['uuid']] = _dps[r]['value'];
-                existingDPs_by_job[_dps[r]['value']['data_processing_id']] = _dps[r]['uuid'];
-            }
-
-            // Do some error checking
-
-            repList = data['Repertoire'];
-            if (! repList) {
-                console.error('VDJ-API ERROR: ProjectController.importMetadata, file is not valid AIRR repertoire metadata, missing Repertoire key');
-                data = null;
-                return;
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - file contains ' + repList.length + ' repertoires');
-
-            // check no existing repertoire ids for append
-            if (operation == 'append') {
-                for (var r in repList) {
-                    if (repList[r]['repertoire_id']) {
-                        config.log.info(context, 'Repertoire has an assigned repertoire_id, setting to null');
-                        repList[r]['repertoire_id'] = null;
-                        //msg = 'Repertoires have assigned repertoire_ids, they must be null when appending';
-                        //data = null;
-                        //return;
-                    }
-                }
-            }
-
-            // check that repertoire ids are valid for replace
-            if (operation == 'replace') {
-                for (var r in repList) {
-                    if (repList[r]['repertoire_id']) {
-                        if (! existingRepertoires[repList[r]['repertoire_id']]) {
-                            config.log.info(context, 'Repertoire has unknown repertoire_id, setting to null');
-                            repList[r]['repertoire_id'] = null;
-                            //msg = 'Repertoire has invalid repertoire_id: ' + repList[r]['repertoire_id'];
-                            //data = null;
-                            //return;
-                        }
-                    }
-                }
-            }
-
-            for (var r in repList) {
-                // check that data processing records are valid
-                var found = false;
-                for (var dp in repList[r]['data_processing']) {
-                    if (repList[r]['data_processing'][dp]['primary_annotation']) found = true;
-                    /* disable for now
-                    if (repList[r]['data_processing'][dp]['data_processing_id']) {
-                        if (! existingJobs[repList[r]['data_processing'][dp]['data_processing_id']]) {
-                            msg = 'Repertoire has invalid data_processing_id: ' + repList[r]['data_processing'][dp]['data_processing_id'];
-                            data = null;
-                            return;
-                        }
-                    }
-                    if (repList[r]['data_processing'][dp]['analysis_provenance_id']) {
-                        if (! existingDPs[repList[r]['data_processing'][dp]['analysis_provenance_id']]) {
-                            msg = 'Repertoire has invalid analysis_provenance_id: ' + repList[r]['data_processing'][dp]['analysis_provenance_id'];
-                            data = null;
-                            return;
-                        }
-                    } */
-                }
-                if ((repList[r]['data_processing'].length > 0) && (!found)) {
-                    msg = 'Repertoire has no data_processing marked as primary_annotation';
-                    data = null;
-                    return;
-                }
-
-                // check that subjects have ids
-                if ((! repList[r]['subject']['subject_id']) || (repList[r]['subject']['subject_id'].length == 0)) {
-                    msg = 'Repertoire has subject with missing or blank subject_id';
-                    data = null;
-                    return;
-                }
-            }
-
-            // TODO: should we update the project/study metadata?
-            // Let's assume it was entered in the GUI...
-
-            // normalize the study
-            for (var r in repList) {
-                repList[r]['study'] = { vdjserver_uuid: projectUuid };
-            }
-
-            // get existing subjects
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
-        })
-        .then(function(_subjects) {
-            if (! data) return null;
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' existing subjects');
-
-            for (var r in _subjects) {
-                existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
-            }
-
-            // pull out the subjects
-            for (var r in repList) {
-                var rep = repList[r];
-                var obj = existingSubjects[rep['subject']['subject_id']];
-                if (obj) {
-                    if (operation == 'replace')
-                        // need to update the existing subject
-                        subjects[rep['subject']['subject_id']] = rep['subject'];
-                } else {
-                    // new subject, need to add
-                    subjects[rep['subject']['subject_id']] = rep['subject'];
-                }
-            }
-
-            var subjectList = [];
-            for (var r in subjects) {
-                subjectList.push(subjects[r]);
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + subjectList.length + ' subjects');
-
-            // create/update subject data
-            var promises = [];
-            for (var i = 0; i < subjectList.length; i++) {
-                var entry = subjectList[i];
-                if (existingSubjects[entry['subject_id']])
-                    promises[i] = tapisIO.updateMetadata(existingSubjects[entry['subject_id']], 'subject', entry, [ projectUuid ]);
-                else
-                    promises[i] = tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'subject', entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            // do we need to delete any subjects
-            var deleteList = [];
-            if (operation == 'replace') {
-                // if its existing subject but not among the subjects to be imported
-                for (var r in existingSubjects) {
-                    if (! subjects[r]) deleteList.push(existingSubjects[r]);
-                }
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old subjects');
-
-            // delete subjects
-            var promises = [];
-            for (var i = 0; i < deleteList.length; i++) {
-                var entry = deleteList[i];
-                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            // get existing subjects
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'subject');
-        })
-        .then(function(_subjects) {
-            if (! data) return null;
-
-            for (var r in _subjects) {
-                existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _subjects.length + ' total subjects');
-
-            // normalize the subjects
-            for (var r in repList) {
-                var obj = existingSubjects[repList[r]['subject']['subject_id']];
-                if (! obj) {
-                    msg = 'Cannot find subject: ' + repList[r]['subject']['subject_id'] + ' for repertoire';
-                    data = null;
-                    return;
-                }
-                repList[r]['subject'] = { vdjserver_uuid: obj };
-            }
-
-            // get existing samples
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'sample_processing');
-        })
-        .then(function(_samples) {
-            if (! data) return null;
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - ' + _samples.length + ' existing samples');
-
-            // find any samples to be deleted
-            // if replace operation, delete all and create new records
-            // if append operation, nothing to delete
-            var deleteList = [];
-            if (operation == 'replace') {
-                // we delete all the existing ones
-                for (var r in _samples) deleteList.push(_samples[r]['uuid']);
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old samples');
-
-            // delete samples
-            var promises = [];
-            for (var i = 0; i < deleteList.length; i++) {
-                var entry = deleteList[i];
-                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            samples = [];
-            for (var r in repList) {
-                for (var s in repList[r]['sample']) {
-                    samples.push({ rep: r, sample: repList[r]['sample'][s]});
-                }
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + samples.length + ' samples');
-
-            // we create a new function for the call so that the entry variable is still
-            // within scope for the then(), otherwise entry has a different value when
-            // the promises are performed in allSettled() below.
-            var agaveCall = function(entry) {
-                return tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'sample_processing', entry['sample'])
-                    .then(function(object) {
-                        entry['uuid'] = object['uuid'];
-                    });
-            }
-
-            // create samples
-            var promises = [];
-            for (var i = 0; i < samples.length; i++) {
-                var entry = samples[i];
-                promises[i] = agaveCall(entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            // normalize the samples
-            for (var r in repList) repList[r]['sample'] = [];
-            for (var s in samples) {
-                var rep = repList[samples[s]['rep']];
-                rep['sample'].push({ vdjserver_uuid: samples[s]['uuid'] });
-            }
-
-            // find any data_processing to be deleted
-            // if replace operation, delete all and create new records
-            // if append operation, nothing to delete
-            var deleteList = [];
-            if (operation == 'replace') {
-                // we delete all the existing ones
-                for (var r in existingDPs) deleteList.push(r);
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old data processing');
-
-            // delete data processing
-            var promises = [];
-            for (var i = 0; i < deleteList.length; i++) {
-                var entry = deleteList[i];
-                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            data_processes = [];
-            for (var r in repList) {
-                for (var dp in repList[r]['data_processing']) {
-                    data_processes.push({ rep: r, dp: repList[r]['data_processing'][dp]});
-                }
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - creating ' + data_processes.length + ' data processing');
-
-            // we create a new function for the call so that the entry variable is still
-            // within scope for the then(), otherwise entry has a different value when
-            // the promises are performed in allSettled() below.
-            var agaveCall = function(entry) {
-                return tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'data_processing', entry['dp'])
-                    .then(function(object) {
-                        entry['uuid'] = object['uuid'];
-                    });
-            }
-
-            // create records
-            var promises = [];
-            for (var i = 0; i < data_processes.length; i++) {
-                var entry = data_processes[i];
-                promises[i] = agaveCall(entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            // normalize the data processing
-            for (var r in repList) repList[r]['data_processing'] = [];
-            for (var dp in data_processes) {
-                var rep = repList[data_processes[dp]['rep']];
-                rep['data_processing'].push({ vdjserver_uuid: data_processes[dp]['uuid'] });
-            }
-
-            // now the repertoires are finally normalized
-
-            // find any repertoires to be deleted
-            // if replace operation, delete ones not in list
-            // if append operation, nothing to delete
-            var deleteList = [];
-            if (operation == 'replace') {
-                for (var r in repList) {
-                    if (repList[r]['repertoire_id']) {
-                        if (existingRepertoires[repList[r]['repertoire_id']]) {
-                            delete existingRepertoires[repList[r]['repertoire_id']];
-                        }
-                    }
-                }
-                // any remaining are to be deleted
-                for (var r in existingRepertoires) deleteList.push(r);
-            }
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - deleting ' + deleteList.length + ' old repertoires');
-
-            // delete repertoires
-            var promises = [];
-            for (var i = 0; i < deleteList.length; i++) {
-                var entry = deleteList[i];
-                promises[i] = tapisIO.deleteMetadata(ServiceAccount.accessToken(), entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - creating/updating ' + repList.length + ' repertoires');
-
-            // create/update repertoires
-            var promises = [];
-            for (var i = 0; i < repList.length; i++) {
-                var entry = repList[i];
-                if (entry['repertoire_id'])
-                    promises[i] = tapisIO.updateMetadata(entry['repertoire_id'], 'repertoire', entry, [ projectUuid ]);
-                else
-                    promises[i] = tapisIO.createMetadataForTypeWithPermissions(projectUuid, 'repertoire', entry);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) return null;
-
-            // get existing repertoires
-            return tapisIO.getMetadataForType(ServiceAccount.accessToken(), projectUuid, 'repertoire');
-        })
-        .then(function(_reps) {
-            if (! data) return null;
-
-            console.log('VDJ-API INFO: ProjectController.importMetadata - updating repertoire_ids');
-
-            // need to make sure each has repertoire_id
-            for (var r in _reps) _reps[r]['value']['repertoire_id'] = _reps[r]['uuid'];
-
-            // create/update repertoires
-            var promises = [];
-            for (var i = 0; i < _reps.length; i++) {
-                var entry = _reps[i];
-                promises[i] = tapisIO.updateMetadata(entry['uuid'], 'repertoire', entry['value'], [ projectUuid ]);
-            }
-
-            return Promise.allSettled(promises);
-        })
-        .then(function() {
-            if (! data) {
-                var error_msg = 'VDJ-API ERROR: ProjectController.importMetadata - error - project: ' + projectUuid + ', error: ';
-                if (msg) msg = 'Failed to import metadata: ' + msg;
-                else msg = 'Failed to import metadata';
-                console.error(error_msg + msg);
-                webhookIO.postToSlack(error_msg + msg);
-                apiResponseController.sendError(msg, 400, response);
-            } else {
-                console.log('VDJ-API INFO: ProjectController.importMetadata - successfully imported metadata');
-                apiResponseController.sendSuccess('Successfully imported metadata', response);
-            }
-        })
+    // get metadata to import
+    var fileData = await tapisIO.getProjectFileContents(projectUuid, fileName)
         .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.importMetadata - error - project: ' + projectUuid + ', error: ' + error;
-            console.error(msg);
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
             webhookIO.postToSlack(msg);            
-            apiResponseController.sendError(msg, 500, response);
+            return apiResponseController.sendError(msg, 500, response);
         });
+    // somehow in Tapis V3, the file data is coming back already as a parsed json object
+    // TODO: what about yaml?
+    data = fileData;
+
+    if (! data) {
+        msg = config.log.error(context, 'Could not read import file contents.');
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    config.log.info(context, 'parse file contents');
+
+    // get existing repertoires
+    var _reps = await tapisIO.queryMetadataForProject(projectUuid, 'repertoire')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+
+    for (let r in _reps) {
+        existingRepertoires[_reps[r]['uuid']] = _reps[r]['value'];
+    }
+
+    // get existing jobs
+    var _jobs = await tapisIO.getJobsForProject(projectUuid)
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+
+    for (let r in _jobs) {
+        existingJobs[_jobs[r]['id']] = _jobs[r];
+    }
+
+    // get existing data processing objects
+    var _dps = await tapisIO.queryMetadataForProject(projectUuid, 'data_processing')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+
+    for (let r in _dps) {
+        existingDPs[_dps[r]['uuid']] = _dps[r]['value'];
+        existingDPs_by_job[_dps[r]['value']['data_processing_id']] = _dps[r]['uuid'];
+    }
+
+    // Do some error checking
+
+    repList = data['Repertoire'];
+    if (! repList) {
+        msg = config.log.error(context, 'file is not valid AIRR repertoire metadata, missing Repertoire key');
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    config.log.info(context, 'file contains ' + repList.length + ' repertoires');
+
+    // check no existing repertoire ids for append
+    if (operation == 'append') {
+        for (var r in repList) {
+            if (repList[r]['repertoire_id']) {
+                config.log.info(context, 'Repertoire has an assigned repertoire_id, setting to null');
+                repList[r]['repertoire_id'] = null;
+            }
+        }
+    }
+
+    // check that repertoire ids are valid for replace
+    if (operation == 'replace') {
+        for (var r in repList) {
+            if (repList[r]['repertoire_id']) {
+                if (! existingRepertoires[repList[r]['repertoire_id']]) {
+                    config.log.info(context, 'Repertoire has unknown repertoire_id, setting to null');
+                    repList[r]['repertoire_id'] = null;
+                }
+            }
+        }
+    }
+
+    for (let r in repList) {
+        // check that data processing records are valid
+        var found = false;
+        for (let dp in repList[r]['data_processing']) {
+            if (repList[r]['data_processing'][dp]['primary_annotation']) found = true;
+            /* disable for now
+            if (repList[r]['data_processing'][dp]['data_processing_id']) {
+                if (! existingJobs[repList[r]['data_processing'][dp]['data_processing_id']]) {
+                    msg = 'Repertoire has invalid data_processing_id: ' + repList[r]['data_processing'][dp]['data_processing_id'];
+                    data = null;
+                    return;
+                }
+            }
+            if (repList[r]['data_processing'][dp]['analysis_provenance_id']) {
+                if (! existingDPs[repList[r]['data_processing'][dp]['analysis_provenance_id']]) {
+                    msg = 'Repertoire has invalid analysis_provenance_id: ' + repList[r]['data_processing'][dp]['analysis_provenance_id'];
+                    data = null;
+                    return;
+                }
+            } */
+        }
+        if ((repList[r]['data_processing'].length > 0) && (!found)) {
+            msg = config.log.error(context, 'Repertoire has no data_processing marked as primary_annotation');
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
+
+        // check that subjects have ids
+        if ((! repList[r]['subject']['subject_id']) || (repList[r]['subject']['subject_id'].length == 0)) {
+            msg = config.log.error(context, 'Repertoire has subject with missing or blank subject_id');
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
+    }
+
+    // TODO: should we update the project/study metadata?
+    // Let's assume it was entered in the GUI...
+
+    // normalize the study
+    for (let r in repList) {
+        repList[r]['study'] = { vdjserver_uuid: projectUuid };
+    }
+
+    // get existing subjects
+    var _subjects = await tapisIO.queryMetadataForProject(projectUuid, 'subject')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    config.log.info(context, _subjects.length + ' existing subjects');
+
+    for (let r in _subjects) {
+        existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
+    }
+
+    // pull out the subjects
+    for (let r in repList) {
+        let rep = repList[r];
+        let obj = existingSubjects[rep['subject']['subject_id']];
+        if (obj) {
+            if (operation == 'replace')
+                // need to update the existing subject
+                subjects[rep['subject']['subject_id']] = rep['subject'];
+        } else {
+            // new subject, need to add
+            subjects[rep['subject']['subject_id']] = rep['subject'];
+        }
+    }
+
+    var subjectList = [];
+    for (var r in subjects) {
+        subjectList.push(subjects[r]);
+    }
+
+    config.log.info(context, 'creating/updating ' + subjectList.length + ' subjects');
+    for (let i = 0; i < subjectList.length; i++) {
+        let entry = subjectList[i];
+        entry['genotype'] = null; // TODO: hack as we don't support genotype yet
+        if (entry['vdjserver_uuid']) delete entry['vdjserver_uuid']; // old schema
+        if (existingSubjects[entry['subject_id']])
+            await tapisIO.updateMetadataForProject(projectUuid, existingSubjects[entry['subject_id']], { "value": entry })
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);            
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+        else
+            await tapisIO.createMetadataForProject(projectUuid, 'subject', { "value": entry })
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);            
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+    }
+
+    // do we need to delete any subjects
+    let deleteList = [];
+    if (operation == 'replace') {
+        // if its existing subject but not among the subjects to be imported
+        for (let r in existingSubjects) {
+            if (! subjects[r]) deleteList.push(existingSubjects[r]);
+        }
+    }
+
+    config.log.info(context, 'deleting ' + deleteList.length + ' old subjects');
+    // delete subjects
+    for (let i = 0; i < deleteList.length; i++) {
+        let entry = deleteList[i];
+        await tapisIO.deleteMetadataForProject(projectUuid, entry['uuid'])
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+    }
+
+    // get existing subjects
+    _subjects = await tapisIO.queryMetadataForProject(projectUuid, 'subject')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+
+    for (let r in _subjects) {
+        existingSubjects[_subjects[r]['value']['subject_id']] = _subjects[r]['uuid'];
+    }
+    config.log.info(context, _subjects.length + ' total subjects');
+
+    // normalize the subjects
+    for (let r in repList) {
+        let obj = existingSubjects[repList[r]['subject']['subject_id']];
+        if (! obj) {
+            msg = config.log.error(context, 'Cannot find subject: ' + repList[r]['subject']['subject_id'] + ' for repertoire');
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 400, response);
+        }
+        repList[r]['subject'] = { vdjserver_uuid: obj };
+    }
+
+    // get existing samples
+    var _samples = await tapisIO.queryMetadataForProject(projectUuid, 'sample_processing')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    config.log.info(context, _samples.length + ' existing samples');
+
+    // find any samples to be deleted
+    // if replace operation, delete all and create new records
+    // if append operation, nothing to delete
+    deleteList = [];
+    if (operation == 'replace') {
+        // we delete all the existing ones
+        for (let r in _samples) deleteList.push(_samples[r]['uuid']);
+    }
+
+    config.log.info(context, 'deleting ' + deleteList.length + ' old samples');
+    // delete samples
+    for (let i = 0; i < deleteList.length; i++) {
+        let entry = deleteList[i];
+        await tapisIO.deleteMetadataForProject(projectUuid, entry)
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+    }
+
+    samples = [];
+    for (let r in repList) {
+        for (let s in repList[r]['sample']) {
+            samples.push({ rep: r, sample: repList[r]['sample'][s]});
+        }
+    }
+
+    config.log.info(context, 'creating ' + samples.length + ' samples');
+    // create samples
+    for (let i = 0; i < samples.length; i++) {
+        let entry = samples[i];
+        if (entry['sample']['vdjserver_uuid']) delete entry['sample']['vdjserver_uuid']; // old schema
+        let object = await tapisIO.createMetadataForProject(projectUuid, 'sample_processing', { "value": entry['sample'] })
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+        entry['uuid'] = object['uuid'];
+    }
+
+    // normalize the samples
+    for (let r in repList) repList[r]['sample'] = [];
+    for (let s in samples) {
+        let rep = repList[samples[s]['rep']];
+        rep['sample'].push({ vdjserver_uuid: samples[s]['uuid'] });
+    }
+
+    // find any data_processing to be deleted
+    // if replace operation, delete all and create new records
+    // if append operation, nothing to delete
+    deleteList = [];
+    if (operation == 'replace') {
+        // we delete all the existing ones
+        for (let r in existingDPs) deleteList.push(r);
+    }
+
+    config.log.info(context, 'deleting ' + deleteList.length + ' old data processing');
+    // delete data processing
+    for (let i = 0; i < deleteList.length; i++) {
+        let entry = deleteList[i];
+        await tapisIO.deleteMetadataForProject(projectUuid, entry)
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+    }
+
+    data_processes = [];
+    for (var r in repList) {
+        for (var dp in repList[r]['data_processing']) {
+            data_processes.push({ rep: r, dp: repList[r]['data_processing'][dp]});
+        }
+    }
+
+    config.log.info(context, 'creating ' + data_processes.length + ' data processing');
+    for (let i = 0; i < data_processes.length; i++) {
+        let entry = data_processes[i];
+        if (entry['dp']['vdjserver_uuid']) delete entry['dp']['vdjserver_uuid']; // old schema
+        let object = await tapisIO.createMetadataForProject(projectUuid, 'data_processing', { "value": entry['dp'] })
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+        entry['uuid'] = object['uuid'];
+    }
+
+    // normalize the data processing
+    for (let r in repList) repList[r]['data_processing'] = [];
+    for (let dp in data_processes) {
+        let rep = repList[data_processes[dp]['rep']];
+        rep['data_processing'].push({ vdjserver_uuid: data_processes[dp]['uuid'] });
+    }
+
+    // now the repertoires are finally normalized
+
+    // find any repertoires to be deleted
+    // if replace operation, delete ones not in list
+    // if append operation, nothing to delete
+    deleteList = [];
+    if (operation == 'replace') {
+        for (let r in repList) {
+            if (repList[r]['repertoire_id']) {
+                if (existingRepertoires[repList[r]['repertoire_id']]) {
+                    delete existingRepertoires[repList[r]['repertoire_id']];
+                }
+            }
+        }
+        // any remaining are to be deleted
+        for (let r in existingRepertoires) deleteList.push(r);
+    }
+
+    config.log.info(context, 'deleting ' + deleteList.length + ' old repertoires');
+    // delete repertoires
+    for (let i = 0; i < deleteList.length; i++) {
+        let entry = deleteList[i];
+        await tapisIO.deleteMetadataForProject(projectUuid, entry)
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+    }
+
+    config.log.info(context, 'creating/updating ' + repList.length + ' repertoires');
+    // create/update repertoires
+    for (let i = 0; i < repList.length; i++) {
+        let entry = repList[i];
+        if (entry['repertoire_id'])
+            await tapisIO.updateMetadataForProject(projectUuid, entry['repertoire_id'], { "value": entry })
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);            
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+        else
+            await tapisIO.createMetadataForProject(projectUuid, 'repertoire', { "value": entry })
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);            
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+    }
+
+    // get existing repertoires
+    _reps = await tapisIO.queryMetadataForProject(projectUuid, 'repertoire')
+        .catch(function(error) {
+            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+            webhookIO.postToSlack(msg);            
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    config.log.info(context, 'updating repertoire_ids');
+
+    // need to make sure each has repertoire_id
+    for (let r in _reps) _reps[r]['value']['repertoire_id'] = _reps[r]['uuid'];
+
+    // create/update repertoires
+    for (let i = 0; i < _reps.length; i++) {
+        let entry = _reps[i];
+        await tapisIO.updateMetadataForProject(projectUuid, entry['uuid'], entry)
+            .catch(function(error) {
+                msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+                webhookIO.postToSlack(msg);            
+                return apiResponseController.sendError(msg, 500, response);
+            });
+    }
+
+    config.log.info(context, 'successfully imported metadata');
+    apiResponseController.sendSuccess('Successfully imported metadata', response);
 };
 
 ProjectController.gatherRepertoireMetadataForProject = async function(username, projectUuid, keep_uuids) {
