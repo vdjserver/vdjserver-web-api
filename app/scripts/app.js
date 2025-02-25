@@ -116,17 +116,12 @@ if (config.hostServiceAccount) {
 }
 
 // Tapis
-if (config.tapis_version == 2) config.log.info(context, 'Using Tapis V2 API', true);
-else if (config.tapis_version == 3) config.log.info(context, 'Using Tapis V3 API', true);
-else {
-    config.log.error(context, 'Invalid Tapis version, check TAPIS_VERSION environment variable');
-    process.exit(1);
-}
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis(config);
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+//var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
 
 // Verify we can login with service account
 var ServiceAccount = tapisIO.serviceAccount;
@@ -167,7 +162,7 @@ ServiceAccount.getToken()
         api_spec['components']['schemas'] = vdj_schema.get_schemas();
 
         // Connect schema to vdj-tapis
-        if (tapisIO == tapisV3) tapisV3.init_with_schema(vdj_schema);
+        tapisIO.init_with_schema(vdj_schema);
 
         // Put the AIRR objects into the API
         //api_spec['components']['schemas']['Study'] = schema['Study'];
