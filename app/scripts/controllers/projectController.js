@@ -2498,7 +2498,8 @@ ProjectController.exportTable = async function(request, response) {
         // convert to TSV format
         for (var i = 0; i < metadataList.length; ++i) {
             var value = metadataList[i].value;
-
+            console.log("INSIDE SUBJECT EXPORT");
+            console.log(value);
             // subject values
             var first = true;
             for (var j=0; j<subject_columns.length; j++) {
@@ -2602,12 +2603,89 @@ ProjectController.exportTable = async function(request, response) {
             columns.push('sequencing_files.' + i);
             sd_columns.push(i);
         }
-        console.log(sample_columns);
-        console.log(pcr_columns);
-        console.log(sd_columns);
+
+        // console.log(sample_columns);
+        // console.log(pcr_columns);
+        // console.log(sd_columns);
+
 
         // header
         tsvData = columns.join('\t') + '\n';
+
+        for (var i = 0; i < repertoireMetadata.length; ++i){
+            var p = 0;
+            var value = repertoireMetadata[i];
+            //sample values
+            var first = true;
+            for (var j=0; j<sample_columns.length + 2; j++){
+                var prop = columns[j];
+
+                if (!first) tsvData += '\t';
+                if (prop == 'repertoire_id'){
+                    tsvData += value['repertoire_id'];
+                }else if(prop =='subject_id'){
+                    tsvData += value['subject']['subject_id'];
+                }
+                else{
+                    for (let k = 0; k < value['sample'].length; k++){
+                        var sampleData = value['sample'][k];
+                        if (schema.is_ontology(prop)){
+                            if (sampleData[prop]['id'] != null){
+                                tsvData += sampleData[prop]['id'];
+                            }
+                        }else if(sampleData[prop] != null){
+                            tsvData += sampleData[prop];
+                        }
+                    }
+                }
+                
+                first = false;
+            }
+
+        // iterate through pcr_target and sequencing data
+        for (var j = 0; j < max_pcr; ++j) {
+            if (j >=value['sample'][j]['pcr_target'][0].length){
+                // fill out empty columns
+                for (let k=0; k < pcr_columns.length; k++) tsvData += '\t';
+            }else{
+                for (let l=0; l < value['sample'][j]['pcr_target'].length; l++){
+                    var pcrTarget = value['sample'][j]['pcr_target'][l];
+                    for (var k = 0; k < pcr_columns.length; ++k) {
+                        var prop = pcr_columns[k];
+                        tsvData += '\t';
+                        if (pcrSchema.is_ontology(prop)){
+                            if(pcrTarget[prop]['id'] != null){
+                                tsvData += pcrTarget[prop]['id'];
+                            }
+                        }else if(pcrTarget[prop] != null){
+                            tsvData += pcrTarget[prop];
+                        }
+                    }
+                }
+                
+            }
+            
+        }
+        // sequencing data values
+        for (let k = 0; k < sd_columns.length; ++k) {
+            let prop = sd_columns[k];
+            
+            var seqData = value['sample'][0]['sequencing_files'];
+            tsvData += '\t';
+            if (sdSchema.is_ontology(prop)){
+                if (seqData[prop]['id'] != null){
+                    tsvData += seqData[prop]['id'];
+                }
+            }else{
+                tsvData += seqData[prop];
+            }
+        }
+
+        tsvData += '\n';  
+        }
+
+        console.log("PRINTING TSV DATA")
+        console.log(tsvData);
 
     }
 
