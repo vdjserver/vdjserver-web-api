@@ -1737,8 +1737,8 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
             var study = projectMetadata.value;
             var schema = airr.get_schema('Repertoire');
             var blank = schema.template();
-            console.log(JSON.stringify(study, null, 2));
-            console.log(JSON.stringify(blank, null, 2));
+            //console.log(JSON.stringify(study, null, 2));
+            //console.log(JSON.stringify(blank, null, 2));
 
             if (!keep_uuids) delete study['vdjserver'];
 
@@ -2498,7 +2498,8 @@ ProjectController.exportTable = async function(request, response) {
         // convert to TSV format
         for (var i = 0; i < metadataList.length; ++i) {
             var value = metadataList[i].value;
-
+            console.log("INSIDE SUBJECT EXPORT");
+            //console.log(value);
             // subject values
             var first = true;
             for (var j=0; j<subject_columns.length; j++) {
@@ -2602,12 +2603,89 @@ ProjectController.exportTable = async function(request, response) {
             columns.push('sequencing_files.' + i);
             sd_columns.push(i);
         }
-        console.log(sample_columns);
-        console.log(pcr_columns);
-        console.log(sd_columns);
+
+        // console.log(sample_columns);
+        // console.log(pcr_columns);
+        // console.log(sd_columns);
+
 
         // header
         tsvData = columns.join('\t') + '\n';
+
+        // loop through repertoires
+        for (var i = 0; i < repertoireMetadata.length; ++i){
+            var p = 0;
+            var value = repertoireMetadata[i];
+
+            tsvData += value['repertoire_id'];
+            tsvData += '\t';
+            tsvData += value['subject']['subject_id'];
+
+            // for each sample
+            for (let k = 0; k < value['sample'].length; k++){
+                var sampleData = value['sample'][k];
+
+                //sample values
+                for (var j=0; j<sample_columns.length; j++){
+                    var prop = sample_columns[j];
+
+                    tsvData += '\t';
+                    if (schema.is_ontology(prop)){
+                        //console.log(prop, sampleData[prop]);
+                        if (sampleData[prop] && sampleData[prop]['id'] != null){
+                            tsvData += sampleData[prop]['id'];
+                        }
+                    }else if(sampleData[prop] != null){
+                        tsvData += sampleData[prop];
+                    }
+                }
+
+                // iterate through pcr_target(s)
+                for (var j = 0; j < max_pcr; ++j) {
+                    if (j >= sampleData['pcr_target'].length){
+                        // fill out empty columns
+                        for (let l=0; l < pcr_columns.length; l++) tsvData += '\t';
+                    }else{
+                        for (let l=0; l < sampleData['pcr_target'].length; l++){
+                            var pcrTarget = sampleData['pcr_target'][l];
+                            for (let k = 0; k < pcr_columns.length; ++k) {
+                                let prop = pcr_columns[k];
+                                tsvData += '\t';
+                                if (pcrSchema.is_ontology(prop)){
+                                    if(pcrTarget[prop] && pcrTarget[prop]['id'] != null){
+                                        tsvData += pcrTarget[prop]['id'];
+                                    }
+                                }else if(pcrTarget[prop] != null){
+                                    tsvData += pcrTarget[prop];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // sequencing data values
+                for (let j = 0; j < sd_columns.length; ++j) {
+                    let prop = sd_columns[j];
+
+                    let seqData = sampleData['sequencing_files'];
+                    tsvData += '\t';
+                    if (sdSchema.is_ontology(prop)){
+                        if (seqData[prop] && seqData[prop]['id'] != null){
+                            tsvData += seqData[prop]['id'];
+                        }
+                    }else if (seqData[prop] != null){
+                        tsvData += seqData[prop];
+                    }
+                }
+
+                // each sample in the repertoire is on its own row
+                // this avoids explosion of columns with sample indexing, e.g. sample.0.sample_id
+                tsvData += '\n';
+            }
+        }
+
+        //console.log("PRINTING TSV DATA")
+        //console.log(tsvData);
 
     }
 
