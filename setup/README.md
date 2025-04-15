@@ -40,6 +40,9 @@ curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_i
 
 + Localhost at port 9001
 
+```
+curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_id": "localhost9001", "callback_url": "http://localhost:9001/oauth2/callback"}' https://vdjserver.tapis.io/v3/oauth2/clients
+```
 
 # ADC Download Cache
 
