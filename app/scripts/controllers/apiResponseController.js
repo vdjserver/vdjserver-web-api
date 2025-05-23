@@ -78,3 +78,11 @@ ApiResponseController.send401 = function(request, response) {
 ApiResponseController.confirmUpStatus = function(request, response) {
     ApiResponseController.sendSuccess('', response);
 };
+
+ApiResponseController.deprecated = function(response) {
+    ApiResponseController.sendError('Functionality has been deprecated.', 400, response);
+};
+
+ApiResponseController.notImplemented = function(response) {
+    ApiResponseController.sendError('Not implemented.', 500, response);
+};
