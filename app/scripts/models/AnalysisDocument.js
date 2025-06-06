@@ -51,11 +51,9 @@ var AnalysisDocument = function(document) {
 };
 module.exports = AnalysisDocument;
 
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
 
 AnalysisDocument.prototype.get_input_entities = function() {
     var inputs = {};
@@ -94,6 +92,91 @@ AnalysisDocument.prototype.get_available_entities = function() {
     }
 
     return available;
+}
+
+AnalysisDocument.prototype.create_job_data = async function(a, project_uuid, allow_alternate) {
+    var context = 'AnalysisDocument.create_job_data';
+
+    if (!this.activity[a]) return Promise.reject(new Error("Unknown activity: " + a));
+
+    let app = await tapisIO.getApplication(this.activity[a]['vdjserver:app:name'], this.activity[a]['vdjserver:app:version'])
+        .catch(function(error) {
+            return Promise.reject(error);
+        });
+    if (app['statusCode'] == 404) {
+        if (allow_alternate) {
+            // TODO: check alternates
+        }
+        return Promise.reject(new Error("Tapis application is not available."));
+    } else {
+        config.log.info(context, 'vdjserver:app (' + this.activity[a]['vdjserver:app:name'] + ',' + this.activity[a]['vdjserver:app:version'] + ') exists.');
+
+        // TODO: size job for input size
+        // TODO: notifications
+
+        let job_data = {
+            "name": "vdjserver tapis job",
+            "appId": this.activity[a]['vdjserver:app:name'],
+            "appVersion": this.activity[a]['vdjserver:app:version'],
+            "maxMinutes": 60,
+            "nodeCount": 1,
+            "archiveSystemId": "data-storage.vdjserver.org",
+            "archiveSystemDir": "/projects/" + project_uuid + "/analyses/${JobUUID}",
+            "archiveOnAppError": false,
+            "fileInputs": [],
+            "fileInputArrays": [],
+            "parameterSet": {
+                "schedulerOptions": [
+                    { "name":"allocation", "arg":"-A MCB23006" }
+                ],
+                "containerArgs": [],
+                "appArgs": [],
+                "envVariables": []
+            }
+        };
+
+        // check that inputs can be resolved to entity attributes
+//         let app_inputs = app['jobAttributes']['fileInputs'];
+//         for (let i in app_inputs) {
+//             // skip if fixed
+//             if (app_inputs[i]['inputMode'] == 'FIXED') continue;
+// 
+//             let found = false;
+//             for (let u in this.uses) {
+//                 if (this.uses[u]['prov:activity'] == a)
+//                     if (this.entity[this.uses[u]['prov:entity']]['vdjserver:type'] == 'app:inputs')
+//                         if (this.entity[this.uses[u]['prov:entity']][app_inputs[i]['name']]) {
+//                             found = true;
+//                             config.log.info(context, 'app input (' + app_inputs[i]['name'] + ') found, it is ' + app_inputs[i]['inputMode']);
+//                             break;
+//                         }
+//             }
+//             if (!found) {
+//                 if (app_inputs[i]['inputMode'] == 'REQUIRED') valid = false;
+//                 config.log.info(context, 'app input (' + app_inputs[i]['name'] + ') not found, it is ' + app_inputs[i]['inputMode']);
+//             }
+//         }
+
+        // set app parameters from entity
+        let app_params = app['jobAttributes']['parameterSet']['envVariables'];
+        for (let i in app_params) {
+            // skip if fixed
+            if (app_params[i]['inputMode'] == 'FIXED') continue;
+
+            let param_entity = null;
+            for (let u in this.uses) {
+                if (this.uses[u]['prov:activity'] == a)
+                    if (this.entity[this.uses[u]['prov:entity']]['vdjserver:type'] == 'app:parameters')
+                        param_entity = this.entity[this.uses[u]['prov:entity']];
+                        break;
+            }
+            if (param_entity) {
+                job_data['parameterSet']['envVariables'].push({ key: app_params[i]['key'], value: param_entity[i] });
+            }
+        }
+
+        return Promise.resolve(job_data);
+    }
 }
 
 // find set of activities which can be performed based on inputs
@@ -152,31 +235,54 @@ AnalysisDocument.prototype.perform_activities = function(is_executing) {
 AnalysisDocument.prototype.validate = async function(project_uuid, allow_alternate) {
     var context = 'AnalysisDocument.validate';
     var valid = true;
+    var errors = [];
 
     // TODO: need to return reasons/messages for anything invalid
 
     // check that all the uses relationships can be resolved
     for (let u in this.uses) {
-        if (! this.uses[u]['prov:activity']) valid = false;
-        else if (! this.activity[this.uses[u]['prov:activity']]) valid = false;
+        if (! this.uses[u]['prov:activity']) {
+            errors.push({ message: "activity in uses relation not found:" + this.uses[u] });
+            valid = false;
+        } else if (! this.activity[this.uses[u]['prov:activity']]) {
+            errors.push({ message: "activity in uses relation not found:" + this.uses[u]['prov:activity'] });
+            valid = false;
+        }
 
-        if (! this.uses[u]['prov:entity']) valid = false;
-        else if (! this.entity[this.uses[u]['prov:entity']]) valid = false;
+        if (! this.uses[u]['prov:entity']) {
+            errors.push({ message: "entity in uses relation not found:" + this.uses[u] });
+            valid = false;
+        } else if (! this.entity[this.uses[u]['prov:entity']]) {
+            errors.push({ message: "entity in uses relation not found:" + this.uses[u]['prov:entity'] });
+            valid = false;
+        }
     }
 
     // check that all the isGeneratedBy relationships can be resolved
     for (let u in this.isGeneratedBy) {
-        if (! this.isGeneratedBy[u]['prov:activity']) valid = false;
-        else if (! this.activity[this.isGeneratedBy[u]['prov:activity']]) valid = false;
+        if (! this.isGeneratedBy[u]['prov:activity']) {
+            errors.push({ message: "activity in isGeneratedBy relation not found:" + this.isGeneratedBy[u] });
+            valid = false;
+        } else if (! this.activity[this.isGeneratedBy[u]['prov:activity']]) {
+            errors.push({ message: "activity in isGeneratedBy relation not found:" + this.isGeneratedBy[u]['prov:activity'] });
+            valid = false;
+        }
 
-        if (! this.isGeneratedBy[u]['prov:entity']) valid = false;
-        else if (! this.entity[this.isGeneratedBy[u]['prov:entity']]) valid = false;
+        if (! this.isGeneratedBy[u]['prov:entity']) {
+            errors.push({ message: "entity in isGeneratedBy relation not found:" + this.isGeneratedBy[u] });
+            valid = false;
+        } else if (! this.entity[this.isGeneratedBy[u]['prov:entity']]) {
+            errors.push({ message: "entity in isGeneratedBy relation not found:" + this.isGeneratedBy[u]['prov:entity'] });
+            valid = false;
+        }
     }
+
+    if (!valid) return Promise.resolve(errors);
 
     // validate that activities are tapis app ids
     for (let a in this.activity) {
-        if (this.activity[a]['vdjserver:app']) {
-            let app = await tapisIO.getApplication(this.activity[a]['vdjserver:app'])
+        if (this.activity[a]['vdjserver:app:name'] && this.activity[a]['vdjserver:app:version']) {
+            let app = await tapisIO.getApplication(this.activity[a]['vdjserver:app:name'], this.activity[a]['vdjserver:app:version'])
                 .catch(function(error) {
                     return Promise.reject(error);
                 });
@@ -184,63 +290,80 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
                 if (allow_alternate) {
                     // TODO: check alternates
                 }
+                errors.push({ message: "Tapis app for activity not found: " + a });
                 valid = false;
             } else
-                config.log.info(context, 'vdjserver:app (' + this.activity[a]['vdjserver:app'] + ') exists.');
+                config.log.info(context, 'vdjserver:app (' + this.activity[a]['vdjserver:app:name'] + ',' + this.activity[a]['vdjserver:app:version'] + ') exists.');
 
                 // check that inputs can be resolved to entity attributes
-                for (let i in app['inputs']) {
-                    // ok if has non-blank default value or is not required
-                    if ((app['inputs'][i]['value']['default'])
-                        && (app['inputs'][i]['value']['default'].length > 0)) continue;
-                    if (app['inputs'][i]['value']['required']) continue;
+                let app_inputs = app['jobAttributes']['fileInputs'];
+                for (let i in app_inputs) {
+                    // skip if fixed
+                    if (app_inputs[i]['inputMode'] == 'FIXED') continue;
 
                     let found = false;
                     for (let u in this.uses) {
                         if (this.uses[u]['prov:activity'] == a)
                             if (this.entity[this.uses[u]['prov:entity']]['vdjserver:type'] == 'app:inputs')
-                                if (this.entity[this.uses[u]['prov:entity']][app['inputs'][i]['id']]) {
+                                if (this.entity[this.uses[u]['prov:entity']][app_inputs[i]['name']]) {
                                     found = true;
+                                    config.log.info(context, 'app input (' + app_inputs[i]['name'] + ') found, it is ' + app_inputs[i]['inputMode']);
                                     break;
                                 }
                     }
-                    if (!found) valid = false;
+                    if (!found) {
+                        if (app_inputs[i]['inputMode'] == 'REQUIRED') {
+                            errors.push({ message: "Required input:" + i + " not found for activity: " + a });
+                            valid = false;
+                        }
+                        config.log.info(context, 'app input (' + app_inputs[i]['name'] + ') not found, it is ' + app_inputs[i]['inputMode']);
+                    }
                 }
 
                 // check that parameters can be resolved to entity attributes
-                for (let i in app['parameters']) {
-                    // ok if has non-blank default value or is not required
-                    if ((app['parameters'][i]['value']['default'])
-                        && (app['parameters'][i]['value']['default'].length > 0)) continue;
-                    if (app['parameters'][i]['value']['required']) continue;
+                let app_params = app['jobAttributes']['parameterSet']['envVariables'];
+                for (let i in app_params) {
+                    // ok if fixed
+                    if (app_params[i]['inputMode'] == 'FIXED') continue;
 
                     let found = false;
                     for (let u in this.uses) {
                         if (this.uses[u]['prov:activity'] == a)
                             if (this.entity[this.uses[u]['prov:entity']]['vdjserver:type'] == 'app:parameters')
-                                if (this.entity[this.uses[u]['prov:entity']][app['parameters'][i]['id']]) {
+                                if (this.entity[this.uses[u]['prov:entity']][app_params[i]['key']] != undefined) {
                                     found = true;
+                                    config.log.info(context, 'app parameter (' + app_params[i]['key'] + ') found, it is ' + app_params[i]['inputMode']);
                                     break;
                                 }
                     }
-                    if (!found) valid = false;
+                    if (!found) {
+                        if (app_params[i]['inputMode'] == 'REQUIRED') {
+                            errors.push({ message: "Required parameter:" + i + " not found for activity: " + a });
+                            valid = false;
+                        }
+                        config.log.info(context, 'app parameter (' + app_params[i]['key'] + ') not found, it is ' + app_params[i]['inputMode']);
+                    }
                 }
         }
     }
 
-    if (!valid) return Promise.resolve(valid);
+    if (!valid) return Promise.resolve(errors);
 
     // determine input files, validate their existence
     var inputs = this.get_input_entities();
     console.log(inputs);
     for (let i in inputs) {
         if (inputs[i]['vdjserver:uuid']) {
-            let data = await tapisIO.getMetadata(inputs[i]['vdjserver:uuid'])
+            if (project_uuid == inputs[i]['vdjserver:uuid']) continue;
+            let data = await tapisIO.getMetadataForProject(project_uuid, inputs[i]['vdjserver:uuid'])
                 .catch(function(error) {
                     return Promise.reject(error);
                 });
-            if (data['statusCode'] == 404) valid = false;
-            else
+            console.log(data);
+            if (data.length == 0) {
+                errors.push({ message: "Input:" + i + " not found for vdjserver uuid: " + inputs[i]['vdjserver:uuid'] });
+                valid = false;
+            } else
                 config.log.info(context, 'vdjserver:uuid (' + inputs[i]['vdjserver:uuid'] + ') exists.');
         }
     }
@@ -254,6 +377,6 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
     // check that entities were used
     // check that entities were generated
 
-    return Promise.resolve(valid);
+    return Promise.resolve(errors);
 };
 
