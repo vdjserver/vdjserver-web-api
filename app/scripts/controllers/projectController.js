@@ -1845,10 +1845,33 @@ ProjectController.exportMetadata = async function(request, response) {
 
     config.log.info(context, 'gathered ' + repertoireMetadata.length + ' repertoire metadata for project: ' + projectUuid);
 
+    // gather the repertoire group objects
+    var groupMetadata = await tapisIO.queryMetadataForProject(projectUuid, 'repertoire_group')
+        .catch(function(error) {
+            msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    if (groupMetadata.length == 0) groupMetadata = null;
+    var groups = null;
+    if (groupMetadata) {
+        groups = [];
+        for (let i in groupMetadata) {
+            let obj = groupMetadata[i]['value'];
+            if (!obj['repertoire_group_id']) obj['repertoire_group_id'] = groupMetadata[i]['uuid'];
+            groups.push(obj);
+        }
+    }
+
+    if (groups) config.log.info(context, 'gathered ' + groups.length + ' repertoire groups for project: ' + projectUuid);
+
     // save in file
     var data = {};
     data['Info'] = airr.get_info();
     data['Repertoire'] = repertoireMetadata;
+    if (groups) data['RepertoireGroup'] = groups;
     var buffer = Buffer.from(JSON.stringify(data, null, 2));
     await tapisIO.uploadFileToProjectTempDirectory(projectUuid, 'repertoires.airr.json', buffer)
         .catch(function(error) {
