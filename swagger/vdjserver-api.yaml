@@ -959,6 +959,18 @@ paths:
           required: true
           schema:
             type: string
+        - name: audit_only
+          in: query
+          description: Simulates execution of workflow for validation, assumes jobs run correctly but does not execute them.
+          required: false
+          schema:
+            type: boolean
+        - name: use_alternate_app
+          in: query
+          description: If exact Tapis app is not available because execution system is unavailable, try similar app on another execution system.
+          required: false
+          schema:
+            type: boolean
       requestBody:
         content:
           'application/json':

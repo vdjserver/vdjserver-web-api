@@ -86,6 +86,11 @@ UserController.createUser = async function(request, response) {
     const context = 'UserController.createUser';
     config.injectError(request.body.inject_error);
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     // The API middleware verifies these are present
     var user = new User(request.body);
     var recaptchaData = {
@@ -214,6 +219,7 @@ UserController.createUser = async function(request, response) {
     msg = config.log.info(context, msg);
     webhookIO.postToSlack(msg);
     return apiResponseController.sendSuccess(user.getSanitizedAttributes(), response);
+    */
 };
 
 // get user profile
@@ -271,8 +277,12 @@ UserController.getUserIdentity = async function(request, response) {
 UserController.duplicateUsername = async function(request, response) {
     const context = 'UserController.duplicateUsername';
     var username = request.params.username;
-    var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     config.log.info(context, 'checking username ' + username);
 
     // check for duplicate username
@@ -291,6 +301,7 @@ UserController.duplicateUsername = async function(request, response) {
         return apiResponseController.sendSuccess('duplicate', response);
     else
         return apiResponseController.sendSuccess('not duplicate', response);
+        */
 };
 
 
@@ -304,12 +315,16 @@ UserController.duplicateUsername = async function(request, response) {
 // 3a. Success
 // 3b. Fail
 UserController.changePassword = async function(request, response) {
-
+    const context = 'UserController.changePassword';
     var username = request.user.username;
     var password = request.body.password;
     var newPassword = request.body.new_password;
-    var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     console.log('VDJ-API INFO: UserController.changePassword - begin for ' + username);
 
     var auth = {
@@ -360,13 +375,19 @@ UserController.changePassword = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.changePassword - change password complete for ' + username);
     apiResponseController.sendSuccess('Password changed successfully.', response);
+    */
 };
 
 // verify the user given the verification code sent by email
 UserController.verifyUser = async function(request, response) {
+    const context = 'UserController.verifyUser';
     var verificationId = request.params.verification_id;
-    var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     console.log('VDJ-API INFO: UserController.verifyUser - begin for ' + verificationId);
 
     var userVerificationMetadata = await tapisIO.getMetadata(verificationId)
@@ -422,13 +443,20 @@ UserController.verifyUser = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.verifyUser - verification complete for ' + verificationId);
     apiResponseController.sendSuccess('', response);
+    */
 };
 
 // resend verification email for given username
 UserController.resendVerificationEmail = async function(request, response) {
+    const context = 'UserController.resendVerificationEmail';
     var username = request.params.username;
-    var msg = null;
+    //var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - begin for ' + username);
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - get verification metadata for ' + username);
 
@@ -480,6 +508,7 @@ UserController.resendVerificationEmail = async function(request, response) {
 
     console.log('VDJ-API INFO: UserController.resendVerificationEmail - complete for ' + username);
     apiResponseController.sendSuccess('', response);
+    */
 };
 
 // 1.  Get confirm username, email address from user profile
@@ -488,10 +517,15 @@ UserController.resendVerificationEmail = async function(request, response) {
 // 4.  Send response success
 // TODO: this should be protected by a recaptcha
 UserController.createResetPasswordRequest = async function(request, response) {
-
+    const context = 'UserController.createResetPasswordRequest';
     var username = request.body.username;
-    var msg = null;
+    //var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - begin for user ' + username);
     console.log('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - getUserProfile for user ' + username);
 
@@ -530,6 +564,7 @@ UserController.createResetPasswordRequest = async function(request, response) {
     webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.createResetPasswordRequest - sendPasswordResetEmail for user ' + username);
 
     apiResponseController.sendSuccess('Password reset email sent.', response);
+    */
 };
 
 // 1.  Get password reset metadata for given uuid
@@ -540,12 +575,17 @@ UserController.createResetPasswordRequest = async function(request, response) {
 // 5a. Report error if delete fails
 // 6.  Response
 UserController.processResetPasswordRequest = async function(request, response) {
-
+    const context = 'UserController.processResetPasswordRequest';
     var username = request.body.username;
     var uuid = request.body.reset_code;
     var newPassword = request.body.new_password;
-    var msg = null;
+    //var msg = null;
 
+    var msg = config.log.error(context, 'deprecated endpoint was called.');
+    webhookIO.postToSlack(msg);
+    return apiResponseController.deprecated(response);
+
+/*
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - begin for user ' + username);
     console.log('VDJ-API INFO: UserController.processResetPasswordRequest - getPasswordResetMetadata for user ' + username);
 
@@ -609,6 +649,7 @@ UserController.processResetPasswordRequest = async function(request, response) {
     webhookIO.postToSlack('VDJ-API INFO: PasswordResetController.processResetPasswordRequest - updateUserPassword for user ' + username);
 
     apiResponseController.sendSuccess('Password reset successfully.', response);
+    */
 };
 
 // admin security so must be considered admin to get this far
