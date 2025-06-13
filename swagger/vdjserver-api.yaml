@@ -1437,6 +1437,38 @@ paths:
           description: Not authorized.
         '500':
           description: Internal service error occurred.
+    post:
+      description: update user profile
+      operationId: updateUserProfile
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserAccountMeta'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
 
   /user/identity:
     get:

@@ -233,6 +233,7 @@ ServiceAccount.getToken()
                 // user
                 createUser: async function(req, res) { return try_function(req, res, userController.createUser); },
                 getUserProfile: async function(req, res) { return try_function(req, res, userController.getUserProfile); },
+                updateUserProfile: async function(req, res) { return try_function(req, res, userController.updateUserProfile); },
                 getUserIdentity: async function(req, res) { return try_function(req, res, userController.getUserIdentity); },
                 duplicateUsername: async function(req, res) { return try_function(req, res, userController.duplicateUsername); },
                 verifyUser: async function(req, res) { return try_function(req, res, userController.verifyUser); },
