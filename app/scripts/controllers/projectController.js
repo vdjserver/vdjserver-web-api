@@ -1171,37 +1171,34 @@ ProjectController.reloadProject = async function(request, response) {
 // None of the other metadata/files/jobs are modified
 //
 ProjectController.archiveProject = async function(request, response) {
+    var context = 'ProjectController.archiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    // TODO: the project cannot be published and/or loaded
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'private_project') {
-                projectMetadata.name = 'archive_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' is not in an archivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.archiveProject - project ' + projectUuid + ' has been archived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'private_project') {
+        projectMetadata.name = 'archived_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been archived.');
+        return apiResponseController.sendSuccess('project has been archived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an archivable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -1209,36 +1206,34 @@ ProjectController.archiveProject = async function(request, response) {
 // This changes the name back to normal private project
 //
 ProjectController.unarchiveProject = async function(request, response) {
+    var context = 'ProjectController.unarchiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'archive_project') {
-                projectMetadata.name = 'private_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' is not in an unarchivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.unarchiveProject - project ' + projectUuid + ' has been unarchived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'archived_project') {
+        projectMetadata.name = 'private_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been unarchived.');
+        return apiResponseController.sendSuccess('project has been unarchived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an unarchivable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
