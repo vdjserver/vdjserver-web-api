@@ -175,6 +175,28 @@ ProjectController.getProjectMetadata = async function(request, response) {
     return apiResponseController.sendSuccess(metadata, response);
 };
 
+ProjectController.getArchivedProjectMetadata = async function(request, response) {
+    const context = 'ProjectController.getArchivedProjectMetadata';
+    var msg = null;
+    var username = request['user']['username'];
+
+    config.log.info(context, 'user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.getProjectMetadata(username, null, true)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
 ProjectController.queryMetadata = async function(request, response) {
     const context = 'ProjectController.queryMetadata';
     var project_uuid = request.params.project_uuid;

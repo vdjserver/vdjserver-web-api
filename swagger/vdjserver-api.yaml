@@ -340,6 +340,33 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /archive/project/metadata:
+    get:
+      description: get archived project metadata records
+      operationId: getArchivedProjectMetadata
+      tags:
+        - project
+      security:
+        - user_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/metadata/name/{name}:
     get:
       description: query metadata for project

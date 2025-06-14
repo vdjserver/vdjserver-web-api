@@ -246,6 +246,7 @@ ServiceAccount.getToken()
                 // project
                 createProject: async function(req, res) { return try_function(req, res, projectController.createProject); },
                 getProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectMetadata); },
+                getArchivedProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getArchivedProjectMetadata); },
                 getMetadata: async function(req, res) { return try_function(req, res, projectController.getMetadata); },
                 createMetadata: async function(req, res) { return try_function(req, res, projectController.createMetadata); },
                 updateMetadata: async function(req, res) { return try_function(req, res, projectController.updateMetadata); },
