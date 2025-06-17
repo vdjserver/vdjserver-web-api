@@ -175,6 +175,28 @@ ProjectController.getProjectMetadata = async function(request, response) {
     return apiResponseController.sendSuccess(metadata, response);
 };
 
+ProjectController.getArchivedProjectMetadata = async function(request, response) {
+    const context = 'ProjectController.getArchivedProjectMetadata';
+    var msg = null;
+    var username = request['user']['username'];
+
+    config.log.info(context, 'user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.getProjectMetadata(username, null, true)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
 ProjectController.queryMetadata = async function(request, response) {
     const context = 'ProjectController.queryMetadata';
     var project_uuid = request.params.project_uuid;
@@ -642,28 +664,32 @@ ProjectController.checkPROVStatus = function(request, response) {
 ProjectController.executeWorkflow = async function(request, response) {
     var context = 'ProjectController.executeWorkflow';
     var projectUuid = request.params.project_uuid;
+    var audit_only = request.query.audit_only;
+    var use_alternate_app = request.query.use_alternate_app;
+    var obj = request.body;
 
     config.log.info(context, 'start, project: ' + projectUuid);
 
-    var doc = new AnalysisDocument(request.body.workflow);
+    var doc = new AnalysisDocument(obj['value']);
     config.log.info(context, 'analysis document:' + JSON.stringify(doc, null, 2));
 
     // validate
-    var valid = await doc.validate(projectUuid, request.body.use_alternate_app)
+    var errors = await doc.validate(projectUuid, use_alternate_app)
         .catch(function(error) {
             let msg = 'Error while validating workflow.\n' + error;
             msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
         });
-    if (!valid) return apiResponseController.sendError('Workflow is not valid.', 400, response);
-    else if (request.body.audit_only === true) {
+    if (errors.length > 0) return apiResponseController.sendError('Workflow is not valid.\n' + JSON.stringify(errors), 400, response);
+    else if (audit_only === true) {
         return apiResponseController.sendSuccess('Workflow is valid.', response);
-    }
+    } else config.log.info(context, 'Workflow is valid.');
 
     // create meta for analysis document
-    config.log.info(context, 'create metadata:', vdj_schema.tapisName('AnalysisDocument'))
-    var result = await tapisIO.createMetadataForType(projectUuid, vdj_schema.tapisName('AnalysisDocument'), doc)
+    config.log.info(context, 'create metadata for analysis document.');
+    obj['value']['status'] = 'STARTED';
+    var result = await tapisIO.createMetadataForProject(projectUuid, 'analysis_document', obj)
         .catch(function(error) {
             let msg = 'Error while saving analysis document.\n' + error;
             msg = config.log.error(context, msg);
@@ -672,18 +698,7 @@ ProjectController.executeWorkflow = async function(request, response) {
         });
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
 
-    //tapisIO.createMetadata(vdj_schema.tapisName('AnalysisDocument'));
-    //tapisIO.updateMetadata(vdj_schema.tapisName('ProvRequest'), obj);
-    //tapisIO.queryMetadata(vdj_schema.tapisName('ProvRequest'), obj);
-
-    // 1. set file set as initial input files
-
-    // 2. get set of non-executed activities that have all of their inputs
-    // 2a. if none, then perform error checks and exit
-    // 3. execute those activities
-    // 4. update file set with output files, goto 2
-
-    return apiResponseController.sendError('Not implemented.', 500, response);
+    return apiResponseController.sendSuccess('Workflow submitted.', response);
 };
 
 ProjectController.getPendingPROV = function(request, response) {
@@ -1178,37 +1193,34 @@ ProjectController.reloadProject = async function(request, response) {
 // None of the other metadata/files/jobs are modified
 //
 ProjectController.archiveProject = async function(request, response) {
+    var context = 'ProjectController.archiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    // TODO: the project cannot be published and/or loaded
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'private_project') {
-                projectMetadata.name = 'archive_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' is not in an archivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.archiveProject - project ' + projectUuid + ' has been archived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'private_project') {
+        projectMetadata.name = 'archived_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been archived.');
+        return apiResponseController.sendSuccess('project has been archived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an archivable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -1216,36 +1228,34 @@ ProjectController.archiveProject = async function(request, response) {
 // This changes the name back to normal private project
 //
 ProjectController.unarchiveProject = async function(request, response) {
+    var context = 'ProjectController.unarchiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'archive_project') {
-                projectMetadata.name = 'private_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' is not in an unarchivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.unarchiveProject - project ' + projectUuid + ' has been unarchived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'archived_project') {
+        projectMetadata.name = 'private_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been unarchived.');
+        return apiResponseController.sendSuccess('project has been unarchived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an unarchivable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -1852,10 +1862,33 @@ ProjectController.exportMetadata = async function(request, response) {
 
     config.log.info(context, 'gathered ' + repertoireMetadata.length + ' repertoire metadata for project: ' + projectUuid);
 
+    // gather the repertoire group objects
+    var groupMetadata = await tapisIO.queryMetadataForProject(projectUuid, 'repertoire_group')
+        .catch(function(error) {
+            msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    if (groupMetadata.length == 0) groupMetadata = null;
+    var groups = null;
+    if (groupMetadata) {
+        groups = [];
+        for (let i in groupMetadata) {
+            let obj = groupMetadata[i]['value'];
+            if (!obj['repertoire_group_id']) obj['repertoire_group_id'] = groupMetadata[i]['uuid'];
+            groups.push(obj);
+        }
+    }
+
+    if (groups) config.log.info(context, 'gathered ' + groups.length + ' repertoire groups for project: ' + projectUuid);
+
     // save in file
     var data = {};
     data['Info'] = airr.get_info();
     data['Repertoire'] = repertoireMetadata;
+    if (groups) data['RepertoireGroup'] = groups;
     var buffer = Buffer.from(JSON.stringify(data, null, 2));
     await tapisIO.uploadFileToProjectTempDirectory(projectUuid, 'repertoires.airr.json', buffer)
         .catch(function(error) {

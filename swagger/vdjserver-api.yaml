@@ -340,6 +340,33 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /archive/project/metadata:
+    get:
+      description: get archived project metadata records
+      operationId: getArchivedProjectMetadata
+      tags:
+        - project
+      security:
+        - user_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/metadata/name/{name}:
     get:
       description: query metadata for project
@@ -959,6 +986,18 @@ paths:
           required: true
           schema:
             type: string
+        - name: audit_only
+          in: query
+          description: Simulates execution of workflow for validation, assumes jobs run correctly but does not execute them.
+          required: false
+          schema:
+            type: boolean
+        - name: use_alternate_app
+          in: query
+          description: If exact Tapis app is not available because execution system is unavailable, try similar app on another execution system.
+          required: false
+          schema:
+            type: boolean
       requestBody:
         content:
           'application/json':
@@ -1412,6 +1451,38 @@ paths:
           required: true
           schema:
             type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+    post:
+      description: update user profile
+      operationId: updateUserProfile
+      tags:
+        - user
+      security:
+        - user_authorization: []
+      parameters:
+        - name: username
+          in: path
+          description: username
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserAccountMeta'
       responses:
         '200':
           description: Success.

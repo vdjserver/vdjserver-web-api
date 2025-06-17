@@ -233,6 +233,7 @@ ServiceAccount.getToken()
                 // user
                 createUser: async function(req, res) { return try_function(req, res, userController.createUser); },
                 getUserProfile: async function(req, res) { return try_function(req, res, userController.getUserProfile); },
+                updateUserProfile: async function(req, res) { return try_function(req, res, userController.updateUserProfile); },
                 getUserIdentity: async function(req, res) { return try_function(req, res, userController.getUserIdentity); },
                 duplicateUsername: async function(req, res) { return try_function(req, res, userController.duplicateUsername); },
                 verifyUser: async function(req, res) { return try_function(req, res, userController.verifyUser); },
@@ -245,6 +246,7 @@ ServiceAccount.getToken()
                 // project
                 createProject: async function(req, res) { return try_function(req, res, projectController.createProject); },
                 getProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectMetadata); },
+                getArchivedProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getArchivedProjectMetadata); },
                 getMetadata: async function(req, res) { return try_function(req, res, projectController.getMetadata); },
                 createMetadata: async function(req, res) { return try_function(req, res, projectController.createMetadata); },
                 updateMetadata: async function(req, res) { return try_function(req, res, projectController.updateMetadata); },
@@ -345,6 +347,7 @@ ServiceAccount.getToken()
 
         if (config.enable_job_queues) {
             config.log.info(context, 'Job queues are ENABLED.', true);
+            jobQueueManager.triggerQueue();
         } else {
             config.log.info(context, 'Job queues are DISABLED.', true);
         }
