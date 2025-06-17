@@ -82,6 +82,14 @@ app.redisConfig = {
     host: 'vdj-redis'
 };
 
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis(config);
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+//var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
 var tokenController       = require('./controllers/tokenController');
@@ -114,14 +122,6 @@ if (config.hostServiceAccount) {
 } else {
     config.log.info('WARNING', 'config.hostServiceAccount is not defined, Corral access will generate errors.');
 }
-
-// Tapis
-var tapisSettings = require('vdj-tapis-js/tapisSettings');
-var tapisIO = tapisSettings.get_default_tapis(config);
-var ServiceAccount = tapisIO.serviceAccount;
-var GuestAccount = tapisIO.guestAccount;
-//var authController = tapisIO.authController;
-var webhookIO = require('vdj-tapis-js/webhookIO');
 
 // Verify we can login with service account
 var ServiceAccount = tapisIO.serviceAccount;
@@ -299,7 +299,7 @@ ServiceAccount.getToken()
                 notifyADCDownloadCache: async function(req, res) { return try_function(req, res, adcController.notifyADCDownloadCache); },
 
                 // administration
-                queryProjectLoad: async function(req, res) { return try_function(req, res, adminController.queryProjectLoad); }
+                queryPublicProjects: async function(req, res) { return try_function(req, res, adminController.queryPublicProjects); }
             }
         });
 

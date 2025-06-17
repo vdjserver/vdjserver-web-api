@@ -1980,10 +1980,10 @@ paths:
         '500':
           description: Internal service error occurred.
 
-  /admin/project/load:
+  /admin/project/public:
     get:
-      description: query project load records
-      operationId: queryProjectLoad
+      description: query public projects
+      operationId: queryPublicProjects
       tags:
         - admin
       security:
@@ -1995,39 +1995,6 @@ paths:
           required: false
           schema:
             type: string
-        - name: collection
-          in: query
-          description: collection name
-          required: false
-          schema:
-            type: string
-            enum:
-              - _0
-              - _1
-        - name: should_load
-          in: query
-          description: should load flag
-          required: false
-          schema:
-            type: boolean
-        - name: is_loaded
-          in: query
-          description: is loaded flag
-          required: false
-          schema:
-            type: boolean
-        - name: repertoire_loaded
-          in: query
-          description: is repertoire metadata loaded flag
-          required: false
-          schema:
-            type: boolean
-        - name: rearrangement_loaded
-          in: query
-          description: is rearrangement data loaded flag
-          required: false
-          schema:
-            type: boolean
       responses:
         '200':
           description: Success.
