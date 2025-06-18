@@ -48,8 +48,8 @@ const swaggerUi = require('swagger-ui-express');
 var app = module.exports = express();
 var context = 'app';
 
-var webhookIO = require('./vendor/webhookIO');
-var mongoSettings = require('./config/mongoSettings');
+//var webhookIO = require('./vendor/webhookIO');
+//var mongoSettings = require('./config/mongoSettings');
 
 // Server Options
 var config = require('./config/config');
@@ -87,13 +87,12 @@ var tapisSettings = require('vdj-tapis-js/tapisSettings');
 var tapisIO = tapisSettings.get_default_tapis(config);
 var ServiceAccount = tapisIO.serviceAccount;
 var GuestAccount = tapisIO.guestAccount;
-//var authController = tapisIO.authController;
+var authController = tapisIO.authController;
 var webhookIO = require('vdj-tapis-js/webhookIO');
 
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
 var tokenController       = require('./controllers/tokenController');
-var authController       = require('./controllers/authController');
 var projectController = require('./controllers/projectController');
 var feedbackController = require('./controllers/feedbackController');
 var userController = require('./controllers/userController');
@@ -106,8 +105,8 @@ var tenantController = require('./controllers/tenantController');
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
 
-config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
-config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
+//config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
+//config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
 
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,

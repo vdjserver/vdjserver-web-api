@@ -34,12 +34,17 @@ module.exports = ProjectController;
 var app = require('../app');
 var config = require('../config/config');
 
-// Settings
-var mongoSettings = require('../config/mongoSettings');
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+var mongoSettings = require('vdj-tapis-js/mongoSettings');
+var authController = tapisIO.authController;
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
-var authController = require('./authController');
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
@@ -52,18 +57,6 @@ var vdj_schema = require('vdjserver-schema');
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
 var projectQueueManager = require('../queues/projectQueueManager');
 var adcDownloadQueueManager = require('../queues/adcDownloadQueueManager');
-
-// Processing
-var webhookIO = require('../vendor/webhookIO');
-
-// Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
-var tapisSettings = tapisIO.tapisSettings;
-var ServiceAccount = tapisIO.serviceAccount;
 
 // Node Libraries
 var requestLib = require('request');
