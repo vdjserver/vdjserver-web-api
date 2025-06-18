@@ -247,6 +247,7 @@ ServiceAccount.getToken()
                 createProject: async function(req, res) { return try_function(req, res, projectController.createProject); },
                 getProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getProjectMetadata); },
                 getArchivedProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getArchivedProjectMetadata); },
+                getPublicProjectMetadata: async function(req, res) { return try_function(req, res, projectController.getPublicProjectMetadata); },
                 getMetadata: async function(req, res) { return try_function(req, res, projectController.getMetadata); },
                 createMetadata: async function(req, res) { return try_function(req, res, projectController.createMetadata); },
                 updateMetadata: async function(req, res) { return try_function(req, res, projectController.updateMetadata); },
@@ -301,7 +302,7 @@ ServiceAccount.getToken()
                 notifyADCDownloadCache: async function(req, res) { return try_function(req, res, adcController.notifyADCDownloadCache); },
 
                 // administration
-                queryPublicProjects: async function(req, res) { return try_function(req, res, adminController.queryPublicProjects); }
+                getAllPublicProjects: async function(req, res) { return try_function(req, res, adminController.getAllPublicProjects); }
             }
         });
 

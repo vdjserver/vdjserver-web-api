@@ -315,7 +315,7 @@ paths:
 
   /project/metadata:
     get:
-      description: get project metadata records
+      description: get project metadata records for user
       operationId: getProjectMetadata
       tags:
         - project
@@ -342,8 +342,35 @@ paths:
 
   /archive/project/metadata:
     get:
-      description: get archived project metadata records
+      description: get archived project metadata records for user
       operationId: getArchivedProjectMetadata
+      tags:
+        - project
+      security:
+        - user_authorization: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /public/project/metadata:
+    get:
+      description: get public project metadata records for user
+      operationId: getPublicProjectMetadata
       tags:
         - project
       security:
@@ -2053,19 +2080,12 @@ paths:
 
   /admin/project/public:
     get:
-      description: query public projects
-      operationId: queryPublicProjects
+      description: get all public projects
+      operationId: getAllPublicProjects
       tags:
         - admin
       security:
         - admin_authorization: []
-      parameters:
-        - name: project_uuid
-          in: query
-          description: project identifer
-          required: false
-          schema:
-            type: string
       responses:
         '200':
           description: Success.
