@@ -42,16 +42,15 @@ var apiResponseController = require('./apiResponseController');
 var User = require('../models/user');
 
 // Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
 var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+var emailIO = require('vdj-tapis-js/emailIO');
 
 // Processing
-var emailIO = require('../vendor/emailIO');
-var webhookIO = require('../vendor/webhookIO');
 var Recaptcha = require('recaptcha-v2').Recaptcha;
 
 // we use recaptcha to deter user creation bots
@@ -240,6 +239,67 @@ UserController.getUserProfile = async function(request, response) {
         msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(profile, response);
+};
+
+// update user profile
+UserController.updateUserProfile = async function(request, response) {
+    const context = 'UserController.updateUserProfile';
+    var username = request.params.username;
+    var new_profile = request.body;
+    var msg = null;
+
+    config.log.info(context, 'checking username ' + username);
+
+    // service account can update
+    if (request['user']['username'] != tapisSettings.serviceAccountKey) {
+        // can only update your own profile
+        if (request['user']['username'] != username) {
+            return apiResponseController.sendError('Token does not match username.', 400, response);
+        } else {
+            // do not let the user accidentally change their username
+            new_profile['value']['username'] = username;
+        }
+    }
+
+    // get user profile
+    var profile = await tapisIO.getUserProfile(username)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    if (!profile || profile.length == 0) {
+        // profile does not exist so create
+        profile = await tapisIO.createUserProfile(new_profile, username)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+    } else {
+        // update profile
+        profile = profile[0];
+        profile = await tapisIO.updateDocument(profile['uuid'], profile['name'], new_profile['value'], profile['associationIds'], profile['owner'])
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
     }
 
     return apiResponseController.sendSuccess(profile, response);

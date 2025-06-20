@@ -30,10 +30,13 @@
 var TelemetryController = {};
 module.exports = TelemetryController;
 
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var webhookIO = require('vdj-tapis-js/webhookIO');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
-
-var webhookIO = require('../vendor/webhookIO');
 
 // Retrieves a new user token from Agave and returns it to the client
 TelemetryController.recordErrorTelemetry = function(request, response) {
