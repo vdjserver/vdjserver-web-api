@@ -29,12 +29,8 @@
 
 // Express Modules
 var express      = require('express');
-//var morgan       = require('morgan');
-var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
 var openapi      = require('express-openapi');
-var passport     = require('passport');
-var _            = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
@@ -47,9 +43,6 @@ const swaggerUi = require('swagger-ui-express');
 // Express app
 var app = module.exports = express();
 var context = 'app';
-
-//var webhookIO = require('./vendor/webhookIO');
-//var mongoSettings = require('./config/mongoSettings');
 
 // Server Options
 var config = require('./config/config');
@@ -70,10 +63,6 @@ var allowCrossDomain = function(request, response, next) {
         next();
     }
 };
-
-// Server Settings
-// Puts an Apache-style log line into stdout
-//app.use(morgan('combined'));
 // Allow cross-origin resource sharing
 app.use(allowCrossDomain);
 // redis config
@@ -97,16 +86,10 @@ var projectController = require('./controllers/projectController');
 var feedbackController = require('./controllers/feedbackController');
 var userController = require('./controllers/userController');
 var telemetryController = require('./controllers/telemetryController');
-var permissionsController = require('./controllers/permissionsController');
-var adcController = require('./controllers/adcController');
 var adminController = require('./controllers/adminController');
-var tenantController = require('./controllers/tenantController');
 
 // load API spec
 var api_spec = yaml.safeLoad(fs.readFileSync(path.resolve(__dirname, '../../swagger/vdjserver-api.yaml'), 'utf8'));
-
-//config.log.info(context, 'Using query collection suffix: ' + mongoSettings.queryCollection);
-//config.log.info(context, 'Using load collection suffix: ' + mongoSettings.loadCollection);
 
 // Downgrade to host vdj user
 // This is also so that the /vdjZ Corral file volume can be accessed,
@@ -217,11 +200,7 @@ ServiceAccount.getToken()
                 project_authorization: authController.projectAuthorization
             },
             operations: {
-                //getStatus: function(req, res) { res.send('{"result":"success"}'); }
                 getStatus: async function(req, res) { return try_function(req, res, apiResponseController.confirmUpStatus); },
-                //getDocs: async function(req, res) { return Promise.resolve(); },
-                //getDocsUI: async function(req, res) { return Promise.resolve(); },
-                getTenants: async function(req, res) { return try_function(req, res, tenantController.getTenants); },
 
                 // authentication
                 createToken: async function(req, res) { return try_function(req, res, tokenController.getToken); },
@@ -273,32 +252,12 @@ ServiceAccount.getToken()
                 unarchiveProject: async function(req, res) { return try_function(req, res, projectController.unarchiveProject); },
                 purgeProject: async function(req, res) { return try_function(req, res, projectController.purgeProject); },
 
-                // permissions
-                //addPermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.addPermissionsForUsername); },
-                //removePermissionsForUsername: async function(req, res) { return try_function(req, res, permissionsController.removePermissionsForUsername); },
-                //syncMetadataPermissionsWithProject: async function(req, res) { return try_function(req, res, permissionsController.syncMetadataPermissionsWithProject); },
-
                 // feedback
                 createFeedback: async function(req, res) { return try_function(req, res, feedbackController.createFeedback); },
                 createPublicFeedback: async function(req, res) { return try_function(req, res, feedbackController.createPublicFeedback); },
 
                 // telemetry
                 recordErrorTelemetry: async function(req, res) { return try_function(req, res, telemetryController.recordErrorTelemetry); },
-                
-                // ADC
-                statusADCRepository: async function(req, res) { return try_function(req, res, adcController.statusADCRepository); },
-                defaultADCRepositories: async function(req, res) { return try_function(req, res, adcController.defaultADCRepositories); },
-                updateADCRepositories: async function(req, res) { return try_function(req, res, adcController.updateADCRepositories); },
-
-                // ADC Download Cache
-                getADCDownloadCacheStatus: async function(req, res) { return try_function(req, res, adcController.getADCDownloadCacheStatus); },
-                updateADCDownloadCacheStatus: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheStatus); },
-                getADCDownloadCacheForStudies: async function(req, res) { return try_function(req, res, adcController.getADCDownloadCacheForStudies); },
-                updateADCDownloadCacheForStudy: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheForStudy); },
-                deleteADCDownloadCacheForStudy: async function(req, res) { return try_function(req, res, adcController.deleteADCDownloadCacheForStudy); },
-                updateADCDownloadCacheForRepertoire: async function(req, res) { return try_function(req, res, adcController.updateADCDownloadCacheForRepertoire); },
-                deleteADCDownloadCacheForRepertoire: async function(req, res) { return try_function(req, res, adcController.deleteADCDownloadCacheForRepertoire); },
-                notifyADCDownloadCache: async function(req, res) { return try_function(req, res, adcController.notifyADCDownloadCache); },
 
                 // administration
                 getAllPublicProjects: async function(req, res) { return try_function(req, res, adminController.getAllPublicProjects); }
@@ -325,26 +284,6 @@ ServiceAccount.getToken()
             jobQueueManager.clearQueues();
         }
 
-        // ADC download cache queues
-        if (config.enableADCDownloadCache) {
-            config.log.info(context, 'ADC download cache is enabled, triggering cache.');
-            adcDownloadQueueManager.triggerDownloadCache();
-        } else {
-            config.log.info(context, 'ADC download cache is disabled.');
-
-            // TODO: remove any existing jobs from the queue
-        }
-
-        // ADC load of rearrangements
-        if (config.enableADCLoad) {
-            config.log.info(context, 'ADC loading is enabled, triggering checks.');
-            projectQueueManager.checkRearrangementLoad();
-            //projectQueueManager.triggerRearrangementLoad();
-        } else {
-            config.log.info(context, 'ADC loading is disabled.');
-            // TODO: remove any existing jobs from the queue?
-        }
-
         if (config.enable_job_queues) {
             config.log.info(context, 'Job queues are ENABLED.', true);
             jobQueueManager.triggerQueue();
@@ -360,16 +299,8 @@ ServiceAccount.getToken()
         //process.exit(1);
     });
 
-// WebsocketIO
-require('./utilities/websocketManager');
-
-var accountQueueManager = require('./queues/accountQueueManager');
-accountQueueManager.processNewAccounts();
-
 var jobQueueManager = require('./queues/jobQueueManager');
 //jobQueueManager.processJobs();
 
 var projectQueueManager = require('./queues/projectQueueManager');
 //projectQueueManager.processProjects();
-
-var adcDownloadQueueManager = require('./queues/adcDownloadQueueManager');

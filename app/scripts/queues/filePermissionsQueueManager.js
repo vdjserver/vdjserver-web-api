@@ -34,18 +34,16 @@ module.exports = FilePermissionsQueueManager;
 var app = require('../app');
 var config = require('../config/config');
 
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+var emailIO = require('vdj-tapis-js/emailIO');
+
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
-
-// Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
-
-// Processing
-var webhookIO = require('../vendor/webhookIO');
 
 // Node Libraries
 var Queue = require('bull');
