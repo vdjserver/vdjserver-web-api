@@ -72,6 +72,14 @@ components:
       type: apiKey
       name: project_uuid
       in: query
+    project_unarchive_authorization:
+      type: apiKey
+      name: project_uuid
+      in: query
+    project_unpublish_authorization:
+      type: apiKey
+      name: project_uuid
+      in: query
 
 
 paths:
@@ -1108,7 +1116,7 @@ paths:
       tags:
         - project
       security:
-        - project_write_authorization: []
+        - project_unpublish_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -1176,7 +1184,7 @@ paths:
       tags:
         - project
       security:
-        - project_write_authorization: []
+        - project_unarchive_authorization: []
       parameters:
         - name: project_uuid
           in: path
