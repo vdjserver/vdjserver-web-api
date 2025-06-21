@@ -794,131 +794,71 @@ ProjectController.generateVisualization = async function(request, response) {
 // Publish project to community data
 //
 
-// Publishing a project involves changine the project metadata type from
-// private_project to public_project, and changing the permissions on the
-// files, metadata and jobs to read-only and world read-able.
+// Publishing a project involves changing the project metadata name from
+// private_project to public_project. Permission aren't changed.
 
-// VDJServer V1 of publish project actually moved all of the files from
-// the /project folder into /community. This was time-consuming, expensive,
-// and error prone, so now we leave the files in-place and just change
-// permissions, which should be much faster.
-
-// We still use a task queue to do the operations asynchronously
-// and send emails when it is done.
-
-
-ProjectController.publishProject = function(request, response) {
+ProjectController.publishProject = async function(request, response) {
+    var context = 'ProjectController.publishProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
+    var msg = null;
 
-    console.log('VDJ-API INFO: ProjectController.publishProject - start, project: ' + projectUuid);
+    if (projectMetadata.name == 'private_project') {
+        projectMetadata.name = 'public_project';
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
 
-    return apiResponseController.notImplemented(response);
-
-    // First step is to modify project metadata to be in process.
-    // This removes the project from users' list so no changes
-    // are accidently made while the project is being published.
-    // Publishing may take awhile so we use a queue which breaks
-    // it up into steps.
-    // If this first step completes fine, then return success to
-    // the user that publishing is in process.
-
-//     var msg = null;
-//     ServiceAccount.getToken()
-//         .then(function(token) {
-//             return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-//         })
-//         .then(function(projectMetadata) {
-//             if (projectMetadata.name == 'private_project') {
-//                 projectMetadata.name = 'projectPublishInProcess';
-//                 //console.log(projectMetadata);
-//                 return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-//             } else if (projectMetadata.name == 'projectPublishInProcess') {
-//                 console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
-//                 return null;
-//             } else {
-//                 msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
-//                 return Promise.reject(new Error(msg));
-//             }
-//         })
-//         .then(function(responseObject) {
-//             console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' publishing in process.');
-//             //console.log(responseObject);
-// 
-//             taskQueue
-//                 .create('publishProjectFilesPermissionsTask', projectUuid)
-//                 .removeOnComplete(true)
-//                 .attempts(5)
-//                 .backoff({delay: 60 * 1000, type: 'fixed'})
-//                 .save()
-//             ;
-// 
-//             return apiResponseController.sendSuccess('ok', response);
-//         })
-//         .catch(function(error) {
-//             if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
-//             console.error(msg);
-//             webhookIO.postToSlack(msg);
-//             return apiResponseController.sendError(msg, 500, response);
-//         })
-//         ;
+        config.log.info(context, 'project ' + projectUuid + ' has been published.');
+        return apiResponseController.sendSuccess('project has been published.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an publishable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
 // Unpublish project to community data
 //
 
-ProjectController.unpublishProject = function(request, response) {
+ProjectController.unpublishProject = async function(request, response) {
+    var context = 'ProjectController.unpublishProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
+    var msg = null;
 
-    console.log('VDJ-API INFO: ProjectController.unpublishProject - start, project: ' + projectUuid);
+    if (projectMetadata.name == 'public_project') {
+        projectMetadata.name = 'private_project';
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
 
-    return apiResponseController.notImplemented(response);
-
-    // First step is to modify project metadata to be in process.
-    // This removes the project from community data list so users
-    // do not accidently try to copy it or look at files.
-    // Unpublishing may take awhile so we use a queue which breaks
-    // it up into steps.
-    // If this first step completes fine, then return success to
-    // the user that unpublishing is in process.
-
-//     var msg = null;
-//     ServiceAccount.getToken()
-//         .then(function(token) {
-//             return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-//         })
-//         .then(function(projectMetadata) {
-//             if (projectMetadata.name == 'public_project') {
-//                 projectMetadata.name = 'projectUnpublishInProcess';
-//                 return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-//             } else if (projectMetadata.name == 'projectUnpublishInProcess') {
-//                 console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' - restarting unpublish.');
-//                 return null;
-//             } else {
-//                 msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
-//                 return Promise.reject(new Error(msg));
-//             }
-//         })
-//         .then(function() {
-//             console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' unpublishing in process.');
-// 
-//             taskQueue
-//                 .create('unpublishProjectFilesPermissionsTask', projectUuid)
-//                 .removeOnComplete(true)
-//                 .attempts(5)
-//                 .backoff({delay: 60 * 1000, type: 'fixed'})
-//                 .save()
-//             ;
-// 
-//             return apiResponseController.sendSuccess('ok', response);
-//         })
-//         .catch(function(error) {
-//             if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
-//             console.error(msg);
-//             webhookIO.postToSlack(msg);
-//             return apiResponseController.sendError(msg, 500, response);
-//         })
-//         ;
+        config.log.info(context, 'project ' + projectUuid + ' has been unpublished.');
+        return apiResponseController.sendSuccess('project has been unpublished.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in a published state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -985,7 +925,7 @@ ProjectController.unarchiveProject = async function(request, response) {
         config.log.info(context, 'project ' + projectUuid + ' has been unarchived.');
         return apiResponseController.sendSuccess('project has been unarchived.', response);
     } else {
-        msg = 'project ' + projectUuid + ' is not in an unarchivable state.';
+        msg = 'project ' + projectUuid + ' is not in an archived state.';
         msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 400, response);
@@ -1461,7 +1401,7 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
     return ServiceAccount.getToken()
         .then(function(token) {
             // get the project metadata
-            return tapisIO.getProjectMetadata(username, projectUuid);
+            return tapisIO.getAllProjectMetadata(username, projectUuid);
         })
         .then(function(_projectMetadata) {
             // 404 not found
@@ -2265,7 +2205,7 @@ ProjectController.exportTable = async function(request, response) {
         // convert to TSV format
         for (var i = 0; i < metadataList.length; ++i) {
             var value = metadataList[i].value;
-            console.log("INSIDE SUBJECT EXPORT");
+            //console.log("INSIDE SUBJECT EXPORT");
             //console.log(value);
             // subject values
             var first = true;
