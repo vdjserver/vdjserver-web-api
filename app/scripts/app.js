@@ -197,7 +197,8 @@ ServiceAccount.getToken()
             securityHandlers: {
                 user_authorization: authController.userAuthorization,
                 admin_authorization: authController.adminAuthorization,
-                project_authorization: authController.projectAuthorization
+                project_authorization: authController.projectAuthorization,
+                project_write_authorization: authController.projectWriteAuthorization
             },
             operations: {
                 getStatus: async function(req, res) { return try_function(req, res, apiResponseController.confirmUpStatus); },

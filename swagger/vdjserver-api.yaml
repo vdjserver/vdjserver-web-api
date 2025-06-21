@@ -68,12 +68,10 @@ components:
       type: apiKey
       name: project_uuid
       in: query
-    metadata_authorization:
-      type: http
-      scheme: bearer
-    publish_authorization:
-      type: http
-      scheme: bearer
+    project_write_authorization:
+      type: apiKey
+      name: project_uuid
+      in: query
 
 
 paths:
@@ -420,7 +418,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -507,7 +505,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -554,7 +552,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -599,7 +597,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -677,7 +675,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -778,7 +776,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -894,7 +892,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -934,7 +932,7 @@ paths:
       tags:
         - permission
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       requestBody:
         content:
           'application/json':
@@ -959,7 +957,7 @@ paths:
       tags:
         - permission
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       requestBody:
         content:
           'application/json':
@@ -986,7 +984,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -1076,7 +1074,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -1110,7 +1108,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -1144,7 +1142,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
@@ -1178,7 +1176,7 @@ paths:
       tags:
         - project
       security:
-        - project_authorization: []
+        - project_write_authorization: []
       parameters:
         - name: project_uuid
           in: path
