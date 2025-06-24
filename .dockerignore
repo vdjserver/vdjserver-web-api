@@ -3,5 +3,5 @@
 .gitignore
 .dockerignore
 Dockerfile
-
+.env
 node_modules
