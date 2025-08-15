@@ -1739,6 +1739,8 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
                 var model = models[i].value;
                 model['repertoire_id'] = models[i].uuid;
                 model['study'] = study;
+                //setting projectUUID here
+                model['study']['vdjserver']['vdjserver_uuid']= projectUuid;
                 repertoireMetadata.push(model);
             }
 
@@ -2607,7 +2609,7 @@ ProjectController.exportTable = async function(request, response) {
                     max_pcr = rep['sample'][j]['pcr_target'].length;
             }
         }
-        
+
         for (let j = 0; j < max_pcr; ++j) {
             for (let i in pcr_columns) columns.push('pcr_target.' + j + '.' + pcr_columns[i]);
         }
