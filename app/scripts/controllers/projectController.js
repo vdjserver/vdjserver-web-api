@@ -2602,11 +2602,12 @@ ProjectController.exportTable = async function(request, response) {
         let max_pcr = 1;
         for (let i = 0; i < repertoireMetadata.length; ++i) {
             let rep = repertoireMetadata[i];
-            for (let j = 0; j < rep['sample']; ++j) {
+            for (let j = 0; j < rep['sample'].length; ++j) {
                 if (rep['sample'][j]['pcr_target'].length > max_pcr)
                     max_pcr = rep['sample'][j]['pcr_target'].length;
             }
         }
+        
         for (let j = 0; j < max_pcr; ++j) {
             for (let i in pcr_columns) columns.push('pcr_target.' + j + '.' + pcr_columns[i]);
         }
@@ -2633,12 +2634,15 @@ ProjectController.exportTable = async function(request, response) {
             var p = 0;
             var value = repertoireMetadata[i];
 
-            tsvData += value['repertoire_id'];
-            tsvData += '\t';
-            tsvData += value['subject']['subject_id'];
+            
 
             // for each sample
             for (let k = 0; k < value['sample'].length; k++){
+                //initialize for each sample
+                tsvData += value['repertoire_id'];
+                tsvData += '\t';
+                tsvData += value['subject']['subject_id'];
+
                 var sampleData = value['sample'][k];
 
                 //sample values
@@ -2662,18 +2666,16 @@ ProjectController.exportTable = async function(request, response) {
                         // fill out empty columns
                         for (let l=0; l < pcr_columns.length; l++) tsvData += '\t';
                     }else{
-                        for (let l=0; l < sampleData['pcr_target'].length; l++){
-                            var pcrTarget = sampleData['pcr_target'][l];
-                            for (let k = 0; k < pcr_columns.length; ++k) {
-                                let prop = pcr_columns[k];
-                                tsvData += '\t';
-                                if (pcrSchema.is_ontology(prop)){
-                                    if(pcrTarget[prop] && pcrTarget[prop]['id'] != null){
-                                        tsvData += pcrTarget[prop]['id'];
-                                    }
-                                }else if(pcrTarget[prop] != null){
-                                    tsvData += pcrTarget[prop];
+                        var pcrTarget = sampleData['pcr_target'][j];
+                        for (let k = 0; k < pcr_columns.length; ++k) {
+                            let prop = pcr_columns[k];
+                            tsvData += '\t';
+                            if (pcrSchema.is_ontology(prop)){
+                                if(pcrTarget[prop] && pcrTarget[prop]['id'] != null){
+                                    tsvData += pcrTarget[prop]['id'];
                                 }
+                            }else if(pcrTarget[prop] != null){
+                                tsvData += pcrTarget[prop];
                             }
                         }
                     }
