@@ -62,13 +62,13 @@ JobQueueManager.clearQueues = async function(queue) {
     for (let i in repeatableJobs) {
         await triggerQueue.removeRepeatableByKey(repeatableJobs[i].key);
     }
-    config.log.info(context, repeatableJobs.length + ' jobs cleared from triggerQueue', true);
+    config.log.info(context, repeatableJobs.length + ' repeating jobs cleared from triggerQueue', true);
 
     repeatableJobs = await checkQueue.getRepeatableJobs();
     for (let i in repeatableJobs) {
         await checkQueue.removeRepeatableByKey(repeatableJobs[i].key);
     }
-    config.log.info(context, repeatableJobs.length + ' jobs cleared from checkQueue', true);
+    config.log.info(context, repeatableJobs.length + ' repeating jobs cleared from checkQueue', true);
 }
 
 //
@@ -96,6 +96,8 @@ JobQueueManager.triggerQueue = async function() {
 
     // check, every 10 mins
     triggerQueue.add({}, { repeat: { every: 600000 }});
+    // submit one immediately
+    triggerQueue.add({});
 
     config.log.info(context, 'end');
     return Promise.resolve();
@@ -122,6 +124,7 @@ triggerQueue.process(async (job) => {
 
 // this should run periodically to check analysis progress
 checkQueue.process(async (job) => {
+try {
     var context = 'JobQueueManager checkQueue.process';
     var msg = null;
 
@@ -144,11 +147,14 @@ checkQueue.process(async (job) => {
         return Promise.resolve();
     }
     config.log.info(context, analyses.length + ' analysis documents with STARTED status.');
+    //console.log(JSON.stringify(analyses, null, 2));
 
     // check status of started activities
     for (let i in analyses) {
         let analysis = analyses[i];
         let doc = new AnalysisDocument(analysis['value']);
+
+        config.log.info(context, 'check status of tapis jobs for analysis: ' + analysis['uuid'] + ' project:' + analysis['associationIds'][0]);
 
         // get activities being performed, tapis job submitted
         // activity has startTime but no endTime
@@ -168,9 +174,11 @@ checkQueue.process(async (job) => {
                 return Promise.resolve();
             }
 
+            config.log.info(context, 'Current status of tapis job: ' + job_entry['status']);
+
             // tapis job failed
             if (job_entry['status'] == 'FAILED') {
-                msg = config.log.error(context, 'Tapis job failed: ' + job_entry['id']
+                msg = config.log.error(context, 'Tapis job failed: ' + job_entry['uuid']
                     + ' for analysis document: ' + analysis['uuid']);
                 webhookIO.postToSlack(msg);
                 msg = null;
@@ -180,7 +188,7 @@ checkQueue.process(async (job) => {
                 if (job_entry['lastMessage'].indexOf('TIMEOUT') >= 0) {
                     // check if exceeded time and rerun
                     if (job_entry['maxMinutes'] >= config.job_max_minutes) {
-                        msg = config.log.error(context, 'Tapis job: ' + job_entry['id']
+                        msg = config.log.error(context, 'Tapis job: ' + job_entry['uuid']
                             + ' already ran for 48 hours, analysis failed');
                         webhookIO.postToSlack(msg);
                         msg = null;
@@ -208,8 +216,8 @@ checkQueue.process(async (job) => {
                         msg = null;
 
                         // reset status of activity so new tapis jobs is submitted
-                        analysis['value']['activity'][a]['prov:startTime'] = null;
-                        analysis['value']['activity'][a]['vdjserver:job'] = null;
+                        delete analysis['value']['activity'][a]['prov:startTime'];
+                        delete analysis['value']['activity'][a]['vdjserver:job'];
                         analysis['value']['activity'][a]['vdjserver:job:timeMultiplier'] = timeMultiplier;
                         analysis['value']['status_message'] = 'Retrying tapis job for activity: ' + a;
                         await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
@@ -264,7 +272,7 @@ checkQueue.process(async (job) => {
     }
 
     // get all analysis documents with STARTED status
-    var analyses = await tapisIO.getAnalysisDocuments('STARTED')
+    analyses = await tapisIO.getAnalysisDocuments('STARTED')
         .catch(function(error) {
             msg = config.log.error(context, 'tapisIO.getAnalysisDocuments() error: ' + error);
         });
@@ -273,16 +281,21 @@ checkQueue.process(async (job) => {
         return Promise.resolve();
     }
     config.log.info(context, analyses.length + ' analysis documents with STARTED status.');
+    //console.log(JSON.stringify(analyses, null, 2));
 
     // get activities to be performed, submit tapis job
     for (let i in analyses) {
         let analysis = analyses[i];
         let doc = new AnalysisDocument(analysis['value']);
+        //console.log(analysis['value']);
+
+        config.log.info(context, 'performing activities for analysis: ' + analysis['uuid'] + ' project:' + analysis['associationIds'][0]);
 
         let activities = doc.perform_activities(true);
-        if (Object.keys(activities).length == 0) {
-            // no activities to perform, so analysis is done
-            analysis['value']['status'] = 'FINISHED';
+        if (!activities) {
+            // no activities to perform, check if all activities are done
+            
+/*            analysis['value']['status'] = 'FINISHED';
             await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
                 .catch(function(error) {
                     msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
@@ -290,23 +303,40 @@ checkQueue.process(async (job) => {
             if (msg) {
                 webhookIO.postToSlack(msg);
                 return Promise.resolve();
-            }
+            } */
         } else {
+            //console.log(analysis['value']);
             for (let a in activities) {
-                let job_data = doc.create_job_data(a, analysis['associationIds'][0]);
-                let job = await tapisIO.submitTapisJob(job_data)
+                let job_data = await doc.create_job_data(a, analysis['associationIds'][0])
                     .catch(function(error) {
-                        msg = config.log.error(context, 'tapisIO.submitTapisJob error' + error);
+                        msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
                     });
                 if (msg) {
                     webhookIO.postToSlack(msg);
                     return Promise.resolve();
                 }
+                console.log(JSON.stringify(job_data, null, 2));
 
-                analysis['value']['activity'][a]['prov:startTime'] = new Date().toISOString();
-                analysis['value']['activity'][a]['vdjserver:job'] = job['id'];
+                if (config.disable_tapis_job) {
+                    config.log.info(context, 'skipping submission of tapis job for activity: ' + a);
+                } else {
+                    let job = await tapisIO.submitTapisJob(job_data)
+                        .catch(function(error) {
+                            msg = config.log.error(context, 'tapisIO.submitTapisJob error' + error);
+                        });
+                    if (msg) {
+                        webhookIO.postToSlack(msg);
+                        return Promise.resolve();
+                    }
+                    if (job['fileInputs']) config.log.info(context, JSON.stringify(JSON.parse(job['fileInputs']), null, 2));
+                    if (job['parameterSet']) config.log.info(context, JSON.stringify(JSON.parse(job['parameterSet']), null, 2));
+                    config.log.info(context, 'Tapis job submitted: ' + job['uuid']);
+    
+                    analysis['value']['activity'][a]['prov:startTime'] = new Date().toISOString();
+                    analysis['value']['activity'][a]['vdjserver:job'] = job['uuid'];
+                }
             }
-
+            //console.log(analysis['value']);
             await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
                 .catch(function(error) {
                     msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
@@ -320,6 +350,8 @@ checkQueue.process(async (job) => {
 
     config.log.info(context, 'end');
     return Promise.resolve();
+
+} catch (e) { console.error(e); }
 });
 
 

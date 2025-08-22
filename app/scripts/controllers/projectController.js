@@ -34,12 +34,17 @@ module.exports = ProjectController;
 var app = require('../app');
 var config = require('../config/config');
 
-// Settings
-var mongoSettings = require('../config/mongoSettings');
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+var mongoSettings = require('vdj-tapis-js/mongoSettings');
+var authController = tapisIO.authController;
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
-var authController = require('./authController');
 
 // Models
 var FileUploadJob = require('../models/fileUploadJob');
@@ -51,31 +56,13 @@ var vdj_schema = require('vdjserver-schema');
 // Queues
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
 var projectQueueManager = require('../queues/projectQueueManager');
-var adcDownloadQueueManager = require('../queues/adcDownloadQueueManager');
-
-// Processing
-var webhookIO = require('../vendor/webhookIO');
-
-// Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
-var tapisSettings = tapisIO.tapisSettings;
-var ServiceAccount = tapisIO.serviceAccount;
+var jobQueueManager = require('../queues/jobQueueManager');
 
 // Node Libraries
-var requestLib = require('request');
 var yaml = require('js-yaml');
 var d3 = require('d3');
 const { v4: uuidv4 } = require('uuid');
 var moment = require('moment');
-
-var kue = require('kue');
-var taskQueue = kue.createQueue({
-    redis: app.redisConfig,
-});
 
 //
 // Creates a project and all initial directories
@@ -162,6 +149,50 @@ ProjectController.getProjectMetadata = async function(request, response) {
 
     // get metadata
     var metadata = await tapisIO.getProjectMetadata(username)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.getArchivedProjectMetadata = async function(request, response) {
+    const context = 'ProjectController.getArchivedProjectMetadata';
+    var msg = null;
+    var username = request['user']['username'];
+
+    config.log.info(context, 'user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.getProjectMetadata(username, null, true)
+        .catch(function(error) {
+            msg = 'got error for ' + username
+                + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    return apiResponseController.sendSuccess(metadata, response);
+};
+
+ProjectController.getPublicProjectMetadata = async function(request, response) {
+    const context = 'ProjectController.getPublicProjectMetadata';
+    var msg = null;
+    var username = request['user']['username'];
+
+    config.log.info(context, 'user: ' + username);
+
+    // get metadata
+    var metadata = await tapisIO.getPublicProjectMetadata(username, null, true)
         .catch(function(error) {
             msg = 'got error for ' + username
                 + ', error: ' + error;
@@ -642,6 +673,7 @@ ProjectController.checkPROVStatus = function(request, response) {
 ProjectController.executeWorkflow = async function(request, response) {
     var context = 'ProjectController.executeWorkflow';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
     var audit_only = request.query.audit_only;
     var use_alternate_app = request.query.use_alternate_app;
     var obj = request.body;
@@ -659,10 +691,40 @@ ProjectController.executeWorkflow = async function(request, response) {
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
         });
-    if (errors.length > 0) return apiResponseController.sendError('Workflow is not valid.\n' + JSON.stringify(errors), 400, response);
-    else if (audit_only === true) {
+    if (errors.length > 0) {
+        config.log.error(context, 'Workflow is not valid.\n' + JSON.stringify(doc, null, 2));
+        return apiResponseController.sendError('Workflow is not valid.\n' + JSON.stringify(errors), 400, response);
+    }
+
+    // VDJServer customization, expand Repertoire and RepertoireGroup
+    errors = await doc.expand_airr_types(projectMetadata)
+        .catch(function(error) {
+            let msg = 'Error with expand_airr_types.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    // validate again
+    errors = await doc.validate(projectUuid, use_alternate_app)
+        .catch(function(error) {
+            let msg = 'Error while validating workflow.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    if (errors.length > 0) {
+        config.log.error(context, 'Workflow with airr:type expansion is not valid.\n' + JSON.stringify(doc, null, 2));
+        return apiResponseController.sendError('Workflow with airr:type expansion is not valid.\n' + JSON.stringify(errors), 500, response);
+    }
+
+    config.log.info(context, 'Workflow is valid.');
+    if (audit_only === true) {
         return apiResponseController.sendSuccess('Workflow is valid.', response);
-    } else config.log.info(context, 'Workflow is valid.');
+    }
+
+    // update obj
+    obj['value']['entity'] = doc.entity;
+    obj['value']['uses'] = doc.uses;
 
     // create meta for analysis document
     config.log.info(context, 'create metadata for analysis document.');
@@ -676,7 +738,10 @@ ProjectController.executeWorkflow = async function(request, response) {
         });
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
 
-    return apiResponseController.sendSuccess('Workflow submitted.', response);
+    // trigger job queue manager?
+    jobQueueManager.triggerQueue();
+
+    return apiResponseController.sendSuccess(result, response);
 };
 
 ProjectController.getPendingPROV = function(request, response) {
@@ -728,15 +793,17 @@ ProjectController.generateVisualization = async function(request, response) {
         method: 'GET'
     };
 
-    switch (visualization['name']) {
-        case 'mutational_hedgehog':
-            requestSettings['url'] += visualization['name'] + '?uuid=' + uuid;
-            return requestLib(requestSettings).pipe(response);
-        case 'heartbeat':
-        default:
-            requestSettings['url'] += 'mean';
-            return requestLib(requestSettings).pipe(response);
-    }
+    // TODO: replace with axios
+
+//     switch (visualization['name']) {
+//         case 'mutational_hedgehog':
+//             requestSettings['url'] += visualization['name'] + '?uuid=' + uuid;
+//             return requestLib(requestSettings).pipe(response);
+//         case 'heartbeat':
+//         default:
+//             requestSettings['url'] += 'mean';
+//             return requestLib(requestSettings).pipe(response);
+//     }
 
 /*
     var postData = {
@@ -762,405 +829,69 @@ ProjectController.generateVisualization = async function(request, response) {
 // Publish project to community data
 //
 
-// Publishing a project involves changine the project metadata type from
-// private_project to public_project, and changing the permissions on the
-// files, metadata and jobs to read-only and world read-able.
+// Publishing a project involves changing the project metadata name from
+// private_project to public_project. Permission aren't changed.
 
-// VDJServer V1 of publish project actually moved all of the files from
-// the /project folder into /community. This was time-consuming, expensive,
-// and error prone, so now we leave the files in-place and just change
-// permissions, which should be much faster.
-
-// We still use a task queue to do the operations asynchronously
-// and send emails when it is done.
-
-
-ProjectController.publishProject = function(request, response) {
+ProjectController.publishProject = async function(request, response) {
+    var context = 'ProjectController.publishProject';
     var projectUuid = request.params.project_uuid;
-
-    console.log('VDJ-API INFO: ProjectController.publishProject - start, project: ' + projectUuid);
-
-    // First step is to modify project metadata to be in process.
-    // This removes the project from users' list so no changes
-    // are accidently made while the project is being published.
-    // Publishing may take awhile so we use a queue which breaks
-    // it up into steps.
-    // If this first step completes fine, then return success to
-    // the user that publishing is in process.
-
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'private_project') {
-                projectMetadata.name = 'projectPublishInProcess';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else if (projectMetadata.name == 'projectPublishInProcess') {
-                console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' - restarting publish.');
-                return null;
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' is not in a publishable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.publishProject - project ' + projectUuid + ' publishing in process.');
-            //console.log(responseObject);
 
-            taskQueue
-                .create('publishProjectFilesPermissionsTask', projectUuid)
-                .removeOnComplete(true)
-                .attempts(5)
-                .backoff({delay: 60 * 1000, type: 'fixed'})
-                .save()
-            ;
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.publishProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'private_project') {
+        projectMetadata.name = 'public_project';
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been published.');
+        return apiResponseController.sendSuccess('project has been published.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an publishable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
 // Unpublish project to community data
 //
 
-ProjectController.unpublishProject = function(request, response) {
+ProjectController.unpublishProject = async function(request, response) {
+    var context = 'ProjectController.unpublishProject';
     var projectUuid = request.params.project_uuid;
-
-    console.log('VDJ-API INFO: ProjectController.unpublishProject - start, project: ' + projectUuid);
-
-    // First step is to modify project metadata to be in process.
-    // This removes the project from community data list so users
-    // do not accidently try to copy it or look at files.
-    // Unpublishing may take awhile so we use a queue which breaks
-    // it up into steps.
-    // If this first step completes fine, then return success to
-    // the user that unpublishing is in process.
-
-    var msg = null;
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'public_project') {
-                projectMetadata.name = 'projectUnpublishInProcess';
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else if (projectMetadata.name == 'projectUnpublishInProcess') {
-                console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' - restarting unpublish.');
-                return null;
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' is not in an unpublishable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function() {
-            console.log('VDJ-API INFO: ProjectController.unpublishProject - project ' + projectUuid + ' unpublishing in process.');
-
-            taskQueue
-                .create('unpublishProjectFilesPermissionsTask', projectUuid)
-                .removeOnComplete(true)
-                .attempts(5)
-                .backoff({delay: 60 * 1000, type: 'fixed'})
-                .save()
-            ;
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unpublishProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
-};
-
-//
-// Load project data into VDJServer ADC data repository
-//
-// Instead of using the project metadata record, we setup
-// and additional metadata record (name:projectLoad) that
-// keeps track of the state of the load process.
-//
-
-// 1. set load flag on project
-// 2. load repertoire metadata
-// 3. set load flag on each repertoire for rearrangement load
-// 4. load rearrangements for each repertoire
-// 5. set verification flag
-
-ProjectController.loadProject = async function(request, response) {
-    var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    // check for project load metadata
-    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
-        .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
-        });
-    if (msg) {
-        console.error(msg);
-        webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 500, response);
-    }
-    console.log(loadMetadata);
-
-    // load record already exists
-    if (loadMetadata && loadMetadata[0]) {
-        loadMetadata = loadMetadata[0];
-
-        if (loadMetadata['value']['isLoaded']) {
-            var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: project already loaded'
-                + ', metadata: ' + loadMetadata.uuid;
-            console.error(msg);
-            webhookIO.postToSlack(msg);            
-            return apiResponseController.sendError(msg, 400, response);
-        }
-
-        if (loadMetadata['value']['shouldLoad']) {
-            var msg = 'VDJ-API ERROR: ProjectController.loadProject, project: ' + projectUuid + ', error: project already flagged for load'
-                + ', metadata: ' + loadMetadata.uuid;
-            console.error(msg);
-            webhookIO.postToSlack(msg);            
-            return apiResponseController.sendError(msg, 400, response);
-        }
-
-        console.log('VDJ-API INFO: ProjectController.loadProject, project: ' + projectUuid + ' load record already exists, marking for load'
-                    + ', metadata: ' + loadMetadata.uuid);
-
-        loadMetadata['value']['shouldLoad'] = true;
-        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
+    if (projectMetadata.name == 'public_project') {
+        projectMetadata.name = 'private_project';
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
             .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.updateMetadata, error: ' + error;
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
             });
         if (msg) {
-            console.error(msg);
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
         }
 
-        taskQueue
-            .create('checkProjectsToLoadTask', null)
-            .removeOnComplete(true)
-            .attempts(5)
-            .backoff({delay: 60 * 1000, type: 'fixed'})
-            .save();
-
-        return apiResponseController.sendSuccess('Project marked for load', response);
-
+        config.log.info(context, 'project ' + projectUuid + ' has been unpublished.');
+        return apiResponseController.sendSuccess('project has been unpublished.', response);
     } else {
-
-        // create the project load metadata
-       loadMetadata = await tapisIO.createProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.loadProject - tapisIO.createProjectLoadMetadata, error: ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        // trigger load queue if necessary
-        console.log('VDJ-API INFO: ProjectController.loadProject, project: ' + projectUuid + ' flagged for repository load'
-                    + ', metadata: ' + loadMetadata.uuid);
-
-        taskQueue
-            .create('checkProjectsToLoadTask', null)
-            .removeOnComplete(true)
-            .attempts(5)
-            .backoff({delay: 60 * 1000, type: 'fixed'})
-            .save();
-
-        return apiResponseController.sendSuccess('Project marked for load', response);
-    }
-};
-
-//
-// Unload project data from VDJServer ADC data repository
-//
-ProjectController.unloadProject = async function(request, response) {
-    var projectUuid = request.params.project_uuid;
-    var load_id = request.body.load_id;
-    var clear_cache = request.body.clear_cache;
-    var clear_statistics = request.body.clear_statistics;
-    var msg = null;
-
-    console.log('VDJ-API INFO (ProjectController.unloadProject): start, project: ' + projectUuid);
-    console.log(request.body);
-
-    // check for project load metadata
-    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
-        .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.unloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
-        });
-    if (msg) {
-        console.error(msg);
+        msg = 'project ' + projectUuid + ' is not in a published state.';
+        msg = config.log.error(context, msg);
         webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 500, response);
-    }
-
-    if (loadMetadata && loadMetadata[0]) {
-        loadMetadata = loadMetadata[0];
-        if (loadMetadata['uuid'] != load_id) {
-            msg = 'VDJ-API ERROR (ProjectController.unloadProject): Invalid load metadata id for project: ' + projectUuid;
-            console.error(msg);
-            webhookIO.postToSlack(msg);            
-            return apiResponseController.sendError(msg, 400, response);
-        }
-
-        // turn off load
-        loadMetadata['value']['shouldLoad'] = false;
-        loadMetadata['value']['isLoaded'] = false;
-        loadMetadata['value']['repertoireMetadataLoaded'] = false;
-        loadMetadata['value']['rearrangementDataLoaded'] = false;
-        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.unloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        // trigger load queue if necessary
-        console.log('VDJ-API INFO: ProjectController.unloadProject, project: ' + projectUuid + ' flagged for repository unload'
-            + ', metadata: ' + loadMetadata.uuid);
-
-        projectQueueManager.triggerProjectUnload(projectUuid, loadMetadata);
-
-        // clear ADC download cache
-        if (clear_cache) {
-            await ServiceAccount.getToken()
-                .catch(function(error) {
-                    msg = 'VDJ-API ERROR (ProjectController.unloadProject): ServiceAccount.getToken, error: ' + error;
-                });
-            if (msg) {
-                console.error(msg);
-                webhookIO.postToSlack(msg);
-                return apiResponseController.sendError(msg, 500, response);
-            }
-
-            // get the study_id
-            var projectMetadata = await tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
-                .catch(function(error) {
-                    msg = 'VDJ-API ERROR (ProjectController.unloadProject): tapisIO.getProjectMetadata, error: ' + error;
-                });
-            if (msg) {
-                console.error(msg);
-                webhookIO.postToSlack(msg);
-                return apiResponseController.sendError(msg, 500, response);
-            }
-
-            // assume VDJServer repository
-            adcDownloadQueueManager.triggerClearCache('vdjserver', projectMetadata['value']['study_id']);
-        }
-
-        // clear statistics cache
-        if (clear_statistics) {
-            console.log('TODO: clear statistics cache');
-        }
-
-        return apiResponseController.sendSuccess('Project queued for unload', response);
-    } else {
-        msg = 'VDJ-API ERROR (ProjectController.unloadProject): project: ' + projectUuid + ' does not have load metadata.';
-        console.error(msg);
-        webhookIO.postToSlack(msg);            
-        return apiResponseController.sendError(msg, 400, response);
-    }
-};
-
-//
-// Reload repertoire metadata for project in VDJServer ADC data repository
-//
-ProjectController.reloadProject = async function(request, response) {
-    var projectUuid = request.params.project_uuid;
-    var load_id = request.body.load_id;
-    var msg = null;
-
-    console.log('VDJ-API INFO (ProjectController.reloadProject): start, project: ' + projectUuid);
-    console.log(request.body);
-
-    // check for project load metadata
-    var loadMetadata = await tapisIO.getProjectLoadMetadata(projectUuid, mongoSettings.loadCollection)
-        .catch(function(error) {
-            msg = 'VDJ-API ERROR: ProjectController.reloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
-        });
-    if (msg) {
-        console.error(msg);
-        webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 500, response);
-    }
-
-    if (loadMetadata && loadMetadata[0]) {
-        loadMetadata = loadMetadata[0];
-        if (loadMetadata['uuid'] != load_id) {
-            msg = 'VDJ-API ERROR (ProjectController.reloadProject): Invalid load metadata id for project: ' + projectUuid + ', ' + load_id + ' != ' + loadMetadata['uuid'];
-            console.error(msg);
-            webhookIO.postToSlack(msg);            
-            return apiResponseController.sendError(msg, 400, response);
-        }
-
-        // flag repertoire metadata as not loaded
-        loadMetadata['value']['isLoaded'] = false;
-        loadMetadata['value']['repertoireMetadataLoaded'] = false;
-        await tapisIO.updateMetadata(loadMetadata.uuid, loadMetadata.name, loadMetadata.value, loadMetadata.associationIds)
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR: ProjectController.reloadProject - tapisIO.getProjectLoadMetadata, error: ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        // trigger load queue if necessary
-        console.log('VDJ-API INFO: ProjectController.reloadProject, project: ' + projectUuid + ' flagged for repository reload'
-            + ', metadata: ' + loadMetadata.uuid);
-
-        projectQueueManager.triggerProjectLoad(projectUuid, loadMetadata);
-
-        // flag ADC download cache
-        await ServiceAccount.getToken()
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR (ProjectController.reloadProject): ServiceAccount.getToken, error: ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        // get the study_id
-        var projectMetadata = await tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid)
-            .catch(function(error) {
-                msg = 'VDJ-API ERROR (ProjectController.reloadProject): tapisIO.getProjectMetadata, error: ' + error;
-            });
-        if (msg) {
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        // assume VDJServer repository
-        adcDownloadQueueManager.recacheRepertoireMetadata('vdjserver', projectMetadata['value']['study_id']);
-
-        return apiResponseController.sendSuccess('Project queued for reload', response);
-    } else {
-        msg = 'VDJ-API ERROR (ProjectController.reloadProject): project: ' + projectUuid + ' does not have load metadata.';
-        console.error(msg);
-        webhookIO.postToSlack(msg);            
         return apiResponseController.sendError(msg, 400, response);
     }
 };
@@ -1171,37 +902,34 @@ ProjectController.reloadProject = async function(request, response) {
 // None of the other metadata/files/jobs are modified
 //
 ProjectController.archiveProject = async function(request, response) {
+    var context = 'ProjectController.archiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    // TODO: the project cannot be published and/or loaded
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'private_project') {
-                projectMetadata.name = 'archive_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' is not in an archivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.archiveProject - project ' + projectUuid + ' has been archived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.archiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'private_project') {
+        projectMetadata.name = 'archived_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been archived.');
+        return apiResponseController.sendSuccess('project has been archived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an archivable state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -1209,36 +937,34 @@ ProjectController.archiveProject = async function(request, response) {
 // This changes the name back to normal private project
 //
 ProjectController.unarchiveProject = async function(request, response) {
+    var context = 'ProjectController.unarchiveProject';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
+    var username = request['user']['username'];
     var msg = null;
 
-    ServiceAccount.getToken()
-        .then(function(token) {
-            return tapisIO.getProjectMetadata(ServiceAccount.accessToken(), projectUuid);
-        })
-        .then(function(projectMetadata) {
-            if (projectMetadata.name == 'archive_project') {
-                projectMetadata.name = 'private_project';
-                //console.log(projectMetadata);
-                return tapisIO.updateMetadata(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null);
-            } else {
-                msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' is not in an unarchivable state.';
-                return Promise.reject(new Error(msg));
-            }
-        })
-        .then(function(responseObject) {
-            console.log('VDJ-API INFO: ProjectController.unarchiveProject - project ' + projectUuid + ' has been unarchived.');
-            //console.log(responseObject);
-
-            return apiResponseController.sendSuccess('ok', response);
-        })
-        .catch(function(error) {
-            if (!msg) msg = 'VDJ-API ERROR: ProjectController.unarchiveProject - project ' + projectUuid + ' error ' + error;
-            console.error(msg);
+    if (projectMetadata.name == 'archived_project') {
+        projectMetadata.name = 'private_project';
+        //console.log(projectMetadata);
+        await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
+            .catch(function(error) {
+                msg = 'got error for ' + username
+                    + ', error: ' + error;
+            });
+        if (msg) {
+            msg = config.log.error(context, msg);
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
-        })
-        ;
+        }
+
+        config.log.info(context, 'project ' + projectUuid + ' has been unarchived.');
+        return apiResponseController.sendSuccess('project has been unarchived.', response);
+    } else {
+        msg = 'project ' + projectUuid + ' is not in an archived state.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 };
 
 //
@@ -1710,7 +1436,7 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
     return ServiceAccount.getToken()
         .then(function(token) {
             // get the project metadata
-            return tapisIO.getProjectMetadata(username, projectUuid);
+            return tapisIO.getAllProjectMetadata(username, projectUuid);
         })
         .then(function(_projectMetadata) {
             // 404 not found
@@ -2516,7 +2242,7 @@ ProjectController.exportTable = async function(request, response) {
         // convert to TSV format
         for (var i = 0; i < metadataList.length; ++i) {
             var value = metadataList[i].value;
-            console.log("INSIDE SUBJECT EXPORT");
+            //console.log("INSIDE SUBJECT EXPORT");
             //console.log(value);
             // subject values
             var first = true;

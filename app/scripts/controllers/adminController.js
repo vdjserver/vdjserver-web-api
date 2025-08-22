@@ -40,31 +40,20 @@ var apiResponseController = require('./apiResponseController');
 var User = require('../models/user');
 
 // Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
 var ServiceAccount = tapisIO.serviceAccount;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+var emailIO = require('vdj-tapis-js/emailIO');
 
-// Processing
-var emailIO = require('../vendor/emailIO');
-var webhookIO = require('../vendor/webhookIO');
-
-AdminController.queryProjectLoad = async function(request, response) {
-    var context = 'AdminController.queryProjectLoad';
+AdminController.getAllPublicProjects = async function(request, response) {
+    var context = 'AdminController.getAllPublicProjects';
     config.log.info(context, 'parameters: ' + JSON.stringify(request.query));
 
-    var projectUuid = request.query.project_uuid;
-    var collection = request.query.collection;
-    var shouldLoad = request.query.should_load;
-    var isLoaded = request.query.is_loaded;
-    var repertoireMetadataLoaded = request.query.repertoire_loaded;
-    var rearrangementDataLoaded = request.query.rearrangement_loaded;
     var msg = null;
 
     // query the records
-    var project_loads = await tapisIO.queryProjectLoadMetadata(projectUuid, collection, shouldLoad, isLoaded, repertoireMetadataLoaded, rearrangementDataLoaded)
+    var project_loads = await tapisIO.getAllPublicProjectMetadata()
         .catch(function(error) {
             msg = config.log.error(context, 'error ' + error);
         });

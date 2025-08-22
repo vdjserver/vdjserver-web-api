@@ -54,6 +54,7 @@ config.tapis_version = process.env.TAPIS_VERSION;
 config.redis_port = 6379;
 config.redis_host = 'vdj-redis';
 config.enable_job_queues = parseBoolean(process.env.ENABLE_JOB_QUEUES);
+config.disable_tapis_job = parseBoolean(process.env.DISABLE_TAPIS_JOB);
 config.job_time_multiplier = 2; // TODO: add to env?
 config.job_max_minutes = 48*60; // TACC limit is 48 hours
 config.job_max_nodes = 8;
