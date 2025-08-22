@@ -56,6 +56,7 @@ var vdj_schema = require('vdjserver-schema');
 // Queues
 var filePermissionsQueueManager = require('../queues/filePermissionsQueueManager');
 var projectQueueManager = require('../queues/projectQueueManager');
+var jobQueueManager = require('../queues/jobQueueManager');
 
 // Node Libraries
 var yaml = require('js-yaml');
@@ -672,6 +673,7 @@ ProjectController.checkPROVStatus = function(request, response) {
 ProjectController.executeWorkflow = async function(request, response) {
     var context = 'ProjectController.executeWorkflow';
     var projectUuid = request.params.project_uuid;
+    var projectMetadata = request['project_metadata'];
     var audit_only = request.query.audit_only;
     var use_alternate_app = request.query.use_alternate_app;
     var obj = request.body;
@@ -689,10 +691,40 @@ ProjectController.executeWorkflow = async function(request, response) {
             webhookIO.postToSlack(msg);
             return apiResponseController.sendError(msg, 500, response);
         });
-    if (errors.length > 0) return apiResponseController.sendError('Workflow is not valid.\n' + JSON.stringify(errors), 400, response);
-    else if (audit_only === true) {
+    if (errors.length > 0) {
+        config.log.error(context, 'Workflow is not valid.\n' + JSON.stringify(doc, null, 2));
+        return apiResponseController.sendError('Workflow is not valid.\n' + JSON.stringify(errors), 400, response);
+    }
+
+    // VDJServer customization, expand Repertoire and RepertoireGroup
+    errors = await doc.expand_airr_types(projectMetadata)
+        .catch(function(error) {
+            let msg = 'Error with expand_airr_types.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    // validate again
+    errors = await doc.validate(projectUuid, use_alternate_app)
+        .catch(function(error) {
+            let msg = 'Error while validating workflow.\n' + error;
+            msg = config.log.error(context, msg);
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        });
+    if (errors.length > 0) {
+        config.log.error(context, 'Workflow with airr:type expansion is not valid.\n' + JSON.stringify(doc, null, 2));
+        return apiResponseController.sendError('Workflow with airr:type expansion is not valid.\n' + JSON.stringify(errors), 500, response);
+    }
+
+    config.log.info(context, 'Workflow is valid.');
+    if (audit_only === true) {
         return apiResponseController.sendSuccess('Workflow is valid.', response);
-    } else config.log.info(context, 'Workflow is valid.');
+    }
+
+    // update obj
+    obj['value']['entity'] = doc.entity;
+    obj['value']['uses'] = doc.uses;
 
     // create meta for analysis document
     config.log.info(context, 'create metadata for analysis document.');
@@ -706,7 +738,10 @@ ProjectController.executeWorkflow = async function(request, response) {
         });
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
 
-    return apiResponseController.sendSuccess('Workflow submitted.', response);
+    // trigger job queue manager?
+    jobQueueManager.triggerQueue();
+
+    return apiResponseController.sendSuccess(result, response);
 };
 
 ProjectController.getPendingPROV = function(request, response) {
