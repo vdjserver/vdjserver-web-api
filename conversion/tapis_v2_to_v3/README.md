@@ -14,10 +14,14 @@ validated in the migration.
 We assume that V2 API is not available and that the data to be migrated
 resides in a JSON file.
 
-## Docker
+## Jupyter notebooks
 
-We build a specialized docker image that brings in vdj-tapis-js and vdjserver-schema
+The extract and transform fuctions are performed in the Jupyter notebooks
+and generate JSONL files with meta records that can be bulk uploaded with
+meta_load_records.js script in the tapis-conversion docker container. It
+resdes in the adc-api-tapis-js of vdjserver-repository.
 
+- public_projects.ipynb: Public Projects
 
 ## Users
 
@@ -82,3 +86,20 @@ so they are either old or testing.
 "bioProcessing": 5,
 "irplus_analysis": 3,
 
+# Migration Tasks
+
+## Public projects
+
+This conversion maintains uuids for the records.
+
+- public_projects.ipynb: Public Projects
+
+This will generate files in the directories:
+
+- Metadata_public_project: One file per project containing metadata records.
+- Metadata_public_project_jobs: One file per project containing Tapis V2 job records.
+
+As there aren't many files, manually load the files one at a time using
+meta_load_records.js in the tapis-conversion docker.
+
+## 
