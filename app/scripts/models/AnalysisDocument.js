@@ -257,6 +257,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                         if (!repertoire) return Promise.reject(new Error('Repertoire: ' + rep_id + 'not found for RepertoireGroup: ' + e['vdjserver:uuid']));
     
                         //expand_repertoire(rep_data[0]);
+                        expand_repertoire(this, repertoire);
                     }
                 } // else we ignore empty groups
         }
