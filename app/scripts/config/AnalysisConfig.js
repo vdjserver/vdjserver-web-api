@@ -29,6 +29,28 @@
 
 var AnalysisConfig = {
     "apps": {
+        "takara_bio_umi_human_tr": {
+            "vdjserver:name":"Takara Bio UMI Human TCR (pRESTO)",
+            "activity": {
+              "presto-ls6-0.2": {
+                  "vdjserver:app:name": "presto-ls6",
+                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:default": true
+              },
+              "presto-ls6-0.1": {
+                  "vdjserver:app:name": "presto-ls6",
+                  "vdjserver:app:version": "0.1"
+              }
+            },
+            "vdjserver:activity:uses": {
+                "SequenceForwardPairedFiles": ['sequence_forward_paired_reads'],
+                "SequenceReversePairedFiles": ['sequence_reverse_paired_reads']
+            },
+            "vdjserver:activity:generates": [
+                "FASTQ",
+                "FASTA"
+            ]
+        },
         "presto": {
             "vdjserver:name":"Presto",
             "activity": {
