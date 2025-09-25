@@ -1776,6 +1776,86 @@ ProjectController.importTable = async function(request, response) {
             diagnosis_columns.push(i);
         }
 
+        var assign_subject_values = async function(i, dataRow, subject) {
+            for (let j in subject_columns) {
+                let data_value = manualTranslation(subject_columns[j], dataRow[subject_columns[j]]);
+                if (schema.is_ontology(subject_columns[j])) {
+                    if (data_value != '') {
+                        if (curie_cache[data_value]) subject[subject_columns[j]] = curie_cache[data_value];
+                        else {
+                            let term_url = airr_schema.resolve_curie(subject_columns[j], data_value);
+                            if (!term_url) ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved.'});
+                            else {
+                                let requestSettings = {
+                                    url: term_url,
+                                    method: 'GET',
+                                    headers: {
+                                        'Accept': 'application/json'
+                                    }
+                                };
+                                let term = await tapisIO.sendRequest(requestSettings)
+                                    .catch(function(error) {
+                                        config.log.error(context, 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error);
+                                        ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error});
+                                    });
+                                if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
+                                    subject[subject_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
+                                    curie_cache[data_value] = subject[subject_columns[j]];
+                                }
+                            }
+                        }
+                    }
+                } else
+                    subject[subject_columns[j]] = schema.map_value({header: subject_columns[j], value: data_value});
+            }
+            //console.log(JSON.stringify(subject));
+
+            // at least 1 diagnosis, add more if data
+            for (let idx = 0; idx <= max_diagnosis; ++idx) {
+                let hasData = checkFlatArray('diagnosis', dataRow, idx, diagnosis_columns);
+                if (!hasData) continue;
+
+                let diag;
+                if (!subject['diagnosis']) subject['diagnosis'] = [];
+                if (idx >= subject['diagnosis'].length) {
+                    diag = diagnosisSchema.template();
+                    subject['diagnosis'].push(diag);
+                } else diag = subject['diagnosis'][idx];
+
+                for (let j in diagnosis_columns) {
+                    let col_name = 'diagnosis.' + idx + '.' + diagnosis_columns[j];
+                    if (diagnosisSchema.is_ontology(diagnosis_columns[j])) {
+                        if (dataRow[col_name] != '') {
+                            if (curie_cache[dataRow[col_name]]) diag[diagnosis_columns[j]] = curie_cache[dataRow[col_name]];
+                            else {
+                                let term_url = diagnosisSchema.resolve_curie(diagnosis_columns[j], dataRow[col_name]);
+                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved.'});
+                                else {
+                                    let requestSettings = {
+                                        url: term_url,
+                                        method: 'GET',
+                                        headers: {
+                                            'Accept': 'application/json'
+                                        }
+                                    };
+                                    let term = await tapisIO.sendRequest(requestSettings)
+                                        .catch(function(error) {
+                                            config.log.error(context, 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error);
+                                            ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error});
+                                        });
+                                    if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
+                                        diag[diagnosis_columns[j]] = { id: dataRow[col_name], label: term['_embedded']['terms'][0]['label'] };
+                                        curie_cache[dataRow[col_name]] = diag[diagnosis_columns[j]];
+                                    }
+                                }
+                            }
+                        }
+                    } else
+                        diag[diagnosis_columns[j]] = diagnosisSchema.map_value({header: diagnosis_columns[j], value: dataRow[col_name]});
+                }
+            }
+        }
+
         let new_subjects;
         if (op == 'replace') {
             // delete and replace
@@ -1789,80 +1869,8 @@ ProjectController.importTable = async function(request, response) {
                 new_subjects.push(subject);
 
                 // assign subject values
-                for (let j in subject_columns) {
-                    let data_value = manualTranslation(subject_columns[j], dataRow[subject_columns[j]]);
-                    if (schema.is_ontology(subject_columns[j])) {
-                        if (data_value != '') {
-                            if (curie_cache[data_value]) subject[subject_columns[j]] = curie_cache[data_value];
-                            else {
-                                let term_url = airr_schema.resolve_curie(subject_columns[j], data_value);
-                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved.'});
-                                else {
-                                    let requestSettings = {
-                                        url: term_url,
-                                        method: 'GET',
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    };
-                                    let term = await tapisIO.sendRequest(requestSettings)
-                                        .catch(function(error) {
-                                            config.log.error(context, 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error);
-                                            ontology_errors.push({ message: 'row ' + i + ', subject ontology field ' + subject_columns[j] + ', could not be resolved. Error: ' + error});
-                                        });
-                                    if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
-                                        subject[subject_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
-                                        curie_cache[data_value] = subject[subject_columns[j]];
-                                    }
-                                }
-                            }
-                        }
-                    } else
-                        subject[subject_columns[j]] = schema.map_value({header: subject_columns[j], value: data_value});
-                }
-                //console.log(JSON.stringify(subject));
+                await assign_subject_values(i, dataRow, subject);
 
-                // at least 1 diagnosis, add more if data
-                for (let idx = 0; idx <= max_diagnosis; ++idx) {
-                    let hasData = checkFlatArray('diagnosis', dataRow, idx, diagnosis_columns);
-                    if (!hasData) continue;
-                    let diag = subject['diagnosis'][0];
-                    if (idx != 0) {
-                        diag = diagnosisSchema.template();
-                        subject['diagnosis'].push(diag);
-                    }
-                    for (let j in diagnosis_columns) {
-                        let col_name = 'diagnosis.' + idx + '.' + diagnosis_columns[j];
-                        if (diagnosisSchema.is_ontology(diagnosis_columns[j])) {
-                            if (dataRow[col_name] != '') {
-                                if (curie_cache[dataRow[col_name]]) diag[diagnosis_columns[j]] = curie_cache[dataRow[col_name]];
-                                else {
-                                    let term_url = diagnosisSchema.resolve_curie(diagnosis_columns[j], dataRow[col_name]);
-                                    if (!term_url) ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved.'});
-                                    else {
-                                        let requestSettings = {
-                                            url: term_url,
-                                            method: 'GET',
-                                            headers: {
-                                                'Accept': 'application/json'
-                                            }
-                                        };
-                                        let term = await tapisIO.sendRequest(requestSettings)
-                                            .catch(function(error) {
-                                                config.log.error(context, 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error);
-                                                ontology_errors.push({ message: 'row ' + i + ', diagnosis ontology field ' + diagnosis_columns[j] + ', could not be resolved. Error: ' + error});
-                                            });
-                                        if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
-                                            diag[diagnosis_columns[j]] = { id: dataRow[col_name], label: term['_embedded']['terms'][0]['label'] };
-                                            curie_cache[dataRow[col_name]] = diag[diagnosis_columns[j]];
-                                        }
-                                    }
-                                }
-                            }
-                        } else
-                            diag[diagnosis_columns[j]] = diagnosisSchema.map_value({header: diagnosis_columns[j], value: dataRow[col_name]});
-                    }
-                }
                 //console.log(JSON.stringify(subject));
             }
 
@@ -1915,7 +1923,7 @@ ProjectController.importTable = async function(request, response) {
 
         } else {
             // merge/append
-            new_subjects = await tapisIO.queryMetadataForProject(projectUuid, tableName)
+            let subjectMetadata = await tapisIO.queryMetadataForProject(projectUuid, tableName)
                 .catch(function(error) {
                     msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
                 });
@@ -1923,10 +1931,97 @@ ProjectController.importTable = async function(request, response) {
                 webhookIO.postToSlack(msg);
                 return apiResponseController.sendError(msg, 500, response);
             }
+            let subjects_by_id = {};
+            let subjects_by_uuid = {};
+            for (let i in subjectMetadata) {
+                subjects_by_id[subjectMetadata[i]['value']['subject_id']] = subjectMetadata[i];
+                subjects_by_uuid[subjectMetadata[i]['uuid']] = subjectMetadata[i];
+            }
 
-            return apiResponseController.sendError('merge/append not implemented.', 500, response);
+            let new_subjects = [];
+            let updated_subjects = [];
+            for (let i = 0; i < data.length; ++i) {
+                let dataRow = data[i];
+
+                if (dataRow['vdjserver_uuid']) {
+                    // find with vdjserver uuid?
+                    if (subjects_by_uuid[dataRow['vdjserver_uuid']]) {
+                        let subject = subjects_by_uuid[dataRow['vdjserver_uuid']];
+                        // assign subject values
+                        await assign_subject_values(i, dataRow, subject['value']);
+                        updated_subjects.push(subject);
+                    } else {
+                        validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: 'unknown VDJServer uuid' });
+                    }
+                } else if (dataRow['subject_id']) {
+                    // find with subject ID?
+                    if (subjects_by_id[dataRow['subject_id']]) {
+                        let subject = subjects_by_id[dataRow['subject_id']];
+                        // assign subject values
+                        await assign_subject_values(i, dataRow, subject['value']);
+                        updated_subjects.push(subject);
+                    } else {
+                        // new subject
+                        let subject = schema.template();
+                        // TODO: currently do not support genotype
+                        subject['genotype'] = null;
+                        new_subjects.push(subject);
+
+                        // assign subject values
+                        await assign_subject_values(i, dataRow, subject);
+                    }
+                }
+            }
+
+            // validate
+            for (let i in new_subjects) {
+                let error = schema.validate_object(new_subjects[i]);
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
+            }
+            for (let i in updated_subjects) {
+                let error = schema.validate_object(updated_subjects[i]['value']);
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
+            }
+
+            // TODO: we are missing VDJServer specific validation
+
+            // abort if any errors
+            if (ontology_errors.length > 0) validation_errors.concat(ontology_errors);
+            if (validation_errors.length > 0) {
+                config.log.error(context, 'import table has validation errors.');
+                return apiResponseController.sendError(validation_errors, 400, response);
+            }
+
+            // update the existing subjects
+            for (let i in updated_subjects) {
+                await tapisIO.updateMetadataForProject(projectUuid, updated_subjects[i]['uuid'], updated_subjects[i])
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'updated ' + updated_subjects.length + ' subject entries');
+
+            // insert the new subjects
+            for (let i in new_subjects) {
+                await tapisIO.createMetadataForProject(projectUuid, tableName, { value: new_subjects[i] })
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'inserted ' + new_subjects.length + ' subject entries');
+
+            //console.log(JSON.stringify(new_subjects, null, 2));
+            //console.log(JSON.stringify(updated_subjects, null, 2));
+
         }
-        //console.log(JSON.stringify(new_subjects, null, 2));
 
     } else if (tableName == 'sample_processing') {
         // get the project metadata
