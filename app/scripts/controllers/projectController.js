@@ -401,7 +401,7 @@ ProjectController.importFile = async function(request, response) {
         webhookIO.postToSlack(msg);
         return apiResponseController.sendError(msg, 500, response);
     }
-    console.log(fileUploadJob);
+    //console.log(fileUploadJob);
 
     filePermissionsQueueManager.importFile(fileUploadJob);
 
@@ -2378,10 +2378,10 @@ ProjectController.importTable = async function(request, response) {
                 }
             }
 
-            console.log(JSON.stringify(new_repertoires, null, 2));
+            //console.log(JSON.stringify(new_repertoires, null, 2));
             //console.log(JSON.stringify(new_samples, null, 2));
-            console.log(JSON.stringify(updated_repertoires, null, 2));
-            console.log(JSON.stringify(updated_samples, null, 2));
+            //console.log(JSON.stringify(updated_repertoires, null, 2));
+            //console.log(JSON.stringify(updated_samples, null, 2));
 
             // update existing samples first
             for (let i in updated_samples) {
@@ -2402,7 +2402,7 @@ ProjectController.importTable = async function(request, response) {
                 for (let j in updated_repertoires[i]['value']['sample']) {
                     if (! updated_repertoires[i]['value']['sample'][j]['vdjserver_uuid']) {
                         // new sample entry
-                        console.log(updated_repertoires[i]['value']['sample'][j]);
+                        //console.log(updated_repertoires[i]['value']['sample'][j]);
                         let cs = await tapisIO.createMetadataForProject(projectUuid, tableName, { value: updated_repertoires[i]['value']['sample'][j] })
                             .catch(function(error) {
                                 msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
@@ -2415,7 +2415,7 @@ ProjectController.importTable = async function(request, response) {
                     }
                 }
 
-                console.log(JSON.stringify(updated_repertoires[i], null, 2));
+                //console.log(JSON.stringify(updated_repertoires[i], null, 2));
 
                 await tapisIO.updateMetadataForProject(projectUuid, updated_repertoires[i]['uuid'], updated_repertoires[i])
                     .catch(function(error) {
