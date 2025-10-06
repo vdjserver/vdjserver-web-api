@@ -1776,6 +1776,7 @@ ProjectController.importTable = async function(request, response) {
             diagnosis_columns.push(i);
         }
 
+        // take values from import row and stick into appropriate fields in given subject object
         var assign_subject_values = async function(i, dataRow, subject) {
             for (let j in subject_columns) {
                 let data_value = manualTranslation(subject_columns[j], dataRow[subject_columns[j]]);
@@ -2066,6 +2067,7 @@ ProjectController.importTable = async function(request, response) {
         let airr_schema = new airr.SchemaDefinition('SampleProcessing');
         let schema = new vdj_schema.SchemaDefinition('SampleProcessing');
         for (let i in schema.properties) {
+            if (i == 'sample_processing_id') continue; // internal id
             if (schema.type(i) == 'array') continue;
             if ((schema.type(i) == 'object') && (! schema.is_ontology(i))) continue;
             if (data.columns.indexOf(i) < 0) continue;
@@ -2096,9 +2098,67 @@ ProjectController.importTable = async function(request, response) {
         let airr_rep_schema = new airr.SchemaDefinition('Repertoire');
         let rep_schema = new vdj_schema.SchemaDefinition('Repertoire');
 
+        // take values from import row and stick into appropriate fields in given sample object
+        var assign_sample_values = async function(i, dataRow, sample) {
+            for (let j in sample_columns) {
+                let data_value = dataRow[sample_columns[j]];
+                if (schema.is_ontology(sample_columns[j])) {
+                    if (data_value != '') {
+                        if (curie_cache[data_value]) sample[sample_columns[j]] = curie_cache[data_value];
+                        else {
+                            let term_url = airr_schema.resolve_curie(sample_columns[j], data_value);
+                            if (!term_url) ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved.'});
+                            else {
+                                let requestSettings = {
+                                    url: term_url,
+                                    method: 'GET',
+                                    headers: {
+                                        'Accept': 'application/json'
+                                    }
+                                };
+                                let term = await tapisIO.sendRequest(requestSettings)
+                                    .catch(function(error) {
+                                        config.log.error(context, 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error);
+                                        ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error});
+                                    });
+                                if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
+                                    sample[sample_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
+                                    curie_cache[data_value] = sample[sample_columns[j]];
+                                }
+                            }
+                        }
+                    }
+                } else
+                    sample[sample_columns[j]] = schema.map_value({header: sample_columns[j], value: data_value});
+            }
+
+            // assign sequencing files values, no ontology fields
+            for (let j in sd_columns) {
+                let col_name = 'sequencing_files.' + sd_columns[j];
+                sample['sequencing_files'][sd_columns[j]] = sdSchema.map_value({header: sd_columns[j], value: dataRow[col_name]});
+            }
+
+            // at least 1 pcr target, add more if data, no ontology fields
+            for (let idx = 0; idx <= max_pcr; ++idx) {
+                let hasData = checkFlatArray('pcr_target', dataRow, idx, pcr_columns);
+                if (!hasData) continue;
+                let pcr = sample['pcr_target'][0];
+                if (idx != 0) {
+                    pcr = pcrSchema.template();
+                    sample['pcr_target'].push(pcr);
+                }
+                for (let j in pcr_columns) {
+                    let col_name = 'pcr_target.' + idx + '.' + pcr_columns[j];
+                    pcr[pcr_columns[j]] = pcrSchema.map_value({header: pcr_columns[j], value: dataRow[col_name]});
+                }
+            }
+        }
+
         let match_repertoires = {};
         let new_repertoires = [];
         let new_samples = [];
+        let updated_repertoires = [];
+        let updated_samples = [];
         if (op == 'replace') {
             // delete and replace
             for (let i = 0; i < data.length; ++i) {
@@ -2133,60 +2193,7 @@ ProjectController.importTable = async function(request, response) {
                 rep['sample'].push(i);
 
                 // assign sample values
-                for (let j in sample_columns) {
-                    let data_value = dataRow[sample_columns[j]];
-                    if (schema.is_ontology(sample_columns[j])) {
-                        if (data_value != '') {
-                            if (curie_cache[data_value]) sample[sample_columns[j]] = curie_cache[data_value];
-                            else {
-                                let term_url = airr_schema.resolve_curie(sample_columns[j], data_value);
-                                if (!term_url) ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved.'});
-                                else {
-                                    let requestSettings = {
-                                        url: term_url,
-                                        method: 'GET',
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    };
-                                    let term = await tapisIO.sendRequest(requestSettings)
-                                        .catch(function(error) {
-                                            config.log.error(context, 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error);
-                                            ontology_errors.push({ message: 'row ' + i + ', sample ontology field ' + sample_columns[j] + ', could not be resolved. Error: ' + error});
-                                        });
-                                    if (term && term['_embedded'] && term['_embedded']['terms'] && term['_embedded']['terms'][0] && term['_embedded']['terms'][0]['label']) {
-                                        sample[sample_columns[j]] = { id: data_value, label: term['_embedded']['terms'][0]['label'] };
-                                        curie_cache[data_value] = sample[sample_columns[j]];
-                                    }
-                                }
-                            }
-                        }
-                    } else
-                        sample[sample_columns[j]] = schema.map_value({header: sample_columns[j], value: data_value});
-                }
-                //console.log(JSON.stringify(sample));
-
-                // assign sequencing files values, no ontology fields
-                for (let j in sd_columns) {
-                    let col_name = 'sequencing_files.' + sd_columns[j];
-                    sample['sequencing_files'][sd_columns[j]] = sdSchema.map_value({header: sd_columns[j], value: dataRow[col_name]});
-                }
-
-                // at least 1 pcr target, add more if data, no ontology fields
-                for (let idx = 0; idx <= max_pcr; ++idx) {
-                    let hasData = checkFlatArray('pcr_target', dataRow, idx, pcr_columns);
-                    if (!hasData) continue;
-                    let pcr = sample['pcr_target'][0];
-                    if (idx != 0) {
-                        pcr = pcrSchema.template();
-                        sample['pcr_target'].push(pcr);
-                    }
-                    for (let j in pcr_columns) {
-                        let col_name = 'pcr_target.' + idx + '.' + pcr_columns[j];
-                        pcr[pcr_columns[j]] = pcrSchema.map_value({header: pcr_columns[j], value: dataRow[col_name]});
-                    }
-                }
-                //console.log(JSON.stringify(sample));
+                await assign_sample_values(i, dataRow, sample);
             }
 
             // validate
@@ -2272,7 +2279,183 @@ ProjectController.importTable = async function(request, response) {
 
         } else {
             // merge/append
-            return apiResponseController.sendError('merge/append not implemented.', 500, response);
+            let sampleMetadata = await tapisIO.queryMetadataForProject(projectUuid, tableName)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
+            let samples_by_uuid = {};
+            for (let i in sampleMetadata) {
+                samples_by_uuid[sampleMetadata[i]['uuid']] = sampleMetadata[i];
+            }
+            config.log.info(context, sampleMetadata.length + ' existing sample_processing records.');
+
+            let repMetadata = await tapisIO.queryMetadataForProject(projectUuid, 'repertoire')
+                .catch(function(error) {
+                    msg = config.log.error(context, 'tapisIO.queryMetadataForProject, error: ' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return apiResponseController.sendError(msg, 500, response);
+            }
+            let reps_by_uuid = {};
+            for (let i in repMetadata) {
+                reps_by_uuid[repMetadata[i]['uuid']] = repMetadata[i];
+            }
+            config.log.info(context, repMetadata.length + ' existing repertoire records.');
+
+            // if repertoire_id is empty then new repertoire
+            // else verify existing repertoire and update
+            // multiple samples per repertoire should be multiple rows with same repertoire_id
+            //    if sample_processing_id is empty the new sample record
+            //    else verify existing sample record and update
+
+            for (let i = 0; i < data.length; ++i) {
+                let dataRow = data[i];
+
+                // repertoire entry
+                let rep = null;
+                if (dataRow['repertoire_id']) {
+                    // existing repertoire?
+                    rep = reps_by_uuid[dataRow['repertoire_id']];
+                    if (!rep) {
+                        // fake repertoire_id to group samples?
+                        rep = match_repertoires[dataRow['repertoire_id']];
+                        if (!rep) {
+                            rep = rep_schema.template();
+                            rep['sample'] = [];
+                            match_repertoires[dataRow['repertoire_id']] = rep;
+                            new_repertoires.push(rep);
+                            rep['study']['vdjserver_uuid'] = projectUuid;
+                        }
+                    } else {
+                        updated_repertoires.push(rep);
+                        rep = rep['value'];
+                    }
+                } else {
+                    rep = rep_schema.template();
+                    rep['sample'] = [];
+                    new_repertoires.push(rep);
+                    rep['study']['vdjserver_uuid'] = projectUuid;
+                }
+
+                // assign subject
+                if (dataRow['subject_id']) {
+                    let s = current_subjects[dataRow['subject_id']];
+                    if (!s) validation_errors.push({ message: 'row ' + i + ', cannot find existing subject with subject_id: ' + dataRow['subject_id'] });
+                    else rep['subject']['vdjserver_uuid'] = s['uuid'];
+                }
+
+                // existing sample?
+                let sample = null;
+                if (dataRow['sample_processing_id']) {
+                    sample = samples_by_uuid[dataRow['sample_processing_id']];
+                    if (!sample) validation_errors.push({ message: 'row ' + i + ', cannot find existing sample processing record with sample_processing_id: ' + dataRow['sample_processing_id'] });
+                    else {
+                        let found = false;
+                        for (let j in rep['sample']) {
+                            if (rep['sample'][j]['vdjserver_uuid'] == dataRow['sample_processing_id']) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) validation_errors.push({ message: 'row ' + i + ', cannot find existing sample processing record with sample_processing_id: ' + dataRow['sample_processing_id'] + ' in repertoire: ' + rep['uuid']});
+                        else {
+                            updated_samples.push(sample);
+                            // assign sample values
+                            await assign_sample_values(i, dataRow, sample['value']);
+                        }
+                    }
+                } else {
+                    let sample = schema.template();
+                    new_samples.push(sample);
+                    rep['sample'].push(sample);
+                    // assign sample values
+                    await assign_sample_values(i, dataRow, sample);
+                }
+            }
+
+            console.log(JSON.stringify(new_repertoires, null, 2));
+            //console.log(JSON.stringify(new_samples, null, 2));
+            console.log(JSON.stringify(updated_repertoires, null, 2));
+            console.log(JSON.stringify(updated_samples, null, 2));
+
+            // update existing samples first
+            for (let i in updated_samples) {
+                await tapisIO.updateMetadataForProject(projectUuid, updated_samples[i]['uuid'], updated_samples[i])
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.updateMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'updated ' + updated_samples.length + ' sample entries');
+
+            // for updated repertoires, need to iterate and create any new samples
+            // then update the repertoire with the sample uuid
+            for (let i in updated_repertoires) {
+                for (let j in updated_repertoires[i]['value']['sample']) {
+                    if (! updated_repertoires[i]['value']['sample'][j]['vdjserver_uuid']) {
+                        // new sample entry
+                        console.log(updated_repertoires[i]['value']['sample'][j]);
+                        let cs = await tapisIO.createMetadataForProject(projectUuid, tableName, { value: updated_repertoires[i]['value']['sample'][j] })
+                            .catch(function(error) {
+                                msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                            });
+                        if (msg) {
+                            webhookIO.postToSlack(msg);
+                            return apiResponseController.sendError(msg, 500, response);
+                        }
+                        updated_repertoires[i]['value']['sample'][j] = { vdjserver_uuid: cs['uuid'] };
+                    }
+                }
+
+                console.log(JSON.stringify(updated_repertoires[i], null, 2));
+
+                await tapisIO.updateMetadataForProject(projectUuid, updated_repertoires[i]['uuid'], updated_repertoires[i])
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.updateMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'updated ' + updated_repertoires.length + ' repertoire entries');
+
+            // create new repertoires and samples
+            for (let i in new_repertoires) {
+                for (let j in new_repertoires[i]['sample']) {
+                    if (! new_repertoires[i]['sample'][j]['vdjserver_uuid']) {
+                        // new sample entry
+                        let cs = await tapisIO.createMetadataForProject(projectUuid, tableName, { value: new_repertoires[i]['sample'][j] })
+                            .catch(function(error) {
+                                msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                            });
+                        if (msg) {
+                            webhookIO.postToSlack(msg);
+                            return apiResponseController.sendError(msg, 500, response);
+                        }
+                        new_repertoires[i]['sample'][j] = { vdjserver_uuid: cs['uuid'] };
+                    }
+                }
+
+                // create new repertoire
+                await tapisIO.createMetadataForProject(projectUuid, 'repertoire', { value: new_repertoires[i] })
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.createMetadataForProject, error: ' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                }
+            }
+            config.log.info(context, 'updated ' + new_repertoires.length + ' new repertoire entries');
         }
     }
 
@@ -2399,6 +2582,7 @@ ProjectController.exportTable = async function(request, response) {
         }
 
         config.log.info(context, 'gathered ' + repertoireMetadata.length + ' repertoire metadata for project: ' + projectUuid);
+        //console.log(JSON.stringify(repertoireMetadata, null, 2));
 
         // determine columns to be exported from the schema
         var columns = [ 'repertoire_id', 'subject_id' ];
@@ -2467,6 +2651,12 @@ ProjectController.exportTable = async function(request, response) {
                 tsvData += value['subject']['subject_id'];
 
                 var sampleData = value['sample'][k];
+
+                // define if necessary
+                if (!sampleData['sample_processing_id']) {
+                    if (sampleData['vdjserver'] && sampleData['vdjserver']['vdjserver_uuid'])
+                        sampleData['sample_processing_id'] = sampleData['vdjserver']['vdjserver_uuid'];
+                }
 
                 //sample values
                 for (var j=0; j<sample_columns.length; j++){
