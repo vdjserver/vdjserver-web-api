@@ -9,11 +9,11 @@
     }
   ],
   "website": {
-    "url": "vdjserver.org"
+    "url": "https://vdjserver.org"
   },
   "repository": {
     "type": "git",
-    "url": "https://bitbucket.org/vdjserver/vdjserver-web-api"
+    "url": "https://github.com/vdjserver/vdjserver-web-api.git"
   },
   "license": "GNU AGPL V3",
   "private": true,
