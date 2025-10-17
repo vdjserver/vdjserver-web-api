@@ -1466,6 +1466,7 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
                 model['repertoire_id'] = models[i].uuid;
                 model['study'] = study;
                 //setting projectUUID here
+                if (! model['study']['vdjserver']) model['study']['vdjserver'] = {};
                 model['study']['vdjserver']['vdjserver_uuid']= projectUuid;
                 repertoireMetadata.push(model);
             }
