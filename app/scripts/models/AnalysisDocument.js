@@ -333,7 +333,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, project
             "name": "vdjserver tapis job",
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
-            "maxMinutes": 240,
+            "maxMinutes": 60,
             "nodeCount": 1,
             "archiveSystemId": "data-storage.vdjserver.org",
             "archiveSystemDir": "/projects/" + project_uuid + "/analyses/${JobUUID}",
@@ -507,6 +507,29 @@ AnalysisDocument.prototype.perform_activities = function(is_executing) {
         }
     }
 
+    return activities;
+}
+
+// check if all activities have finished
+AnalysisDocument.prototype.incomplete_activities = function() {
+    var context = 'AnalysisDocument.check_activities';
+    var activities = {};
+
+    // we add activities that haven't finished
+    // if everything is done then empty object is returned
+    for (let a in this.activity) {
+        // not started
+        if (! this.activity[a]['prov:startTime']) {
+            activities[a] = this.activity[a];
+            continue;
+        }
+
+        // not ended
+        if (! this.activity[a]['prov:endTime']) {
+            activities[a] = this.activity[a];
+            continue;
+        }
+    }
     return activities;
 }
 
