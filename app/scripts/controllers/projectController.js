@@ -2397,6 +2397,25 @@ ProjectController.importTable = async function(request, response) {
             //console.log(JSON.stringify(updated_repertoires, null, 2));
             //console.log(JSON.stringify(updated_samples, null, 2));
 
+            // validate
+            for (let i in new_samples) {
+                let error = schema.validate_object(new_samples[i]);
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
+            }
+            for (let i in updated_samples) {
+                let error = schema.validate_object(updated_samples[i]);
+                if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
+            }
+
+            // TODO: we are missing VDJServer specific validation
+
+            // abort if any errors
+            if (ontology_errors.length > 0) validation_errors.concat(ontology_errors);
+            if (validation_errors.length > 0) {
+                config.log.error(context, 'import table has validation errors.');
+                return apiResponseController.sendError(validation_errors, 400, response);
+            }
+
             // update existing samples first
             for (let i in updated_samples) {
                 await tapisIO.updateMetadataForProject(projectUuid, updated_samples[i]['uuid'], updated_samples[i])
