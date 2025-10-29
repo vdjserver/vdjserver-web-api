@@ -2403,7 +2403,7 @@ ProjectController.importTable = async function(request, response) {
                 if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
             }
             for (let i in updated_samples) {
-                let error = schema.validate_object(updated_samples[i]);
+                let error = schema.validate_object(updated_samples[i]['value']);
                 if (error) validation_errors.push({ message: 'row ' + i + ', validation error', validation_error: error });
             }
 
