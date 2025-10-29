@@ -1460,14 +1460,15 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
             //console.log(JSON.stringify(blank, null, 2));
 
             if (!keep_uuids) delete study['vdjserver'];
+            else {
+                if (! study['vdjserver']) study['vdjserver'] = {};
+                study['vdjserver']['vdjserver_uuid'] = projectUuid;
+            }
 
             for (var i in models) {
                 var model = models[i].value;
                 model['repertoire_id'] = models[i].uuid;
                 model['study'] = study;
-                //setting projectUUID here
-                if (! model['study']['vdjserver']) model['study']['vdjserver'] = {};
-                model['study']['vdjserver']['vdjserver_uuid']= projectUuid;
                 repertoireMetadata.push(model);
             }
 
@@ -1512,6 +1513,10 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
                                   + rep['subject']['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                 }
                 if (!keep_uuids) delete subject['value']['vdjserver'];
+                else {
+                    if (! subject['vdjserver']) subject['vdjserver'] = {};
+                    subject['vdjserver']['vdjserver_uuid'] = rep['subject']['vdjserver_uuid'];
+                }
                 rep['subject'] = subject;
 
                 var samples = [];
@@ -1521,7 +1526,11 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
                         console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect sample: '
                                       + rep['sample'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                     }
-                    if (!keep_uuids) delete sample['value']['vdjserver'];
+                    if (!keep_uuids) delete sample['vdjserver'];
+                    else {
+                        if (! sample['vdjserver']) sample['vdjserver'] = {};
+                        sample['vdjserver']['vdjserver_uuid'] = rep['sample'][j]['vdjserver_uuid'];
+                    }
                     samples.push(sample);
                 }
                 rep['sample'] = samples;
@@ -1535,7 +1544,11 @@ ProjectController.gatherRepertoireMetadataForProject = async function(username, 
                             console.error('VDJ-API ERROR: tapisIO.gatherRepertoireMetadataForProject, cannot collect data_processing: '
                                           + rep['data_processing'][j]['vdjserver_uuid'] + ' for repertoire: ' + rep['repertoire_id']);
                         }
-                        if (!keep_uuids) delete dp['value']['vdjserver'];
+                        if (!keep_uuids) delete dp['vdjserver'];
+                        else {
+                            if (! dp['vdjserver']) dp['vdjserver'] = {};
+                            dp['vdjserver']['vdjserver_uuid'] = rep['data_processing'][j]['vdjserver_uuid'];
+                        }
                         dps.push(dp);
                     }
                 }
