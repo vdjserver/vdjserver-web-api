@@ -75,7 +75,8 @@ var AnalysisConfig = {
             },
             "vdjserver:activity:generates": [
                 "FASTQ",
-                "FASTA"
+                "FASTA",
+                "sequence"
             ]
         },
         "vdjpipe": {
@@ -104,30 +105,37 @@ var AnalysisConfig = {
             },
             "vdjserver:activity:generates": [
                 "FASTQ",
-                "FASTA"
+                "FASTA",
+                "sequence"
             ]
         },
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
+              "igblast-ls6-0.6": {
+                  "vdjserver:app:name": "igblast-ls6",
+                  "vdjserver:app:version": "0.6",
+                  "vdjserver:app:default": true
+              },
               "igblast-ls6-0.4": {
                   "vdjserver:app:name": "igblast-ls6",
                   "vdjserver:app:version": "0.4",
-                  "vdjserver:app:default": true
               },
               "igblast-ls6-0.1": {
                   "vdjserver:app:name": "igblast-ls6",
                   "vdjserver:app:version": "0.1"
               }
             },
-            "vdjserver:activity:uses": [
-                "job_files",
-                "FASTA",
-                "AIRR JSON"
-            ],
+            "vdjserver:activity:uses": {
+                "JobFiles": [ 'archive', 'compressed' ],
+                "query": [ 'sequence' ]
+            },
             "vdjserver:activity:generates": [
                 "AIRR TSV",
-                "AIRR JSON"
+                "AIRR JSON",
+                "vdj_sequence_annotation",
+                "annotation_statistics",
+                "assigned_clones"
             ]
         },
         "repcalc": {
@@ -142,6 +150,7 @@ var AnalysisConfig = {
             "vdjserver:activity:uses": [
                 "job_files",
                 "AIRR TSV",
+                "assigned_clones",
                 "AIRR JSON"
             ],
             "vdjserver:activity:generates": [
