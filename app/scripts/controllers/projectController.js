@@ -839,6 +839,13 @@ ProjectController.publishProject = async function(request, response) {
     var username = request['user']['username'];
     var msg = null;
 
+    if (! projectMetadata['value']['study_id']) {
+        msg = 'project ' + projectUuid + ' needs a valid, non-blank study ID in order to be published.';
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
     if (projectMetadata.name == 'private_project') {
         projectMetadata.name = 'public_project';
         await tapisIO.updateDocument(projectMetadata.uuid, projectMetadata.name, projectMetadata.value, null)
