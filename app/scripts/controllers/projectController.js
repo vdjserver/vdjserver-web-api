@@ -677,19 +677,17 @@ ProjectController.executeWorkflow = async function(request, response) {
     var audit_only = request.query.audit_only;
     var use_alternate_app = request.query.use_alternate_app;
     var obj = request.body;
+    var msg = null;
 
     config.log.info(context, 'start, project: ' + projectUuid);
 
     var doc = new AnalysisDocument(obj['value']);
     config.log.info(context, 'analysis document:' + JSON.stringify(doc, null, 2));
 
-    // validate
-    var errors = await doc.validate(projectUuid, use_alternate_app)
+    // validate, skip required check
+    var errors = await doc.validate(projectUuid, use_alternate_app, true)
         .catch(function(error) {
-            let msg = 'Error while validating workflow.\n' + error;
-            msg = config.log.error(context, msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
+            msg = config.log.error(context, 'Error while validating workflow.\n' + error);
         });
     if (errors.length > 0) {
         config.log.error(context, 'Workflow is not valid.\n' + JSON.stringify(doc, null, 2));
@@ -699,13 +697,17 @@ ProjectController.executeWorkflow = async function(request, response) {
     // VDJServer customization, expand Repertoire and RepertoireGroup
     errors = await doc.expand_airr_types(projectMetadata)
         .catch(function(error) {
-            let msg = 'Error with expand_airr_types.\n' + error;
-            msg = config.log.error(context, msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
+            msg = config.log.error(context, 'Error with expand_airr_types.\n' + error);
         });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    config.log.info(context, 'analysis document after expand_airr_types:' + JSON.stringify(doc, null, 2));
+
     // validate again
-    errors = await doc.validate(projectUuid, use_alternate_app)
+    errors = await doc.validate(projectUuid, use_alternate_app, true)
         .catch(function(error) {
             let msg = 'Error while validating workflow.\n' + error;
             msg = config.log.error(context, msg);
@@ -731,13 +733,15 @@ ProjectController.executeWorkflow = async function(request, response) {
     obj['value']['status'] = 'STARTED';
     var result = await tapisIO.createMetadataForProject(projectUuid, 'analysis_document', obj)
         .catch(function(error) {
-            let msg = 'Error while saving analysis document.\n' + error;
-            msg = config.log.error(context, msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
+            msg = config.log.error(context, 'Error while saving analysis document.\n' + error);
         });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
     config.log.info(context, 'result:' + JSON.stringify(result, null, 2));
 
+    //
     // trigger job queue manager?
     jobQueueManager.triggerQueue();
 

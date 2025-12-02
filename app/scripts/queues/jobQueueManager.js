@@ -332,9 +332,9 @@ try {
         } else {
             //console.log(analysis['value']);
             for (let a in activities) {
-                let job_data = await doc.create_job_data(a, analysis['associationIds'][0])
+                let job_data = await doc.create_job_data(a, analysis['uuid'], analysis['associationIds'][0])
                     .catch(function(error) {
-                        msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+                        msg = config.log.error(context, 'AnalysisDocument.create_job_data error' + error);
                     });
                 if (msg) {
                     webhookIO.postToSlack(msg);
