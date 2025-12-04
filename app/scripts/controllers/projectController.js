@@ -40,7 +40,6 @@ var tapisIO = tapisSettings.get_default_tapis();
 var ServiceAccount = tapisIO.serviceAccount;
 var GuestAccount = tapisIO.guestAccount;
 var webhookIO = require('vdj-tapis-js/webhookIO');
-var mongoSettings = require('vdj-tapis-js/mongoSettings');
 var authController = tapisIO.authController;
 
 // Controllers
