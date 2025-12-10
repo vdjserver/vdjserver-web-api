@@ -266,7 +266,28 @@ try {
                 }
             }
 
-            // TODO: tapis job cancelled?
+            // tapis job cancelled
+            // if one activity is cancelled, we cancel the whole analysis
+            if (job_entry['status'] == 'CANCELLED') {
+                // update provenance
+                config.log.info(context, 'job: ' + job_entry['uuid'] + ' is CANCELLED, cancelling analysis: ' + analysis['uuid'] + ' project:' + analysis['associationIds'][0]);
+
+                analysis['value']['status'] = 'CANCELLED';
+                // use remote end time if available, other set time to now
+                if (job_entry['remoteEnded'])
+                    analysis['value']['activity'][a]['prov:endTime'] = job_entry['remoteEnded'];
+                else
+                    analysis['value']['activity'][a]['prov:endTime'] = new Date().toISOString();
+                await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return Promise.resolve();
+                }
+            }
+
             // TODO: other statuses?
         }
     }
@@ -294,22 +315,26 @@ try {
         let activities = doc.perform_activities(true);
         if (!activities) {
             // no activities to perform, check if all activities are done
-            
-/*            analysis['value']['status'] = 'FINISHED';
-            await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
-                .catch(function(error) {
-                    msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
-                });
-            if (msg) {
-                webhookIO.postToSlack(msg);
-                return Promise.resolve();
-            } */
+            activities = doc.incomplete_activities();
+            if (Object.keys(activities).length == 0) {
+                // all done so mark analysis as finished
+                config.log.info(context, 'all activities complete for analysis: ' + analysis['uuid'] + ' project:' + analysis['associationIds'][0]);
+                analysis['value']['status'] = 'FINISHED';
+                await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                    return Promise.resolve();
+                }
+            } // otherwise no change in status, jobs are still running
         } else {
             //console.log(analysis['value']);
             for (let a in activities) {
-                let job_data = await doc.create_job_data(a, analysis['associationIds'][0])
+                let job_data = await doc.create_job_data(a, analysis['uuid'], analysis['associationIds'][0])
                     .catch(function(error) {
-                        msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+                        msg = config.log.error(context, 'AnalysisDocument.create_job_data error' + error);
                     });
                 if (msg) {
                     webhookIO.postToSlack(msg);

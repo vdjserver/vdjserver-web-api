@@ -709,7 +709,7 @@ paths:
                   type: string
                   enum:
                     - replace
-                    - append
+                    - merge
                 filename:
                   type: string
               required:

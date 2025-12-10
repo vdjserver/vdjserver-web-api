@@ -147,35 +147,35 @@ TokenController.getOAuthToken = async function(request, response) {
     //console.log(tapisProfile);
     var username = tapisProfile['result']['username'];
 
-    // does this user have a verification record?
-    var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
-        .catch(function(error) {
-            msg = 'error getting user verification for username: ' + username + ', error: ' + error;
-        });
-    if (msg) {
-        msg = config.log.error(context, msg);
-        webhookIO.postToSlack(msg);
-        return apiResponseController.sendError(msg, 500, response);
-    }
-    //console.log(userVerificationMetadata);
-    if (!userVerificationMetadata || userVerificationMetadata.length == 0) {
-        config.log.info(context, 'first login? No user verification record, creating for user: ' + username);
-
-        // create user verification
-        // TODO: this verify needs to be shifted to email verification
-        userVerificationMetadata = await tapisIO.createUserVerificationMetadata(username, true)
-            .catch(function(error) {
-                msg = 'verification metadata failed for user: ' + username + ', error: ' + error;
-            });
-        if (msg) {
-            msg = config.log.error(context, msg);
-            webhookIO.postToSlack(msg);
-            return apiResponseController.sendError(msg, 500, response);
-        }
-
-        config.log.info(context, 'verification metadata (' + userVerificationMetadata.uuid
-                    + ') successful for user: ' + username);
-    }
+//     // does this user have a verification record?
+//     var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
+//         .catch(function(error) {
+//             msg = 'error getting user verification for username: ' + username + ', error: ' + error;
+//         });
+//     if (msg) {
+//         msg = config.log.error(context, msg);
+//         webhookIO.postToSlack(msg);
+//         return apiResponseController.sendError(msg, 500, response);
+//     }
+//     //console.log(userVerificationMetadata);
+//     if (!userVerificationMetadata || userVerificationMetadata.length == 0) {
+//         config.log.info(context, 'first login? No user verification record, creating for user: ' + username);
+// 
+//         // create user verification
+//         // TODO: this verify needs to be shifted to email verification
+//         userVerificationMetadata = await tapisIO.createUserVerificationMetadata(username, true)
+//             .catch(function(error) {
+//                 msg = 'verification metadata failed for user: ' + username + ', error: ' + error;
+//             });
+//         if (msg) {
+//             msg = config.log.error(context, msg);
+//             webhookIO.postToSlack(msg);
+//             return apiResponseController.sendError(msg, 500, response);
+//         }
+// 
+//         config.log.info(context, 'verification metadata (' + userVerificationMetadata.uuid
+//                     + ') successful for user: ' + username);
+//     }
 
     // does this user have a profile?
     var userProfile = await tapisIO.getUserProfile(username)

@@ -28,6 +28,7 @@
 //
 
 var config = require('../config/config');
+var airr = require('airr-js');
 var vdj_schema = require('vdjserver-schema');
 var AnalysisConfig = require('../config/AnalysisConfig');
 
@@ -71,7 +72,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
     var project_uuid = project_metadata['uuid'];
 
     // gather repertoire metadata for the project
-    var AIRRMetadata = await tapisIO.gatherRepertoireMetadataForProject(project_metadata, true)
+    var AIRRMetadata = await tapisIO.gatherRepertoireMetadataForProject(tapisSettings.serviceAccountKey, project_uuid, true)
             .catch(function(error) {
                 return Promise.reject(error);
             });
@@ -106,7 +107,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
         // match file types with those used by activities
         // generates entities and uses relations and adds to AnalysisDocument
         var expand_repertoire = function(doc, rep) {
-            config.log.info(context, 'expand repertoire: ' + rep);
+            config.log.info(context, 'expand repertoire: ' + rep['repertoire_id']);
 
             // loop through our defined activities(apps)
             for (let activity_id in AnalysisConfig['apps']) {
@@ -124,7 +125,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                         let new_uses_id = [];
                         for (let ut in app['vdjserver:activity:uses'][input_name]) {
                             let use_type = app['vdjserver:activity:uses'][input_name][ut];
-                            //console.log(input_name, use_type);
+                            console.log(input_name, use_type);
                             switch(use_type) {
                                 case 'sequence_forward_paired_reads':
                                     // identifiers use the forward read file
@@ -138,6 +139,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                                 new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
                                                 let extra = {};
                                                 extra[input_name] = seqfiles['filename'];
+                                                extra['airr:Repertoire'] = rep['repertoire_id']
                                                 new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
                                                 if (project_file_map[seqfiles['filename']]) {
                                                     extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
@@ -148,6 +150,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                                 new_entity_id.push('vdjserver:project_file:' + seqfiles['paired_filename']);
                                                 let extra = {};
                                                 extra[input_name] = seqfiles['paired_filename'];
+                                                extra['airr:Repertoire'] = rep['repertoire_id']
                                                 new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['paired_filename']);
                                                 if (project_file_map[seqfiles['paired_filename']]) {
                                                     extra['vdjserver:uuid'] = project_file_map[seqfiles['paired_filename']];
@@ -181,6 +184,26 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                         }
                                     }
                                     break;
+
+                                case 'sequence':
+                                    for (let i in rep['sample']) {
+                                        let seqfiles = rep['sample'][i]['sequencing_files'];
+                                        console.log(seqfiles);
+                                        if (seqfiles['filename'] && seqfiles['file_type'] == 'fasta') {
+                                            found = true;
+                                            new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
+                                            let extra = {};
+                                            extra[input_name] = seqfiles['filename'];
+                                            extra['airr:Repertoire'] = rep['repertoire_id']
+                                            new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
+                                            if (project_file_map[seqfiles['filename']]) {
+                                                extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                            }
+                                            extras.push(extra);
+                                        }
+                                    }
+                                    break;
+
                                 case 'sequence_single_read':
                                 case 'sequence_quality':
                                 case 'sequence_reads':
@@ -257,6 +280,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                         if (!repertoire) return Promise.reject(new Error('Repertoire: ' + rep_id + 'not found for RepertoireGroup: ' + e['vdjserver:uuid']));
     
                         //expand_repertoire(rep_data[0]);
+                        expand_repertoire(this, repertoire);
                     }
                 } // else we ignore empty groups
         }
@@ -303,8 +327,10 @@ AnalysisDocument.prototype.get_available_entities = function() {
     return available;
 }
 
-AnalysisDocument.prototype.create_job_data = async function(activity_id, project_uuid, allow_alternate=false) {
+AnalysisDocument.prototype.create_job_data = async function(activity_id, analysis_uuid, project_uuid, allow_alternate=false) {
     var context = 'AnalysisDocument.create_job_data';
+    let analysis_path = 'analyses/' + analysis_uuid;
+    let tapis_path = "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/' + analysis_path;
 
     config.log.info(context, 'create job data for activity: ' + activity_id);
 
@@ -332,10 +358,10 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, project
             "name": "vdjserver tapis job",
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
-            "maxMinutes": 240,
+            "maxMinutes": 60,
             "nodeCount": 1,
             "archiveSystemId": "data-storage.vdjserver.org",
-            "archiveSystemDir": "/projects/" + project_uuid + "/analyses/${JobUUID}",
+            "archiveSystemDir": '/projects/' + project_uuid + '/' + analysis_path + "/${JobUUID}",
             "archiveOnAppError": false,
             "fileInputs": [],
             "fileInputArrays": [],
@@ -360,6 +386,63 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, project
         for (let i in app_inputs) {
             // skip if fixed
             if (app_inputs[i]['inputMode'] == 'FIXED') continue;
+
+            // AIRRMetadata is hard-coded as file input for AIRR metadata file
+            // TODO: should be just the repertoires/groups that are used?
+            if (app_inputs[i]['name'] == 'AIRRMetadata') {
+                // gather repertoire metadata for the project
+                let AIRRMetadata = await tapisIO.gatherRepertoireMetadataForProject(tapisSettings.serviceAccountKey, project_uuid, true)
+                    .catch(function(error) {
+                        return Promise.reject(error);
+                    });
+                if (AIRRMetadata.length == 0) return Promise.reject('AIRR metadata is null');
+
+                // gather the repertoire group objects
+                let groupMetadata = await tapisIO.queryMetadataForProject(project_uuid, 'repertoire_group')
+                    .catch(function(error) {
+                        return Promise.reject(error);
+                    });
+                if (groupMetadata.length == 0) groupMetadata = null;
+                let groups = null;
+                if (groupMetadata) {
+                    groups = [];
+                    for (let i in groupMetadata) {
+                        let obj = groupMetadata[i]['value'];
+                        if (!obj['repertoire_group_id']) obj['repertoire_group_id'] = groupMetadata[i]['uuid'];
+                        groups.push(obj);
+                    }
+                }
+
+                // save in file
+                let data = {};
+                data['Info'] = airr.get_info();
+                data['Repertoire'] = AIRRMetadata;
+                if (groups) data['RepertoireGroup'] = groups;
+
+                await tapisIO.createProjectDirectory(project_uuid, analysis_path)
+                    .catch(function(error) {
+                        return Promise.reject(error);
+                    });
+
+                let buffer = Buffer.from(JSON.stringify(data, null, 2));
+                await tapisIO.uploadFileToProjectDirectory(project_uuid, analysis_path, 'repertoires.airr.json', buffer)
+                    .catch(function(error) {
+                        return Promise.reject(error);
+                    });
+
+                job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: tapis_path + '/repertoires.airr.json', targetPath: 'repertoires.airr.json'});
+
+                config.log.info(context, 'fileInputs (' + app_inputs[i]['name'] + ') is defined: ' + tapis_path + '/repertoires.airr.json');
+                continue;
+            }
+
+            // analysis_provenance is hard-coded as file input for analysis_document metadata
+            // we add the entry here, but write the file at the end when the document is complete
+            if (app_inputs[i]['name'] == 'analysis_provenance') {
+                job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: tapis_path + '/analysis_document.json', targetPath: 'analysis_document.json'});
+                config.log.info(context, 'fileInputs (' + app_inputs[i]['name'] + ') is defined: ' + tapis_path + '/analysis_document.json');
+                continue;
+            }
 
             let found = false;
             for (let u in this.uses) {
@@ -452,6 +535,23 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, project
             }
         }
 
+        // save the analysis
+        let obj = {
+            uuid: analysis_uuid,
+            name: "analysis_document",
+            value: this
+        };
+        await tapisIO.createProjectDirectory(project_uuid, analysis_path)
+            .catch(function(error) {
+                return Promise.reject(error);
+            });
+
+        let buffer = Buffer.from(JSON.stringify(obj, null, 2));
+        await tapisIO.uploadFileToProjectDirectory(project_uuid, analysis_path, 'analysis_document.json', buffer)
+            .catch(function(error) {
+                return Promise.reject(error);
+            });
+
         return Promise.resolve(job_data);
     }
 }
@@ -509,7 +609,30 @@ AnalysisDocument.prototype.perform_activities = function(is_executing) {
     return activities;
 }
 
-AnalysisDocument.prototype.validate = async function(project_uuid, allow_alternate) {
+// check if all activities have finished
+AnalysisDocument.prototype.incomplete_activities = function() {
+    var context = 'AnalysisDocument.check_activities';
+    var activities = {};
+
+    // we add activities that haven't finished
+    // if everything is done then empty object is returned
+    for (let a in this.activity) {
+        // not started
+        if (! this.activity[a]['prov:startTime']) {
+            activities[a] = this.activity[a];
+            continue;
+        }
+
+        // not ended
+        if (! this.activity[a]['prov:endTime']) {
+            activities[a] = this.activity[a];
+            continue;
+        }
+    }
+    return activities;
+}
+
+AnalysisDocument.prototype.validate = async function(project_uuid, allow_alternate, skip_required=false) {
     var context = 'AnalysisDocument.validate';
     var valid = true;
     var errors = [];
@@ -589,7 +712,7 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
                                 }
                     }
                     if (!found) {
-                        if (app_inputs[i]['inputMode'] == 'REQUIRED') {
+                        if (!skip_required && app_inputs[i]['inputMode'] == 'REQUIRED') {
                             errors.push({ message: "Required input:" + i + " not found for activity: " + a });
                             valid = false;
                         }
@@ -614,7 +737,7 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
                                 }
                     }
                     if (!found) {
-                        if (app_params[i]['inputMode'] == 'REQUIRED') {
+                        if (!skip_required && app_params[i]['inputMode'] == 'REQUIRED') {
                             errors.push({ message: "Required parameter:" + app_params[i]['key'] + " not found for activity: " + a });
                             valid = false;
                         }

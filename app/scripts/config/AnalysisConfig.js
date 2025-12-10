@@ -29,6 +29,28 @@
 
 var AnalysisConfig = {
     "apps": {
+        "takara_bio_umi_human_tr": {
+            "vdjserver:name":"Takara Bio UMI Human TCR (pRESTO)",
+            "activity": {
+              "presto-ls6-0.2": {
+                  "vdjserver:app:name": "presto-ls6",
+                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:default": true
+              },
+              "presto-ls6-0.1": {
+                  "vdjserver:app:name": "presto-ls6",
+                  "vdjserver:app:version": "0.1"
+              }
+            },
+            "vdjserver:activity:uses": {
+                "SequenceForwardPairedFiles": ['sequence_forward_paired_reads'],
+                "SequenceReversePairedFiles": ['sequence_reverse_paired_reads']
+            },
+            "vdjserver:activity:generates": [
+                "FASTQ",
+                "FASTA"
+            ]
+        },
         "presto": {
             "vdjserver:name":"Presto",
             "activity": {
@@ -53,7 +75,8 @@ var AnalysisConfig = {
             },
             "vdjserver:activity:generates": [
                 "FASTQ",
-                "FASTA"
+                "FASTA",
+                "sequence"
             ]
         },
         "vdjpipe": {
@@ -82,30 +105,41 @@ var AnalysisConfig = {
             },
             "vdjserver:activity:generates": [
                 "FASTQ",
-                "FASTA"
+                "FASTA",
+                "sequence"
             ]
         },
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
+              "igblast-ls6-0.7": {
+                  "vdjserver:app:name": "igblast-ls6",
+                  "vdjserver:app:version": "0.7",
+                  "vdjserver:app:default": true
+              },
+              "igblast-ls6-0.6": {
+                  "vdjserver:app:name": "igblast-ls6",
+                  "vdjserver:app:version": "0.6",
+              },
               "igblast-ls6-0.4": {
                   "vdjserver:app:name": "igblast-ls6",
                   "vdjserver:app:version": "0.4",
-                  "vdjserver:app:default": true
               },
               "igblast-ls6-0.1": {
                   "vdjserver:app:name": "igblast-ls6",
                   "vdjserver:app:version": "0.1"
               }
             },
-            "vdjserver:activity:uses": [
-                "job_files",
-                "FASTA",
-                "AIRR JSON"
-            ],
+            "vdjserver:activity:uses": {
+                "JobFiles": [ 'archive', 'compressed' ],
+                "query": [ 'sequence' ]
+            },
             "vdjserver:activity:generates": [
                 "AIRR TSV",
-                "AIRR JSON"
+                "AIRR JSON",
+                "vdj_sequence_annotation",
+                "annotation_statistics",
+                "assigned_clones"
             ]
         },
         "repcalc": {
@@ -120,6 +154,7 @@ var AnalysisConfig = {
             "vdjserver:activity:uses": [
                 "job_files",
                 "AIRR TSV",
+                "assigned_clones",
                 "AIRR JSON"
             ],
             "vdjserver:activity:generates": [
