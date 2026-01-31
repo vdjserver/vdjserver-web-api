@@ -1062,17 +1062,18 @@ ProjectController.importMetadata = async function(request, response) {
     }
 
     // get existing jobs
-    var _jobs = await tapisIO.getJobsForProject(projectUuid)
-        .catch(function(error) {
-            msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
-            webhookIO.postToSlack(msg);            
-            return apiResponseController.sendError(msg, 500, response);
-        });
-
-    for (let r in _jobs) {
-        existingJobs[_jobs[r]['id']] = _jobs[r];
-    }
-
+    // TODO: redesign for analysis provenance
+//     var _jobs = await tapisIO.getJobsForProject(projectUuid)
+//         .catch(function(error) {
+//             msg = config.log.error(context, 'project: ' + projectUuid + ', error: ' + error);
+//             webhookIO.postToSlack(msg);            
+//             return apiResponseController.sendError(msg, 500, response);
+//         });
+// 
+//     for (let r in _jobs) {
+//         existingJobs[_jobs[r]['id']] = _jobs[r];
+//     }
+// 
     // get existing data processing objects
     var _dps = await tapisIO.queryMetadataForProject(projectUuid, 'data_processing')
         .catch(function(error) {
