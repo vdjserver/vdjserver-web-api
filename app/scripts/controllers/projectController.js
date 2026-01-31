@@ -705,6 +705,16 @@ ProjectController.executeWorkflow = async function(request, response) {
 
     config.log.info(context, 'analysis document after expand_airr_types:' + JSON.stringify(doc, null, 2));
 
+    // VDJServer customization, expand JobFiles (previous analysis as input)
+    errors = await doc.expand_archive_input(projectMetadata)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error with expand_archive_input.\n' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
     // validate again
     errors = await doc.validate(projectUuid, use_alternate_app, true)
         .catch(function(error) {

@@ -288,6 +288,122 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
     }
 }
 
+// Customization for VDJServer app:inputs entities
+//
+// Output from previous analysis jobs can be used as input. This output
+// is stored as an archive file (zip file but maybe tgz someday). Thus, only one file
+// needs to be passed as input versus hundreds or potentially thousands of individual files.
+//
+// This function expands the simple entity reference into an actual tapis file object.
+//
+// Document should be validated before calling this function.
+// Call validate after this function to check correct expansion.
+AnalysisDocument.prototype.expand_archive_input = async function(project_metadata) {
+    var context = 'AnalysisDocument.expand_archive_input';
+
+    if (!project_metadata) return Promise.reject('project metadata is null');
+    var project_uuid = project_metadata['uuid'];
+
+    let new_entities = {};
+    let new_uses = {};
+    for (let entity_id in this.entity) {
+        let e = this.entity[entity_id];
+        if (e['vdjserver:type'] != 'app:inputs') continue;
+        if (!e['vdjserver:activity']) continue;
+        // if conditions are met, it must have uuid otherwise it is an error (unresolvable entity)
+        if (! e['vdjserver:uuid'])
+            return Promise.reject(new Error('Entity ' + entity_id + 'must have vdjserver:uuid to be expanded.'));
+
+        // the uuid is for the analysis document
+        // we need to extract the specific activity, get the tapis job id,
+        // and add relations
+        let data = await tapisIO.getMetadataForProject(project_uuid, e['vdjserver:uuid'])
+            .catch(function(error) {
+                return Promise.reject(error);
+            });
+        if (data.length == 0)
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid not found: ' + e['vdjserver:uuid']));
+        data = data[0];
+        if (data['name'] != 'analysis_document')
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' is not an analysis_document'));
+
+        console.log(JSON.stringify(data, null, 2));
+        let activity_key = e['vdjserver:activity'];
+        if (!data['value']['activity'])
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' has no activities.'));
+
+        let prev_activity = data['value']['activity'][activity_key];
+        if (!prev_activity)
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' does not have activity: ' + activity_key));
+
+        let job_id = data['value']['activity'][activity_key]['vdjserver:job'];
+        if (!job_id)
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' does not have Tapis job id for activity: ' + activity_key));
+
+        // TODO: having the uses id be the same as the entity id means only a single activity can reference,
+        //       this should be fixed in the GUI code to be more flexible.
+        let prev_uses = this.uses[entity_id]
+        if (!prev_uses)
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' missing uses relation.'));
+
+        let activity = this.activity[prev_uses['prov:activity']];
+        if (!activity)
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' cannot find activity referenced in uses relation:' + prev_uses['prov:activity']));
+
+        let prov_output = await tapisIO.getProjectJobFileContents(project_uuid, e['vdjserver:uuid'], job_id, 'provenance_output.json')
+            .catch(function(error) {
+                return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', could not read provenance_output.json'));
+            });
+        if (!prov_output['value'])
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+        if (!prov_output['value']['entity'])
+            return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+
+        // entity with tapis file object
+        let new_entity_id = 'vdjserver:project_job_file:' + job_id + '.zip';
+        new_entities[new_entity_id] = { "vdjserver:type": "app:inputs" };
+        new_entities[new_entity_id]['vdjserver:analysis'] = e['vdjserver:uuid'];
+        new_entities[new_entity_id]['vdjserver:job'] = job_id;
+        // TODO: this (JobFiles) is hard-coded, we should look up the name in the config for the activity
+        new_entities[new_entity_id]['JobFiles'] = job_id + '.zip';
+        // TODO: the entity should have a vdjserver uuid
+
+        // what does this app use?
+        // tags --> filenames
+        // look for appropriate output entities in the previous analysis
+        // copy those entities to this analysis and set input variable with filenames
+        let app = AnalysisConfig['apps'][this.workflow_mode];
+        for (let input_name in app['vdjserver:activity:uses']) {
+            //let input_array = [];
+            for (let pe in prov_output['value']['entity']) {
+                if (prov_output['value']['entity'][pe]['vdjserver:type'] != 'app:outputs') continue;
+                if (!prov_output['value']['entity'][pe]['vdjserver:tags']) continue;
+                let tags = prov_output['value']['entity'][pe]['vdjserver:tags'].split(',');
+                let intersection = app['vdjserver:activity:uses'][input_name].filter(item => tags.includes(item));
+                if (intersection.length == 0) continue;
+                // add the entity
+                new_entities[pe] = prov_output['value']['entity'][pe];
+                new_entities[pe]['vdjserver:type'] = 'app:inputs';
+                new_entities[pe][input_name] = prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
+                let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
+                new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': pe };
+                //input_array.push(prov_output['value']['entity'][pe]['vdjserver:project_job_file']);
+            }
+            //if (input_array.length > 0) {
+            //    new_entities[new_entity_id][input_name] = input_array.join(' ');
+            //}
+        }
+
+        // uses relations for activities that use this entity
+        let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + e['vdjserver:uuid'];
+        new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': new_entity_id };
+    }
+
+    // add to document
+    for (let i in new_entities) this.entity[i] = new_entities[i];
+    for (let i in new_uses) this.uses[i] = new_uses[i];
+}
+
 AnalysisDocument.prototype.get_input_entities = function() {
     var inputs = {};
 
@@ -355,7 +471,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
         // TODO: notifications
 
         let job_data = {
-            "name": "vdjserver tapis job",
+            "name": this.workflow_description,
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
             "maxMinutes": 60,
@@ -389,7 +505,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
 
             // AIRRMetadata is hard-coded as file input for AIRR metadata file
             // TODO: should be just the repertoires/groups that are used?
-            if (app_inputs[i]['name'] == 'AIRRMetadata') {
+            if ((app_inputs[i]['name'] == 'AIRRMetadata') || (app_inputs[i]['name'] == 'RepertoireGroupMetadata')) {
                 // gather repertoire metadata for the project
                 let AIRRMetadata = await tapisIO.gatherRepertoireMetadataForProject(tapisSettings.serviceAccountKey, project_uuid, true)
                     .catch(function(error) {
@@ -418,6 +534,10 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                 data['Info'] = airr.get_info();
                 data['Repertoire'] = AIRRMetadata;
                 if (groups) data['RepertoireGroup'] = groups;
+                else {
+                    // if RepertoireGroupMetadata but no groups, skip the file
+                    if (app_inputs[i]['name'] == 'RepertoireGroupMetadata') continue;
+                }
 
                 await tapisIO.createProjectDirectory(project_uuid, analysis_path)
                     .catch(function(error) {
@@ -457,7 +577,10 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                                 job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/files/' + input_value, targetPath: input_value});
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
-                                job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + input_value, targetPath: input_value});
+                                // this needs an analysis id and job id for the path
+                                let prev_analysis_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:analysis'];
+                                let prev_job_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:job'];
+                                job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value, targetPath: input_value});
                             }
                             break;
                         }
@@ -491,7 +614,12 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                                 inputArrayEnv.push(input_value);
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
-                                inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + input_value);
+                                // this needs an analysis id and job id for the path
+                                // otherwise the path is skipped but the env variable is still set
+                                let prev_analysis_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:analysis'];
+                                let prev_job_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:job'];
+                                if (prev_analysis_id)
+                                    inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
                                 inputArrayEnv.push(input_value);
                             }
                         }
@@ -686,13 +814,14 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
                 .catch(function(error) {
                     return Promise.reject(error);
                 });
-            if (app['statusCode'] == 404) {
+
+            if (!app) {
                 if (allow_alternate) {
                     // TODO: check alternates
                 }
                 errors.push({ message: "Tapis app for activity not found: " + a });
                 valid = false;
-            } else
+            } else {
                 config.log.info(context, 'vdjserver:app (' + this.activity[a]['vdjserver:app:name'] + ',' + this.activity[a]['vdjserver:app:version'] + ') exists.');
 
                 // check that inputs can be resolved to entity attributes
@@ -744,6 +873,7 @@ AnalysisDocument.prototype.validate = async function(project_uuid, allow_alterna
                         config.log.info(context, 'app parameter (' + app_params[i]['key'] + ') not found, it is ' + app_params[i]['inputMode']);
                     }
                 }
+            }
         }
     }
 

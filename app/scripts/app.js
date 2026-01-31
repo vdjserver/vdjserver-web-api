@@ -280,18 +280,13 @@ ServiceAccount.getToken()
 
         // Manage Tapis jobs
         if (config.enable_job_queues) {
-            config.log.info(context, 'Tapis job queues are enabled, triggering.');
+            config.log.info(context, 'Analysis job queues are ENABLED, triggering.', true);
+            if (config.disable_tapis_job) config.log.info(context, 'Submission of Tapis jobs is DISABLED.', true);
+            else config.log.info(context, 'Submission of Tapis jobs is ENABLED.', true);
             jobQueueManager.triggerQueue();
         } else {
-            config.log.info(context, 'Tapis job queues are disabled, clearing queues.');
+            config.log.info(context, 'Analysis job queues are DISABLED, clearing queues.', true);
             jobQueueManager.clearQueues();
-        }
-
-        if (config.enable_job_queues) {
-            config.log.info(context, 'Job queues are ENABLED.', true);
-            jobQueueManager.triggerQueue();
-        } else {
-            config.log.info(context, 'Job queues are DISABLED.', true);
         }
 
     })

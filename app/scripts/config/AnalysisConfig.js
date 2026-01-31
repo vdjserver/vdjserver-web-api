@@ -65,7 +65,7 @@ var AnalysisConfig = {
               }
             },
             "vdjserver:activity:uses": {
-                "JobFiles": [ 'archive', 'compressed' ],
+                "JobFiles": [ 'archive' ],
                 "SequenceFiles": [ 'sequence_reads', 'sequence_single_read', 'sequence_quality' ],
                 "SequenceForwardPairedFiles": ['sequence_forward_paired_reads'],
                 "SequenceReversePairedFiles": ['sequence_reverse_paired_reads'] ,
@@ -82,10 +82,14 @@ var AnalysisConfig = {
         "vdjpipe": {
             "vdjserver:name":"VDJPipe",
             "activity": {
+              "vdjpipe-ls6-0.3": {
+                  "vdjserver:app:name": "vdjpipe-ls6",
+                  "vdjserver:app:version": "0.3",
+                  "vdjserver:app:default": true
+              },
               "vdjpipe-ls6-0.2": {
                   "vdjserver:app:name": "vdjpipe-ls6",
-                  "vdjserver:app:version": "0.2",
-                  "vdjserver:app:default": true
+                  "vdjserver:app:version": "0.2"
               },
               "vdjpipe-ls6-0.1": {
                   "vdjserver:app:name": "vdjpipe-ls6",
@@ -93,7 +97,7 @@ var AnalysisConfig = {
               }
             },
             "vdjserver:activity:uses": {
-                "JobFiles": [ 'archive', 'compressed' ],
+                "JobFiles": [ 'archive' ],
                 "SequenceFASTQ": [ 'sequence_reads', 'sequence_single_read', 'sequence_quality' ],
                 "SequenceFASTA": [ 'sequence_reads', 'sequence_single_read' ],
                 "SequenceQualityFiles": [ 'sequence_quality'],
@@ -131,7 +135,7 @@ var AnalysisConfig = {
               }
             },
             "vdjserver:activity:uses": {
-                "JobFiles": [ 'archive', 'compressed' ],
+                "JobFiles": [ 'archive' ],
                 "query": [ 'sequence' ]
             },
             "vdjserver:activity:generates": [
@@ -145,18 +149,16 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc-ls6-0.2": {
-                  "vdjserver:app:name": "repcalc-ls6",
-                  "vdjserver:app:version": "0.2",
+              "repcalc2-ls6-0.6": {
+                  "vdjserver:app:name": "repcalc2-ls6",
+                  "vdjserver:app:version": "0.6",
                   "vdjserver:app:default": true
               }
             },
-            "vdjserver:activity:uses": [
-                "job_files",
-                "AIRR TSV",
-                "assigned_clones",
-                "AIRR JSON"
-            ],
+            "vdjserver:activity:uses": {
+                "JobFiles": [ 'archive' ],
+                "vdjserver:project_job_file": [ 'vdj_sequence_annotation', 'assigned_clones' ]
+            },
             "vdjserver:activity:generates": [
                 "AIRR TSV",
                 "AIRR JSON"
