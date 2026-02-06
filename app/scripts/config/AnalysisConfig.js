@@ -82,18 +82,14 @@ var AnalysisConfig = {
         "vdjpipe": {
             "vdjserver:name":"VDJPipe",
             "activity": {
+              "vdjpipe-ls6-0.4": {
+                  "vdjserver:app:name": "vdjpipe-ls6",
+                  "vdjserver:app:version": "0.4",
+                  "vdjserver:app:default": true
+              },
               "vdjpipe-ls6-0.3": {
                   "vdjserver:app:name": "vdjpipe-ls6",
                   "vdjserver:app:version": "0.3",
-                  "vdjserver:app:default": true
-              },
-              "vdjpipe-ls6-0.2": {
-                  "vdjserver:app:name": "vdjpipe-ls6",
-                  "vdjserver:app:version": "0.2"
-              },
-              "vdjpipe-ls6-0.1": {
-                  "vdjserver:app:name": "vdjpipe-ls6",
-                  "vdjserver:app:version": "0.1"
               }
             },
             "vdjserver:activity:uses": {
@@ -116,22 +112,14 @@ var AnalysisConfig = {
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
+              "igblast-ls6-0.8": {
+                  "vdjserver:app:name": "igblast-ls6",
+                  "vdjserver:app:version": "0.8",
+                  "vdjserver:app:default": true
+              },
               "igblast-ls6-0.7": {
                   "vdjserver:app:name": "igblast-ls6",
                   "vdjserver:app:version": "0.7",
-                  "vdjserver:app:default": true
-              },
-              "igblast-ls6-0.6": {
-                  "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.6",
-              },
-              "igblast-ls6-0.4": {
-                  "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.4",
-              },
-              "igblast-ls6-0.1": {
-                  "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.1"
               }
             },
             "vdjserver:activity:uses": {
@@ -149,10 +137,14 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
+              "repcalc2-ls6-0.7": {
+                  "vdjserver:app:name": "repcalc2-ls6",
+                  "vdjserver:app:version": "0.7",
+                  "vdjserver:app:default": true
+              },
               "repcalc2-ls6-0.6": {
                   "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.6",
-                  "vdjserver:app:default": true
+                  "vdjserver:app:version": "0.6"
               }
             },
             "vdjserver:activity:uses": {
