@@ -234,8 +234,13 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                             if (new_uses_id.length > 0) {
                                 for (let i = 0; i < new_uses_id.length; ++i) {
                                     let newu = new_uses_id[i];
-                                    if (doc.uses[newu]) Promise.reject(new Error('internal error: id is not unique:' + newu));
-                                    doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
+//                                    if (doc.uses[newu]) Promise.reject(new Error('internal error: id is not unique:' + newu));
+//                                    doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
+                                    if (doc.uses[newu]) {
+                                        //Promise.reject(new Error('internal error: id is not unique:' + newu + '\n' + JSON.stringify(doc.uses[newu])));
+                                        config.log.info(context, 'uses id is not unique:' + newu + '\n' + JSON.stringify(doc.uses[newu]));
+                                    } else
+                                        doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
                                 }
                                 //console.log(doc.uses);
                             }
@@ -490,7 +495,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
             "name": this.workflow_description,
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
-            "maxMinutes": 60,
+            "maxMinutes": 240,
             "nodeCount": 1,
             "archiveSystemId": "data-storage.vdjserver.org",
             "archiveSystemDir": '/projects/' + project_uuid + '/' + analysis_path + "/${JobUUID}",
@@ -566,12 +571,9 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                         let group_id = e['vdjserver:uuid'];
                         groups_used[group_id] = rg_by_id[group_id];
                         // add repertoires in group
-                        console.log(groups_used[group_id]);
                         for (let rep_obj in groups_used[group_id]['repertoires']) {
                             let rep_id = groups_used[group_id]['repertoires'][rep_obj]['repertoire_id'];
-                            console.log(rep_id);
                             reps_used[rep_id] = reps_by_id[rep_id];
-                            console.log(reps_by_id[rep_id]);
                         }
                     }
                 }
