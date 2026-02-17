@@ -490,12 +490,9 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                 "envVariables": []
             }
         };
+        if (!this.workflow_description) job_data['name'] = 'vdjserver tapis job for ' + analysis_uuid;
 
-        // apply time multiplier
-        if (this.activity[activity_id]['vdjserver:job:timeMultiplier']) {
-            job_data['maxMinutes'] = job_data['maxMinutes'] * this.activity[activity_id]['vdjserver:job:timeMultiplier'];
-            if (job_data['maxMinutes'] >= config.job_max_minutes) job_data['maxMinutes'] = config.job_max_minutes;
-        }
+        var total_file_size = 0;
 
         // set fileInputs from entities
         let app_inputs = app['jobAttributes']['fileInputs'];
@@ -575,12 +572,18 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                             // is it a project_file?
                             if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_file')) {
                                 job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/files/' + input_value, targetPath: input_value});
+                                let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/files/' + input_value);
+                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
+                                console.log(file_info);
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
                                 // this needs an analysis id and job id for the path
                                 let prev_analysis_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:analysis'];
                                 let prev_job_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:job'];
                                 job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value, targetPath: input_value});
+                                let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
+                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
+                                console.log(file_info);
                             }
                             break;
                         }
@@ -612,14 +615,21 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                             if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_file')) {
                                 inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/files/' + input_value);
                                 inputArrayEnv.push(input_value);
+                                let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/files/' + input_value);
+                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
+                                console.log(file_info);
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
                                 // this needs an analysis id and job id for the path
                                 // otherwise the path is skipped but the env variable is still set
                                 let prev_analysis_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:analysis'];
                                 let prev_job_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:job'];
-                                if (prev_analysis_id)
+                                if (prev_analysis_id) {
                                     inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
+                                    let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
+                                    if (file_info.length == 1) total_file_size += file_info[0]['size'];
+                                    console.log(file_info);
+                                }
                                 inputArrayEnv.push(input_value);
                             }
                         }
@@ -659,6 +669,21 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                     else if (v === false) v = "0";
                     else v = String(v);
                     job_data['parameterSet']['envVariables'].push({ key: param_key, value: v });
+                }
+            }
+        }
+
+        if (this.activity[activity_id]['vdjserver:job:timeMultiplier']) {
+            // apply time multiplier
+            job_data['maxMinutes'] = job_data['maxMinutes'] * this.activity[activity_id]['vdjserver:job:timeMultiplier'];
+            if (job_data['maxMinutes'] >= config.job_max_minutes) job_data['maxMinutes'] = config.job_max_minutes;
+        } else {
+            // estimate schedule
+            console.log(total_file_size);
+            let schedule = AnalysisConfig['apps'][this.workflow_mode]['vdjserver:schedule'];
+            if (schedule) {
+                for (let jt in schedule) {
+                    if (total_file_size > schedule[jt]['inputSize']) job_data['maxMinutes'] = schedule[jt]['time'];
                 }
             }
         }
