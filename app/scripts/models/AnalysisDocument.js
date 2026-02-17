@@ -495,7 +495,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
             "name": this.workflow_description,
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
-            "maxMinutes": 240,
+            "maxMinutes": 60,
             "nodeCount": 1,
             "archiveSystemId": "data-storage.vdjserver.org",
             "archiveSystemDir": '/projects/' + project_uuid + '/' + analysis_path + "/${JobUUID}",
