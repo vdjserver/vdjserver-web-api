@@ -234,8 +234,13 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                             if (new_uses_id.length > 0) {
                                 for (let i = 0; i < new_uses_id.length; ++i) {
                                     let newu = new_uses_id[i];
-                                    if (doc.uses[newu]) Promise.reject(new Error('internal error: id is not unique:' + newu));
-                                    doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
+//                                    if (doc.uses[newu]) Promise.reject(new Error('internal error: id is not unique:' + newu));
+//                                    doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
+                                    if (doc.uses[newu]) {
+                                        //Promise.reject(new Error('internal error: id is not unique:' + newu + '\n' + JSON.stringify(doc.uses[newu])));
+                                        config.log.info(context, 'uses id is not unique:' + newu + '\n' + JSON.stringify(doc.uses[newu]));
+                                    } else
+                                        doc.uses[newu] = { 'prov:activity': 'vdjserver:activity:' + activity_id, 'prov:entity': new_entity_id[i] };
                                 }
                                 //console.log(doc.uses);
                             }
@@ -394,6 +399,22 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
             //}
         }
 
+        // Any AIRR Repertoire or RepertoireGroup entities
+        for (let eid in data['value']['entity']) {
+            if (data['value']['entity'][eid]['airr:type'] == 'Repertoire') {
+                if (!this.entity[eid]) {
+                    new_entities[eid] = data['value']['entity'][eid];
+                    new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+                }
+            }
+            if (data['value']['entity'][eid]['airr:type'] == 'RepertoireGroup') {
+                if (!this.entity[eid]) {
+                    new_entities[eid] = data['value']['entity'][eid];
+                    new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+                }
+            }
+        }
+
         // uses relations for activities that use this entity
         let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + e['vdjserver:uuid'];
         new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': new_entity_id };
@@ -474,7 +495,7 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
             "name": this.workflow_description,
             "appId": this.activity[activity_id]['vdjserver:app:name'],
             "appVersion": this.activity[activity_id]['vdjserver:app:version'],
-            "maxMinutes": 60,
+            "maxMinutes": 240,
             "nodeCount": 1,
             "archiveSystemId": "data-storage.vdjserver.org",
             "archiveSystemDir": '/projects/' + project_uuid + '/' + analysis_path + "/${JobUUID}",
@@ -510,6 +531,9 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                     });
                 if (AIRRMetadata.length == 0) return Promise.reject('AIRR metadata is null');
 
+                let reps_by_id = {};
+                for (let r in AIRRMetadata) reps_by_id[AIRRMetadata[r]['repertoire_id']] = AIRRMetadata[r];
+
                 // gather the repertoire group objects
                 let groupMetadata = await tapisIO.queryMetadataForProject(project_uuid, 'repertoire_group')
                     .catch(function(error) {
@@ -526,11 +550,44 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                     }
                 }
 
+                let rg_by_id = {};
+                for (let rg in groups) rg_by_id[groups[rg]['repertoire_group_id']] = groups[rg];
+
+                let reps_used = {};
+                let groups_used = {};
+                // look in analysis document for used Repertoire and RepertoireGroup
+                for (let u in this.uses) {
+                    let entity_id = this.uses[u]['prov:entity'];
+                    let e = this.entity[entity_id];
+                    if (!e) continue;
+                    if (e['airr:type'] == 'Repertoire') {
+                        let rep_id = e['vdjserver:uuid'];
+                        reps_used[rep_id] = reps_by_id[rep_id];
+                    }
+                    if (e['airr:type'] == 'RepertoireGroup') {
+                        let group_id = e['vdjserver:uuid'];
+                        groups_used[group_id] = rg_by_id[group_id];
+                        // add repertoires in group
+                        for (let rep_obj in groups_used[group_id]['repertoires']) {
+                            let rep_id = groups_used[group_id]['repertoires'][rep_obj]['repertoire_id'];
+                            reps_used[rep_id] = reps_by_id[rep_id];
+                        }
+                    }
+                }
+
+                // convert to list
+                let rep_list = [];
+                for (let rep_id in reps_used) rep_list.push(reps_used[rep_id]);
+                config.log.info(context, 'Using ' + rep_list.length + ' repertoires from ' + AIRRMetadata.length + ' total repertoires in project.');
+                let group_list = [];
+                for (let group_id in groups_used) group_list.push(groups_used[group_id]);
+                config.log.info(context, 'Using ' + group_list.length + ' repertoire groups from ' + groups.length + ' total groups in project.');
+
                 // save in file
                 let data = {};
                 data['Info'] = airr.get_info();
-                data['Repertoire'] = AIRRMetadata;
-                if (groups) data['RepertoireGroup'] = groups;
+                data['Repertoire'] = rep_list;
+                if (groups) data['RepertoireGroup'] = group_list;
                 else {
                     // if RepertoireGroupMetadata but no groups, skip the file
                     if (app_inputs[i]['name'] == 'RepertoireGroupMetadata') continue;
