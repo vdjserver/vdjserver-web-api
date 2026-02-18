@@ -350,15 +350,17 @@ try {
                             msg = config.log.error(context, 'tapisIO.submitTapisJob error' + error);
                         });
                     if (msg) {
+                        analysis['value']['status'] = 'FAILED';
+                        analysis['value']['status_message'] = 'Error when submitting Tapis job.';
                         webhookIO.postToSlack(msg);
-                        return Promise.resolve();
-                    }
-                    if (job['fileInputs']) config.log.info(context, JSON.stringify(JSON.parse(job['fileInputs']), null, 2));
-                    if (job['parameterSet']) config.log.info(context, JSON.stringify(JSON.parse(job['parameterSet']), null, 2));
-                    config.log.info(context, 'Tapis job submitted: ' + job['uuid']);
+                    } else {
+                        if (job['fileInputs']) config.log.info(context, JSON.stringify(JSON.parse(job['fileInputs']), null, 2));
+                        if (job['parameterSet']) config.log.info(context, JSON.stringify(JSON.parse(job['parameterSet']), null, 2));
+                        config.log.info(context, 'Tapis job submitted: ' + job['uuid']);
     
-                    analysis['value']['activity'][a]['prov:startTime'] = new Date().toISOString();
-                    analysis['value']['activity'][a]['vdjserver:job'] = job['uuid'];
+                        analysis['value']['activity'][a]['prov:startTime'] = new Date().toISOString();
+                        analysis['value']['activity'][a]['vdjserver:job'] = job['uuid'];
+                    }
                 }
             }
             //console.log(analysis['value']);
