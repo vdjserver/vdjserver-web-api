@@ -580,8 +580,10 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                 for (let rep_id in reps_used) rep_list.push(reps_used[rep_id]);
                 config.log.info(context, 'Using ' + rep_list.length + ' repertoires from ' + AIRRMetadata.length + ' total repertoires in project.');
                 let group_list = [];
-                for (let group_id in groups_used) group_list.push(groups_used[group_id]);
-                config.log.info(context, 'Using ' + group_list.length + ' repertoire groups from ' + groups.length + ' total groups in project.');
+                if (groups) {
+                    for (let group_id in groups_used) group_list.push(groups_used[group_id]);
+                    config.log.info(context, 'Using ' + group_list.length + ' repertoire groups from ' + groups.length + ' total groups in project.');
+                } else config.log.info(context, 'No groups in project.');
 
                 // save in file
                 let data = {};
@@ -740,7 +742,10 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
             let schedule = AnalysisConfig['apps'][this.workflow_mode]['vdjserver:schedule'];
             if (schedule) {
                 for (let jt in schedule) {
-                    if (total_file_size > schedule[jt]['inputSize']) job_data['maxMinutes'] = schedule[jt]['time'];
+                    if (total_file_size > schedule[jt]['inputSize']) {
+                        job_data['maxMinutes'] = schedule[jt]['time'];
+                        if (schedule[jt]['node']) job_data['nodeCount'] = schedule[jt]['node'];
+                    }
                 }
             }
         }
