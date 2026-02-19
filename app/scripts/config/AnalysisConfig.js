@@ -139,6 +139,14 @@ var AnalysisConfig = {
                 "vdj_sequence_annotation",
                 "annotation_statistics",
                 "assigned_clones"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   2e8,  "time": 120 },
+                { "inputSize":   1e9, "time": 480, "node": 4 },
+                { "inputSize":   5e9, "time": 960, "node": 4 },
+                { "inputSize":   1e10, "time": 960, "node": 8 },
+                { "inputSize":   2e10, "time": 1440, "node": 8 },
+                { "inputSize":   4e10, "time": 2880, "node": 8 }
             ]
         },
         "repcalc": {
