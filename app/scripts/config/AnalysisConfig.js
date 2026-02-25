@@ -156,7 +156,7 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc2-ls6-0.7": {
+              "repcalc2-ls6-0.8": {
                   "vdjserver:app:name": "repcalc2-ls6",
                   "vdjserver:app:version": "0.8",
                   "vdjserver:app:default": true
