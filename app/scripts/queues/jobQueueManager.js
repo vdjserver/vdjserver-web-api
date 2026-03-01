@@ -234,7 +234,8 @@ try {
                     docFailed = true;
                     analysis['value']['status'] = 'FAILED';
                     analysis['value']['status_message'] = 'Tapis job failed: ' + job_entry['id'] + ' for activity: ' + a;
-                    analysis['value']['activity'][a]['prov:endTime'] = job_entry['remoteEnded'];
+                    if (job_entry['remoteEnded']) analysis['value']['activity'][a]['prov:endTime'] = job_entry['remoteEnded'];
+                    else analysis['value']['activity'][a]['prov:endTime'] = job_entry['ended'];
                     await tapisIO.updateDocument(analysis['uuid'], analysis['name'], analysis['value'])
                         .catch(function(error) {
                             msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
