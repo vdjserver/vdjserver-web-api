@@ -177,6 +177,14 @@ var AnalysisConfig = {
             "vdjserver:activity:generates": [
                 "AIRR TSV",
                 "AIRR JSON"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   5e8,  "time": 240 },
+                { "inputSize":   2e9, "time": 240, "node": 4 },
+                { "inputSize":   5e9, "time": 480, "node": 4 },
+                { "inputSize":   1e10, "time": 960, "node": 8 },
+                { "inputSize":   2e10, "time": 1440, "node": 8 },
+                { "inputSize":   4e10, "time": 2880, "node": 8 }
             ]
         },
         "statistics": {
