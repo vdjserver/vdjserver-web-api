@@ -757,6 +757,21 @@ ProjectController.executeWorkflow = async function(request, response) {
     return apiResponseController.sendSuccess(result, response);
 };
 
+ProjectController.primaryAnalysis = function(request, response) {
+    var context = 'ProjectController.primaryAnalysis';
+    var projectUuid = request.params.project_uuid;
+    var analysisUuid = request.params.analysis_uuid;
+    var operation = request.body.operation;
+
+    config.log.info(context, 'start, project: ' + projectUuid + ' analysis: ' + analysisUuid + ' operation: ' + operation);
+
+    // manage primary analysis
+    // extract repertoires from the analysis
+    // get list of any existing data processing records
+
+    return apiResponseController.sendError('Not implemented.', 500, response);
+};
+
 ProjectController.getPendingPROV = function(request, response) {
     var context = 'ProjectController.getPendingPROV';
     var projectUuid = request.params.project_uuid;
