@@ -803,16 +803,40 @@ ProjectController.primaryAnalysis = async function(request, response) {
     }
     //console.log(JSON.stringify(data, null, 2));
 
+    // get tapis job id
+    let activity_key = 'vdjserver:activity:' + data['value']['workflow_mode'];
+    let job_id = data['value']['activity'][activity_key]['vdjserver:job'];
+    if (!job_id) {
+        msg = config.log.error(context, 'Analysis: ' + analysis_uuid + 'is missing Tapis job id for activity: ' + activity_key);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
 
+    // 
+    let prov_output = await tapisIO.getProjectJobFileContents(project_uuid, analysis_uuid, job_id, 'provenance_output.json')
+        .catch(function(error) {
+            return Promise.reject(new Error('Analysis: ' + analysis_uuid + ' and job id: ' + job_id + ', could not read provenance_output.json'));
+        });
+    if (!prov_output['value'])
+        return Promise.reject(new Error('Analysis: ' + analysis_uuid + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+    if (!prov_output['value']['entity'])
+        return Promise.reject(new Error('Analysis: ' + analysis_uuid + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
 
-//     let prov_output = await tapisIO.getProjectJobFileContents(project_uuid, e['vdjserver:uuid'], job_id, 'provenance_output.json')
-//         .catch(function(error) {
-//             return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', could not read provenance_output.json'));
-//         });
-//     if (!prov_output['value'])
-//         return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
-//     if (!prov_output['value']['entity'])
-//         return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+    let tag_list = AnalysisDocument.getUniqueTagsForTool(prov_output['value']);
+    console.log(tag_list);
+    let airr_tsv = AnalysisDocument.getEntitiesWithTag(prov_output['value'], 'vdj_sequence_annotation', false);
+    console.log(airr_tsv);
+    config.log.info(context, 'total ' + airr_tsv.length + ' files for vdj_sequence_annotation.');
+    let airr_tsv_by_rep_id = {};
+    for (let i in airr_tsv)
+        if (airr_tsv[i]['airr:Repertoire'])
+            if (airr_tsv[i]['vdjserver:project_file'])
+                airr_tsv_by_rep_id[airr_tsv[i]['airr:Repertoire']] = airr_tsv[i]['vdjserver:project_file'];
+            else if (airr_tsv[i]['vdjserver:project_job_file'])
+                airr_tsv_by_rep_id[airr_tsv[i]['airr:Repertoire']] = airr_tsv[i]['vdjserver:project_job_file'];
+    let airr_tsv_list = Object.keys(airr_tsv_by_rep_id);
+    config.log.info(context, 'total ' + airr_tsv_list.length + ' files for single repertoire for vdj_sequence_annotation.');
+    console.log(airr_tsv_by_rep_id);
 
     // extract repertoires from the analysis
     let rep_ids = [];
@@ -979,6 +1003,7 @@ ProjectController.primaryAnalysis = async function(request, response) {
             let obj = dpschema.template();
             obj['analysis_provenance_id'] = analysis_uuid;
             obj['primary_annotation'] = true;
+            if (airr_tsv_by_rep_id[rep_id]) obj['data_processing_files'] = [ airr_tsv_by_rep_id[rep_id] ];
 
             dp = await tapisIO.createMetadataForProject(project_uuid, 'data_processing', { "value": obj }, 'data_processing_id')
                 .catch(function(error) {
