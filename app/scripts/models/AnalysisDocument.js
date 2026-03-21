@@ -57,6 +57,43 @@ module.exports = AnalysisDocument;
 var tapisSettings = require('vdj-tapis-js/tapisSettings');
 var tapisIO = tapisSettings.get_default_tapis();
 
+AnalysisDocument.getUniqueTagsForTool = function(analysis_doc) {
+    // provenance needs to be provided
+    if (!analysis_doc) return [];
+
+    let tagList = new Set();
+    for (let entityID in analysis_doc['entity']) {
+        let entity = analysis_doc['entity'][entityID];
+        if (entity['vdjserver:tags']) {
+            let fields = entity['vdjserver:tags'].split(',');
+            for (let field of fields) {
+                tagList.add(field.replace(/\s/g,''));
+            }
+        }
+    }
+    return [...tagList];
+}
+
+AnalysisDocument.getEntitiesWithTag = function(analysis_doc, tag, output_only=true) {
+    if (!analysis_doc) return [];
+
+    var collection = [];
+
+    for (let entityID in analysis_doc['entity']) {
+        let entity = analysis_doc['entity'][entityID];
+        if (output_only && entity['vdjserver:type'] != 'app:outputs') continue;
+
+        if (entity['vdjserver:tags']) {
+            let fields = entity['vdjserver:tags'].split(',');
+
+            if (fields.indexOf(tag) >= 0) {
+                collection.push(entity);
+            }
+        }
+    }
+    return collection;
+}
+
 // Customization for VDJServer app:inputs entities
 //
 // AIRR types like Repertoire and RepertoireGroup get expanded
