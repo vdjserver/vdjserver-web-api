@@ -757,19 +757,295 @@ ProjectController.executeWorkflow = async function(request, response) {
     return apiResponseController.sendSuccess(result, response);
 };
 
-ProjectController.primaryAnalysis = function(request, response) {
+ProjectController.primaryAnalysis = async function(request, response) {
     var context = 'ProjectController.primaryAnalysis';
-    var projectUuid = request.params.project_uuid;
-    var analysisUuid = request.params.analysis_uuid;
+    var project_uuid = request.params.project_uuid;
+    var analysis_uuid = request.params.analysis_uuid;
     var operation = request.body.operation;
+    var msg = "";
 
-    config.log.info(context, 'start, project: ' + projectUuid + ' analysis: ' + analysisUuid + ' operation: ' + operation);
+    config.log.info(context, 'start, project: ' + project_uuid + ' analysis: ' + analysis_uuid + ' operation: ' + operation);
 
     // manage primary analysis
-    // extract repertoires from the analysis
-    // get list of any existing data processing records
+    let data = await tapisIO.getMetadataForProject(project_uuid, analysis_uuid)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving analysis document: ' + analysis_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
 
-    return apiResponseController.sendError('Not implemented.', 500, response);
+    // perform some checks
+    // TODO: is there a primary analysis already?
+    // TODO: AIRR TSV outputs
+    // TODO: set data_processing_files
+    if (data.length == 0)
+        msg = config.log.error(context, 'Analysis document: ' + analysis_uuid + ' not found.');
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    data = data[0];
+
+    if (data['name'] != 'analysis_document')
+        msg = config.log.error(context, 'Object: ' + analysis_uuid + ' is not an analysis_document.');
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // status must be FINISHED
+    if (data['value']['status'] != 'FINISHED') {
+        msg = config.log.error(context, 'Analysis: ' + analysis_uuid + ' is not in FINISHED state.');
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    //console.log(JSON.stringify(data, null, 2));
+
+
+
+//     let prov_output = await tapisIO.getProjectJobFileContents(project_uuid, e['vdjserver:uuid'], job_id, 'provenance_output.json')
+//         .catch(function(error) {
+//             return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', could not read provenance_output.json'));
+//         });
+//     if (!prov_output['value'])
+//         return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+//     if (!prov_output['value']['entity'])
+//         return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
+
+    // extract repertoires from the analysis
+    let rep_ids = [];
+    let group_ids = [];
+    for (let e in data['value']['entity']) {
+        if (data['value']['entity'][e]['airr:type'] == 'Repertoire') rep_ids.push(data['value']['entity'][e]['vdjserver:uuid']);
+        if (data['value']['entity'][e]['airr:type'] == 'RepertoireGroup') group_ids.push(data['value']['entity'][e]['vdjserver:uuid']);
+    }
+    config.log.info(context, 'extracted ' + rep_ids.length + ' repertoires from the analysis.');
+    config.log.info(context, 'extracted ' + group_ids.length + ' repertoire groups from the analysis.');
+    console.log(group_ids);
+
+    // get project repertoires
+    var repertoireMetadata = await tapisIO.queryMetadataForProject(project_uuid, 'repertoire')
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving repertoires for project: ' + project_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    let reps_by_id = {};
+    for (let r in repertoireMetadata) reps_by_id[repertoireMetadata[r]['uuid']] = repertoireMetadata[r];
+    //console.log(JSON.stringify(reps_by_id, null ,2));
+
+    // get project repertoire groups
+    var groupMetadata = await tapisIO.queryMetadataForProject(project_uuid, 'repertoire_group')
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving repertoires for project: ' + project_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    let groups_by_id = {};
+    for (let r in groupMetadata) groups_by_id[groupMetadata[r]['uuid']] = groupMetadata[r];
+    //console.log(JSON.stringify(groups_by_id, null ,2));
+
+    config.log.info(context, 'total ' + repertoireMetadata.length + ' repertoires in project.');
+    config.log.info(context, 'total ' + groupMetadata.length + ' repertoire groups in project.');
+
+    // check analysis repertoire groups are in the project
+    let found = true;
+    for (let i in group_ids) {
+        if (!groups_by_id[group_ids[i]]) {
+            found = false;
+            msg += 'repertoire group: ' + group_ids[i] + ' from analysis: ' + analysis_uuid + ' not found in project.';
+        }
+    }
+    if (!found) {
+        msg = config.log.error(context, msg);
+    }
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // expand the repertoire groups for complete repertoire list
+    let expand_rep_dict = {};
+    for (let i in rep_ids) {
+        let rep_id = rep_ids[i];
+        let rep = reps_by_id[rep_id];
+        expand_rep_dict[rep_id] = rep;
+    }
+    for (let j in group_ids) {
+        let group_id = group_ids[j];
+        let group = groups_by_id[group_id];
+        let group_reps = [];
+        for (let i in group['value']['repertoires']) group_reps.push(group['value']['repertoires'][i]['repertoire_id']);
+        config.log.info(context, 'total ' + group_reps.length + ' repertoires in group: ' + group_id);
+        for (let i in group_reps) {
+            let rep_id = group_reps[i];
+            let rep = reps_by_id[rep_id];
+            expand_rep_dict[rep_id] = rep;
+        }
+    }
+    let complete_rep_list = Object.keys(expand_rep_dict);
+    config.log.info(context, 'total ' + complete_rep_list.length + ' analysis repertoires.');
+
+    // completed list of analysis repertoires, check they are in the project
+    found = true;
+    for (let rep_id in expand_rep_dict) {
+        if (!reps_by_id[rep_id]) {
+            found = false;
+            msg += 'repertoire: ' + rep_id + ' from analysis: ' + analysis_uuid + ' not found in project.';
+        }
+    }
+    if (!found) {
+        msg = config.log.error(context, msg);
+    }
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+
+    // get existing data processing objects
+    var dps = await tapisIO.queryMetadataForProject(project_uuid, 'data_processing')
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving data_processing objects for project: ' + project_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    let dps_by_id = {};
+    for (let d in dps) dps_by_id[dps[d]['uuid']] = dps[d]['uuid'];
+    config.log.info(context, 'project has ' + dps.length + ' data_processing records.');
+    //console.log(JSON.stringify(dps, null ,2));
+
+    // special case: if there are no existing data_processing records
+
+    // loop through analysis repertoires
+    var dpschema = airr.get_schema('DataProcessing');
+    for (let rep_id in expand_rep_dict) {
+        let rep = expand_rep_dict[rep_id];
+        let dp_id = null;
+        //console.log(JSON.stringify(rep['value'], null, 2));
+        if (rep['value']['data_processing'] && rep['value']['data_processing'][0] && rep['value']['data_processing'][0]['vdjserver_uuid'])
+            dp_id = rep['value']['data_processing'][0]['vdjserver_uuid'];
+        let dp = null;
+        if (dp_id) dp = dps_by_id[dp_id];
+
+        let delete_dp = false;
+        let create_dp = true;
+        switch (operation) {
+            case 'remove': {
+                create_dp = false;
+                if (dp) {
+                    config.log.info(context, 'removing data_processing: ' + dp_id);
+                    delete_dp = true;
+                } else {
+                    config.log.info(context, 'no data_processing to remove for repertoire: ' + rep_id);
+                }
+                break;
+            }
+            case 'replace': {
+                if (dp) {
+                    delete_dp = true;
+                }
+                break;
+            }
+            case 'ignore': {
+                if (dp) {
+                    delete_dp = false;
+                    create_dp = false;
+                }
+                break;
+            }
+        }
+
+        if (delete_dp) {
+            // delete data_procesing
+            await tapisIO.deleteMetadataForProject(project_uuid, dp_id)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + project_uuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+            config.log.info(context, 'removed data processing: ' + dp_id);
+        }
+
+        // create the AIRR data_processing object
+        if (create_dp) {
+            let obj = dpschema.template();
+            obj['analysis_provenance_id'] = analysis_uuid;
+            obj['primary_annotation'] = true;
+
+            dp = await tapisIO.createMetadataForProject(project_uuid, 'data_processing', { "value": obj }, 'data_processing_id')
+                .catch(function(error) {
+                    msg = config.log.error(context, 'project: ' + project_uuid + ', error: ' + error);
+                    webhookIO.postToSlack(msg);            
+                    return apiResponseController.sendError(msg, 500, response);
+                });
+            dp_id = dp['uuid'];
+            console.log(dp);
+            config.log.info(context, 'created data processing: ' + dp_id);
+        }
+
+        // update data_processing in the repertoire
+        if (operation == 'remove') rep['value']['data_processing'][0]['vdjserver_uuid'] = null;
+        else rep['value']['data_processing'][0]['vdjserver_uuid'] = dp_id;
+        console.log(dp_id);
+        //console.log(JSON.stringify(rep['value'], null, 2));
+        await tapisIO.updateDocument(rep['uuid'], rep['name'], rep['value'])
+            .catch(function(error) {
+                msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+    }
+
+    // update the analysis document
+    if (operation == 'remove') {
+        // remove any remaining data_processings
+        var dps = await tapisIO.queryMetadataForProject(project_uuid, 'data_processing')
+            .catch(function(error) {
+                msg = config.log.error(context, 'Error while retrieving data_processing objects for project: ' + project_uuid);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return apiResponseController.sendError(msg, 500, response);
+        }
+        config.log.info(context, 'project has ' + dps.length + ' extraneous data_processing records.');
+        if (dps.length > 0) {
+            for (let i in dps) {
+                let dp_id = dps[i]['uuid'];
+                await tapisIO.deleteMetadataForProject(project_uuid, dp_id)
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'project: ' + project_uuid + ', error: ' + error);
+                        webhookIO.postToSlack(msg);
+                        return apiResponseController.sendError(msg, 500, response);
+                    });
+                config.log.info(context, 'deleted extraneous data processing: ' + dp_id);
+            }
+        }
+
+        data['value']['primary'] = false;
+    } else
+        data['value']['primary'] = true;
+
+    let analysis_obj = await tapisIO.updateDocument(data['uuid'], data['name'], data['value'])
+        .catch(function(error) {
+            msg = config.log.error(context, 'tapisIO.updateDocument error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    config.log.info(context, 'success end, project: ' + project_uuid + ' analysis: ' + analysis_uuid + ' operation: ' + operation);
+    return apiResponseController.sendSuccess(analysis_obj, response);
 };
 
 ProjectController.getPendingPROV = function(request, response) {

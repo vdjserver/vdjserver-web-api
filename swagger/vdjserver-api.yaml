@@ -1064,12 +1064,11 @@ paths:
               properties:
                 operation:
                   type: string
-                  description: Remove primary status. Replace primary status will overwrite any existing primary status. Merge primary status, assigns primary analysis for repertoires without one. Check if repertoire already has a primary analysis and return error.
+                  description: Removes and creates AIRR data processing records for primary analysis.
                   enum:
                     - remove
                     - replace
-                    - merge
-                    - check
+                    - ignore
               required:
                 - operation
       responses:
