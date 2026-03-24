@@ -1004,11 +1004,16 @@ ProjectController.primaryAnalysis = async function(request, response) {
             obj['analysis_provenance_id'] = analysis_uuid;
             obj['primary_annotation'] = true;
             if (airr_tsv_by_rep_id[rep_id]) obj['data_processing_files'] = [ airr_tsv_by_rep_id[rep_id] ];
+            else {
+                msg = config.log.error(context, 'repertoire: ' + rep_id + ' does not have any data_processing_files. INVALID but ignoring.');
+                webhookIO.postToSlack(msg);
+                msg = null;
+            }
 
             dp = await tapisIO.createMetadataForProject(project_uuid, 'data_processing', { "value": obj }, 'data_processing_id')
                 .catch(function(error) {
                     msg = config.log.error(context, 'project: ' + project_uuid + ', error: ' + error);
-                    webhookIO.postToSlack(msg);            
+                    webhookIO.postToSlack(msg);
                     return apiResponseController.sendError(msg, 500, response);
                 });
             dp_id = dp['uuid'];
