@@ -1036,6 +1036,60 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/primary/{analysis_uuid}:
+    post:
+      description: Manage primary status for analysis for the repertories within it. Creates/deletes AIRR data processing records.
+      operationId: primaryAnalysis
+      tags:
+        - project
+      security:
+        - project_write_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: analysis_uuid
+          in: path
+          description: analysis identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              properties:
+                operation:
+                  type: string
+                  description: Removes and creates AIRR data processing records for primary analysis.
+                  enum:
+                    - remove
+                    - replace
+                    - ignore
+              required:
+                - operation
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/visualize:
     post:
       description: generate visualization for project

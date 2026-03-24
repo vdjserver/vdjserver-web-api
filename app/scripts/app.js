@@ -245,6 +245,7 @@ ServiceAccount.getToken()
                 addPermissionsForUsername: async function(req, res) { return try_function(req, res, projectController.addPermissionsForUsername); },
                 removePermissionsForUsername: async function(req, res) { return try_function(req, res, projectController.removePermissionsForUsername); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
+                primaryAnalysis: async function(req, res) { return try_function(req, res, projectController.primaryAnalysis); },
                 generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
                 unpublishProject: async function(req, res) { return try_function(req, res, projectController.unpublishProject); },

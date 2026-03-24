@@ -57,6 +57,43 @@ module.exports = AnalysisDocument;
 var tapisSettings = require('vdj-tapis-js/tapisSettings');
 var tapisIO = tapisSettings.get_default_tapis();
 
+AnalysisDocument.getUniqueTagsForTool = function(analysis_doc) {
+    // provenance needs to be provided
+    if (!analysis_doc) return [];
+
+    let tagList = new Set();
+    for (let entityID in analysis_doc['entity']) {
+        let entity = analysis_doc['entity'][entityID];
+        if (entity['vdjserver:tags']) {
+            let fields = entity['vdjserver:tags'].split(',');
+            for (let field of fields) {
+                tagList.add(field.replace(/\s/g,''));
+            }
+        }
+    }
+    return [...tagList];
+}
+
+AnalysisDocument.getEntitiesWithTag = function(analysis_doc, tag, output_only=true) {
+    if (!analysis_doc) return [];
+
+    var collection = [];
+
+    for (let entityID in analysis_doc['entity']) {
+        let entity = analysis_doc['entity'][entityID];
+        if (output_only && entity['vdjserver:type'] != 'app:outputs') continue;
+
+        if (entity['vdjserver:tags']) {
+            let fields = entity['vdjserver:tags'].split(',');
+
+            if (fields.indexOf(tag) >= 0) {
+                collection.push(entity);
+            }
+        }
+    }
+    return collection;
+}
+
 // Customization for VDJServer app:inputs entities
 //
 // AIRR types like Repertoire and RepertoireGroup get expanded
@@ -365,12 +402,12 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
             return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
 
         // entity with tapis file object
-        let new_entity_id = 'vdjserver:project_job_file:' + job_id + '.zip';
-        new_entities[new_entity_id] = { "vdjserver:type": "app:inputs" };
-        new_entities[new_entity_id]['vdjserver:analysis'] = e['vdjserver:uuid'];
-        new_entities[new_entity_id]['vdjserver:job'] = job_id;
+        //let new_entity_id = 'vdjserver:project_job_file:' + job_id + '.zip';
+        //new_entities[new_entity_id] = { "vdjserver:type": "app:inputs" };
+        //new_entities[new_entity_id]['vdjserver:analysis'] = e['vdjserver:uuid'];
+        //new_entities[new_entity_id]['vdjserver:job'] = job_id;
         // TODO: this (JobFiles) is hard-coded, we should look up the name in the config for the activity
-        new_entities[new_entity_id]['JobFiles'] = job_id + '.zip';
+        //new_entities[new_entity_id]['JobFiles'] = job_id + '.zip';
         // TODO: the entity should have a vdjserver uuid
 
         // what does this app use?
@@ -390,6 +427,10 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
                 new_entities[pe] = prov_output['value']['entity'][pe];
                 new_entities[pe]['vdjserver:type'] = 'app:inputs';
                 new_entities[pe][input_name] = prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
+                if (prov_output['value']['entity'][pe]['vdjserver:tags'] == 'archive') { // JobFiles is hard-coded, for archive tag bring forward the analysis and job id
+                    new_entities[pe]['vdjserver:analysis'] = e['vdjserver:uuid'];
+                    new_entities[pe]['vdjserver:job'] = job_id;
+                }
                 let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
                 new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': pe };
                 //input_array.push(prov_output['value']['entity'][pe]['vdjserver:project_job_file']);
@@ -416,8 +457,8 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
         }
 
         // uses relations for activities that use this entity
-        let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + e['vdjserver:uuid'];
-        new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': new_entity_id };
+        //let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + e['vdjserver:uuid'];
+        //new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': new_entity_id };
     }
 
     // add to document

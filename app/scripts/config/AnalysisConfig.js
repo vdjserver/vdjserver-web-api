@@ -82,14 +82,10 @@ var AnalysisConfig = {
         "vdjpipe": {
             "vdjserver:name":"VDJPipe",
             "activity": {
-              "vdjpipe-ls6-0.4": {
+              "vdjpipe-ls6-0.5": {
                   "vdjserver:app:name": "vdjpipe-ls6",
-                  "vdjserver:app:version": "0.4",
+                  "vdjserver:app:version": "0.5",
                   "vdjserver:app:default": true
-              },
-              "vdjpipe-ls6-0.3": {
-                  "vdjserver:app:name": "vdjpipe-ls6",
-                  "vdjserver:app:version": "0.3",
               }
             },
             "vdjserver:activity:uses": {
@@ -119,18 +115,10 @@ var AnalysisConfig = {
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
-              "igblast-ls6-0.9": {
+              "igblast-ls6-0.10": {
                   "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.9",
+                  "vdjserver:app:version": "0.10",
                   "vdjserver:app:default": true
-              },
-              "igblast-ls6-0.8": {
-                  "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.8"
-              },
-              "igblast-ls6-0.7": {
-                  "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.7",
               }
             },
             "vdjserver:activity:uses": {
@@ -156,18 +144,10 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc2-ls6-0.8": {
+              "repcalc2-ls6-0.9": {
                   "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.8",
+                  "vdjserver:app:version": "0.9",
                   "vdjserver:app:default": true
-              },
-              "repcalc2-ls6-0.7": {
-                  "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.7"
-              },
-              "repcalc2-ls6-0.6": {
-                  "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.6"
               }
             },
             "vdjserver:activity:uses": {
@@ -177,6 +157,14 @@ var AnalysisConfig = {
             "vdjserver:activity:generates": [
                 "AIRR TSV",
                 "AIRR JSON"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   5e8,  "time": 240 },
+                { "inputSize":   2e9, "time": 240, "node": 4 },
+                { "inputSize":   5e9, "time": 480, "node": 4 },
+                { "inputSize":   1e10, "time": 960, "node": 8 },
+                { "inputSize":   2e10, "time": 1440, "node": 8 },
+                { "inputSize":   4e10, "time": 2880, "node": 8 }
             ]
         },
         "statistics": {
