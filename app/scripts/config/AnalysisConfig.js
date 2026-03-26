@@ -141,6 +141,31 @@ var AnalysisConfig = {
                 { "inputSize":   4e10, "time": 2880, "node": 8 }
             ]
         },
+        "tilde": {
+            "vdjserver:name":"TILDE",
+            "activity": {
+              "tilde-ls6-0.1": {
+                  "vdjserver:app:name": "tilde-ls6",
+                  "vdjserver:app:version": "0.1",
+                  "vdjserver:app:default": true
+              }
+            },
+            "vdjserver:activity:uses": {
+                "JobFiles": [ 'archive' ],
+                "AIRRFiles": [ 'AIRR TSV', 'vdj_sequence_annotation' ]
+            },
+            "vdjserver:activity:inputs": [
+                "igblast"
+            ],
+            "vdjserver:activity:generates": [
+                "receptor_matches",
+                "epitope_matches"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   2e8,  "time": 120 },
+                { "inputSize":   1e9, "time": 480, "node": 4 }
+            ]
+        },
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
