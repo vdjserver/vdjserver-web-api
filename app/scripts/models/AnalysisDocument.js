@@ -773,21 +773,24 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
             }
         }
 
+        // estimate schedule
+        config.log.info(context, 'total input size: ' + total_file_size);
+        let schedule = AnalysisConfig['apps'][this.workflow_mode]['vdjserver:schedule'];
+        if (schedule) {
+            for (let jt in schedule) {
+                if (total_file_size > schedule[jt]['inputSize']) {
+                    job_data['maxMinutes'] = schedule[jt]['time'];
+                    if (schedule[jt]['node']) job_data['nodeCount'] = schedule[jt]['node'];
+                }
+            }
+        }
         if (this.activity[activity_id]['vdjserver:job:timeMultiplier']) {
             // apply time multiplier
             job_data['maxMinutes'] = job_data['maxMinutes'] * this.activity[activity_id]['vdjserver:job:timeMultiplier'];
-            if (job_data['maxMinutes'] >= config.job_max_minutes) job_data['maxMinutes'] = config.job_max_minutes;
-        } else {
-            // estimate schedule
-            console.log(total_file_size);
-            let schedule = AnalysisConfig['apps'][this.workflow_mode]['vdjserver:schedule'];
-            if (schedule) {
-                for (let jt in schedule) {
-                    if (total_file_size > schedule[jt]['inputSize']) {
-                        job_data['maxMinutes'] = schedule[jt]['time'];
-                        if (schedule[jt]['node']) job_data['nodeCount'] = schedule[jt]['node'];
-                    }
-                }
+            if (job_data['maxMinutes'] >= config.job_max_minutes) {
+                // if hit maximum time then also double the node count
+                job_data['maxMinutes'] = config.job_max_minutes;
+                job_data['nodeCount'] = job_data['nodeCount'] * 2;
             }
         }
 
