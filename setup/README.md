@@ -18,7 +18,9 @@ curl -H "X-Tapis-Token: $JWT" https://vdjserver.tapis.io/v3/oauth2/clients
 
 + Production server (production)
 
-
+```
+curl -H "X-Tapis-Token: $JWT" -H "Content-type: application/json" -d '{"client_id": "production", "callback_url": "https://vdjserver.org/oauth2/callback"}' https://vdjserver.tapis.io/v3/oauth2/clients
+```
 
 + Staging server (staging)
 
