@@ -202,13 +202,31 @@ var AnalysisConfig = {
             }
         },
         "cellranger": {
-            "vdjserver:name":"Cellranger",
+            "vdjserver:name":"Cell Ranger",
             "activity": {
-              "cellranger-ls6-0.1": {
+              "cellranger-ls6-10.0.0": {
                   "vdjserver:app:name": "cellranger-ls6",
-                  "vdjserver:app:version": "0.1"
+                  "vdjserver:app:version": "10.0.0",
+                  "vdjserver:app:default": true
               }
-            }
+            },
+            "vdjserver:activity:uses": {
+                "ForwardPairedFiles": ['sequence_forward_paired_reads'],
+                "ReversePairedFiles": ['sequence_reverse_paired_reads']
+            },
+            "vdjserver:activity:generates": [
+                "AIRR TSV",
+                "AIRR JSON",
+                "vdj_sequence_annotation"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   2e8,  "time": 120 },
+                { "inputSize":   1e9, "time": 480, "node": 4 },
+                { "inputSize":   5e9, "time": 960, "node": 4 },
+                { "inputSize":   1e10, "time": 960, "node": 8 },
+                { "inputSize":   2e10, "time": 1440, "node": 8 },
+                { "inputSize":   4e10, "time": 2880, "node": 8 }
+            ]
         },
         "tcrmatch": {
             "vdjserver:name":"TCRMatch",

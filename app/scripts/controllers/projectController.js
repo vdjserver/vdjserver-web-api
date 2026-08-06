@@ -2021,6 +2021,127 @@ ProjectController.importTable = async function(request, response) {
         return hasData;
     }
 
+    // manually convert text to ontology for some fields
+    var manualTranslation = function(field, value) {
+        if (value == '') return value;
+        if (value == null) return null;
+        if (value == undefined) return null;
+        switch (field) {
+            case 'species':
+            case 'cell_species':
+                switch (value.toLowerCase()) {
+                    case 'human':
+                    case 'h':
+                    case 'homo':
+                    case 'homo sapiens':
+                        return 'NCBITAXON:9606';
+                    case 'mouse':
+                    case 'm':
+                    case 'mice':
+                    case 'mus':
+                    case 'mus musculus':
+                        return 'NCBITAXON:10088';
+                    case 'monkey':
+                    case 'macaque':
+                    case 'macaca mulatta':
+                        return 'NCBITAXON:9544';
+                    case 'vicugna pacos huacaya':
+                        return 'NCBITAXON:273913';
+                    default:
+                        return value.toUpperCase();
+                }
+            case 'age_unit':
+            case 'collection_time_point_relative_unit':
+                switch(value.toLowerCase()) {
+                    case 'h':
+                    case 'hr':
+                    case 'hrs':
+                    case 'hour':
+                    case 'hours':
+                    case 'hour(s)':
+                        return 'UO:0000032';
+                    case 'd':
+                    case 'day':
+                    case 'days':
+                    case 'day(s)':
+                    case 'dy':
+                        return 'UO:0000033';
+                    case 'w':
+                    case 'week':
+                    case 'weeks':
+                    case 'week(s)':
+                    case 'wk':
+                        return 'UO:0000034';
+                    case 'm':
+                    case 'mth':
+                    case 'mths':
+                    case 'mnth':
+                    case 'month':
+                    case 'months':
+                    case 'month(s)':
+                        return 'UO:0000035';
+                    case 'y':
+                    case 'yr':
+                    case 'yrs':
+                    case 'year':
+                    case 'years':
+                    case 'year(s)':
+                        return 'UO:0000036';
+                    default:
+                        return value;
+                }
+            case 'template_amount_unit':
+                switch(value.toLowerCase()) {
+                    case 'p':
+                    case 'pg':
+                    case 'picogram':
+                    case 'picograms':
+                    case 'picogram(s)':
+                        return 'UO:0000025';
+                    case 'n':
+                    case 'ng':
+                    case 'nanogram':
+                    case 'nanograms':
+                    case 'nanogram(s)':
+                        return 'UO:0000024';
+                    case 'mcg':
+                    case 'ug':
+                    case 'microgram':
+                    case 'micrograms':
+                    case 'microgram(s)':
+                        return 'UO:0000023';
+                    case 'mg':
+                    case 'milligram':
+                    case 'milligrams':
+                    case 'milligram(s)':
+                        return 'UO:0000022';
+                    case 'g':
+                    case 'gram':
+                    case 'grams':
+                    case 'gram(s)':
+                        return 'UO:0000021';
+                    case 'kg':
+                    case 'kilogram':
+                    case 'kilograms':
+                    case 'kilogram(s)':
+                        return 'UO:0000009';
+                    default:
+                        return value;
+                }
+            case 'sex':
+                switch(value.toLowerCase()) {
+                    case 'm':
+                        return 'male';
+                    case 'f':
+                        return 'female';
+                    default:
+                        return value.toLowerCase();
+                }
+        }
+        return value;
+    }
+
+
     var validation_errors = [];
     var ontology_errors = [];
     var curie_cache = {};
@@ -2039,78 +2160,6 @@ ProjectController.importTable = async function(request, response) {
         config.log.info(context, 'max_diagnosis: ' + max_diagnosis);
 
         // TODO: no support for custom fields beyond the schema
-
-        var manualTranslation = function(field, value) {
-            if (value == '') return value;
-            if (value == null) return null;
-            if (value == undefined) return null;
-            switch (field) {
-                case 'species':
-                    switch (value.toLowerCase()) {
-                        case 'human':
-                        case 'h':
-                        case 'homo':
-                        case 'homo sapiens':
-                            return 'NCBITAXON:9606';
-                        case 'mouse':
-                        case 'm':
-                        case 'mice':
-                        case 'mus':
-                        case 'mus musculus':
-                            return 'NCBITAXON:10088';
-                        case 'monkey':
-                        case 'macaque':
-                        case 'macaca mulatta':
-                            return 'NCBITAXON:9544';
-                        default:
-                            return value;
-                    }
-                case 'age_unit':
-                    switch(value.toLowerCase()) {
-                        case 'h':
-                        case 'hr':
-                        case 'hrs':
-                        case 'hour':
-                        case 'hours':
-                            return 'UO:0000032';
-                        case 'd':
-                        case 'day':
-                        case 'days':
-                        case 'dy':
-                            return 'UO:0000033';
-                        case 'w':
-                        case 'week':
-                        case 'weeks':
-                        case 'wk':
-                            return 'UO:0000034';
-                        case 'm':
-                        case 'mth':
-                        case 'mths':
-                        case 'mnth':
-                        case 'month':
-                        case 'months':
-                            return 'UO:0000035';
-                        case 'y':
-                        case 'yr':
-                        case 'yrs':
-                        case 'year':
-                        case 'years':
-                            return 'UO:0000036';
-                        default:
-                            return value;
-                    }
-                case 'sex':
-                    switch(value.toLowerCase()) {
-                        case 'm':
-                            return 'male';
-                        case 'f':
-                            return 'female';
-                        default:
-                            return value.toLowerCase();
-                    }
-            }
-            return value;
-        }
 
         // simple fields
         let subject_columns = [];
@@ -2457,7 +2506,7 @@ ProjectController.importTable = async function(request, response) {
         // take values from import row and stick into appropriate fields in given sample object
         var assign_sample_values = async function(i, dataRow, sample) {
             for (let j in sample_columns) {
-                let data_value = dataRow[sample_columns[j]];
+                let data_value = manualTranslation(sample_columns[j], dataRow[sample_columns[j]]);
                 if (schema.is_ontology(sample_columns[j])) {
                     if (data_value != '') {
                         if (curie_cache[data_value]) sample[sample_columns[j]] = curie_cache[data_value];
