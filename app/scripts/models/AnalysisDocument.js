@@ -164,6 +164,25 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                             let use_type = app['vdjserver:activity:uses'][input_name][ut];
                             console.log(input_name, use_type);
                             switch(use_type) {
+                                case 'sequence_single_read':
+                                    for (let i in rep['sample']) {
+                                        let seqfiles = rep['sample'][i]['sequencing_files'];
+                                        //console.log(seqfiles);
+                                        if (seqfiles['filename'] && seqfiles['file_type'] == 'fastq') {
+                                            found = true;
+                                            new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
+                                            let extra = {};
+                                            extra[input_name] = seqfiles['filename'];
+                                            extra['airr:Repertoire'] = rep['repertoire_id']
+                                            new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
+                                            if (project_file_map[seqfiles['filename']]) {
+                                                extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                            }
+                                            extras.push(extra);
+                                        }
+                                    }
+                                    break;
+
                                 case 'sequence_forward_paired_reads':
                                     // identifiers use the forward read file
                                     for (let i in rep['sample']) {
@@ -225,7 +244,7 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                 case 'sequence':
                                     for (let i in rep['sample']) {
                                         let seqfiles = rep['sample'][i]['sequencing_files'];
-                                        console.log(seqfiles);
+                                        //console.log(seqfiles);
                                         if (seqfiles['filename'] && seqfiles['file_type'] == 'fasta') {
                                             found = true;
                                             new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
@@ -241,7 +260,6 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                     }
                                     break;
 
-                                case 'sequence_single_read':
                                 case 'sequence_quality':
                                 case 'sequence_reads':
                                 case 'archive':

@@ -91,7 +91,7 @@ var AnalysisConfig = {
             "vdjserver:activity:uses": {
                 "JobFiles": [ 'archive' ],
                 "SequenceFASTQ": [ 'sequence_reads', 'sequence_single_read', 'sequence_quality' ],
-                "SequenceFASTA": [ 'sequence_reads', 'sequence_single_read' ],
+                "SequenceFASTA": [ 'sequence_reads' ],
                 "SequenceQualityFiles": [ 'sequence_quality'],
                 "SequenceForwardPairedFiles": ['sequence_forward_paired_reads'],
                 "SequenceReversePairedFiles": ['sequence_reverse_paired_reads'] ,
