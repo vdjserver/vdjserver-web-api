@@ -91,7 +91,7 @@ var AnalysisConfig = {
             "vdjserver:activity:uses": {
                 "JobFiles": [ 'archive' ],
                 "SequenceFASTQ": [ 'sequence_reads', 'sequence_single_read', 'sequence_quality' ],
-                "SequenceFASTA": [ 'sequence_reads', 'sequence_single_read' ],
+                "SequenceFASTA": [ 'sequence_reads' ],
                 "SequenceQualityFiles": [ 'sequence_quality'],
                 "SequenceForwardPairedFiles": ['sequence_forward_paired_reads'],
                 "SequenceReversePairedFiles": ['sequence_reverse_paired_reads'] ,
@@ -115,9 +115,9 @@ var AnalysisConfig = {
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
-              "igblast-ls6-0.10": {
+              "igblast-ls6-0.11": {
                   "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.10",
+                  "vdjserver:app:version": "0.11",
                   "vdjserver:app:default": true
               }
             },
@@ -169,9 +169,9 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc2-ls6-0.9": {
+              "repcalc2-ls6-0.10": {
                   "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.9",
+                  "vdjserver:app:version": "0.10",
                   "vdjserver:app:default": true
               }
             },
@@ -204,9 +204,9 @@ var AnalysisConfig = {
         "cellranger": {
             "vdjserver:name":"Cell Ranger",
             "activity": {
-              "cellranger-ls6-10.0.0": {
+              "cellranger-ls6-0.2": {
                   "vdjserver:app:name": "cellranger-ls6",
-                  "vdjserver:app:version": "10.0.0",
+                  "vdjserver:app:version": "0.2",
                   "vdjserver:app:default": true
               }
             },
