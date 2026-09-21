@@ -169,9 +169,9 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc2-ls6-0.9": {
+              "repcalc2-ls6-0.10": {
                   "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.9",
+                  "vdjserver:app:version": "0.10",
                   "vdjserver:app:default": true
               }
             },
@@ -204,9 +204,9 @@ var AnalysisConfig = {
         "cellranger": {
             "vdjserver:name":"Cell Ranger",
             "activity": {
-              "cellranger-ls6-10.0.0": {
+              "cellranger-ls6-0.2": {
                   "vdjserver:app:name": "cellranger-ls6",
-                  "vdjserver:app:version": "10.0.0",
+                  "vdjserver:app:version": "0.2",
                   "vdjserver:app:default": true
               }
             },
