@@ -147,36 +147,6 @@ TokenController.getOAuthToken = async function(request, response) {
     //console.log(tapisProfile);
     var username = tapisProfile['result']['username'];
 
-//     // does this user have a verification record?
-//     var userVerificationMetadata = await tapisIO.getUserVerificationMetadata(username)
-//         .catch(function(error) {
-//             msg = 'error getting user verification for username: ' + username + ', error: ' + error;
-//         });
-//     if (msg) {
-//         msg = config.log.error(context, msg);
-//         webhookIO.postToSlack(msg);
-//         return apiResponseController.sendError(msg, 500, response);
-//     }
-//     //console.log(userVerificationMetadata);
-//     if (!userVerificationMetadata || userVerificationMetadata.length == 0) {
-//         config.log.info(context, 'first login? No user verification record, creating for user: ' + username);
-// 
-//         // create user verification
-//         // TODO: this verify needs to be shifted to email verification
-//         userVerificationMetadata = await tapisIO.createUserVerificationMetadata(username, true)
-//             .catch(function(error) {
-//                 msg = 'verification metadata failed for user: ' + username + ', error: ' + error;
-//             });
-//         if (msg) {
-//             msg = config.log.error(context, msg);
-//             webhookIO.postToSlack(msg);
-//             return apiResponseController.sendError(msg, 500, response);
-//         }
-// 
-//         config.log.info(context, 'verification metadata (' + userVerificationMetadata.uuid
-//                     + ') successful for user: ' + username);
-//     }
-
     // does this user have a profile?
     var userProfile = await tapisIO.getUserProfile(username)
         .catch(function(error) {
@@ -226,19 +196,36 @@ TokenController.getOAuthToken = async function(request, response) {
 };
 
 // Refreshes a user token from Agave and returns it to the client
-TokenController.refreshOAuthToken = function(request, response) {
+TokenController.refreshOAuthToken = async function(request, response) {
+    const context = 'TokenController.refreshOAuthToken';
+    var msg = null;
 
-    console.log('VDJ-API INFO: TokenController.refreshToken - begin for ' + request.body.username);
+    config.log.info(context, 'begin for ' + request.body.username + ' and client: ' + request.body.client_id);
+    //console.log(request.body);
 
-    return tapisIO.refreshToken(request.body)
-        .then(function(agaveToken) {
-            console.log('VDJ-API INFO: TokenController.refreshToken - complete for ' + request.body.username);
-            apiResponseController.sendSuccess(agaveToken, response);
-        })
+    // get the client
+    var client = await tapisIO.getClient(request.body.client_id)
         .catch(function(error) {
-            var msg = 'VDJ-API ERROR: TokenController.refreshToken - error - username ' + request.body.username + ', error ' + error;
-            console.error(msg);
-            webhookIO.postToSlack(msg);
-            apiResponseController.sendError(error.message, 401, response);
+            msg = 'error attempting to get client: ' + request.body.client_id + ', error: ' + error;
         });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    var token = await tapisIO.refreshOAuthToken(client, request.body.refresh_token.refresh_token)
+        .catch(function(error) {
+            msg = 'error refreshing token for client: ' + request.body.client_id + ', error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+    //console.log(token);
+
+    msg = config.log.info(context, 'refresh successful for ' + request.body.username);
+    webhookIO.postToSlack(msg);
+    apiResponseController.sendSuccess(token, response);
 };
