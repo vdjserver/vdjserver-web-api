@@ -244,10 +244,13 @@ paths:
               properties:
                 username:
                   type: string
-                refresh_token:
+                client_id:
                   type: string
+                refresh_token:
+                  type: object
               required:
                 - username
+                - client_id
                 - refresh_token
       responses:
         '200':
