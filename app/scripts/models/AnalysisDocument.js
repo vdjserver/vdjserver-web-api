@@ -169,16 +169,18 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                         let seqfiles = rep['sample'][i]['sequencing_files'];
                                         //console.log(seqfiles);
                                         if (seqfiles['filename'] && seqfiles['file_type'] == 'fastq') {
-                                            found = true;
-                                            new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
-                                            let extra = {};
-                                            extra[input_name] = seqfiles['filename'];
-                                            extra['airr:Repertoire'] = rep['repertoire_id']
-                                            new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
-                                            if (project_file_map[seqfiles['filename']]) {
-                                                extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                            if (!seqfiles['paired_filename']) { // make sure no paired file
+                                                found = true;
+                                                new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
+                                                let extra = {};
+                                                extra[input_name] = seqfiles['filename'];
+                                                extra['airr:Repertoire'] = rep['repertoire_id']
+                                                new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
+                                                if (project_file_map[seqfiles['filename']]) {
+                                                    extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                                }
+                                                extras.push(extra);
                                             }
-                                            extras.push(extra);
                                         }
                                     }
                                     break;
