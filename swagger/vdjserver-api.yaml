@@ -1093,6 +1093,86 @@ paths:
         '500':
           description: Internal service error occurred.
 
+  /project/{project_uuid}/execute/archive/{analysis_uuid}:
+    post:
+      description: archive analysis for project
+      operationId: archiveWorkflow
+      tags:
+        - project
+      security:
+        - project_write_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: analysis_uuid
+          in: path
+          description: analysis document identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
+  /project/{project_uuid}/execute/unarchive/{analysis_uuid}:
+    post:
+      description: unarchive analysis for project
+      operationId: unarchiveWorkflow
+      tags:
+        - project
+      security:
+        - project_write_authorization: []
+      parameters:
+        - name: project_uuid
+          in: path
+          description: project identifer
+          required: true
+          schema:
+            type: string
+        - name: analysis_uuid
+          in: path
+          description: analysis document identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/BasicResponse'
+        '400':
+          description: Bad request.
+        '401':
+          description: Not authorized.
+        '500':
+          description: Internal service error occurred.
+
   /project/{project_uuid}/visualize:
     post:
       description: generate visualization for project
