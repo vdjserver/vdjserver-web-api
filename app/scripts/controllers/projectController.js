@@ -1089,6 +1089,106 @@ ProjectController.getPendingPROV = function(request, response) {
     return apiResponseController.sendError('Not implemented.', 500, response);
 };
 
+// archive (soft delete) an analysis
+// project needs to be in writable state
+ProjectController.archiveWorkflow = async function(request, response) {
+    var context = 'ProjectController.archiveWorkflow';
+    var project_uuid = request.params.project_uuid;
+    var analysis_uuid = request.params.analysis_uuid;
+    var projectMetadata = request['project_metadata'];
+    var msg = null;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' archive analysis: ' + analysis_uuid);
+
+    // get analysis document
+    let metadata = await tapisIO.getMetadataForProject(project_uuid, analysis_uuid)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving analysis document: ' + analysis_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // record with uuid not found, so return 404
+    if (metadata.length == 0)
+        msg = config.log.error(context, 'Analysis document: ' + analysis_uuid + ' not found.');
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    metadata = metadata[0];
+
+    if (metadata['name'] != 'analysis_document') return apiResponseController.sendError('Not a valid analysis document', 400, response);
+
+    let end_states = ['FINISHED', 'FAILED', 'CANCELLED'];
+    if (!end_states.includes(metadata['value']['status']))
+        return apiResponseController.sendError('Analysis document not in a valid state (' + metadata['value']['status'] + ')', 400, response);
+
+    if (metadata['value']['primary'])
+        return apiResponseController.sendError('Cannot archive a primary analysis, remove as primary first.', 400, response);
+
+    metadata['name'] = 'archived_analysis';
+    await tapisIO.updateDocument(metadata.uuid, metadata.name, metadata.value)
+        .catch(function(error) {
+            msg = 'tapisIO.updateDocument error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    config.log.info(context, 'analysis ' + analysis_uuid + ' has been archived.');
+    return apiResponseController.sendSuccess('analysis has been archived.', response);
+};
+
+// unarchive an analysis
+// project needs to be in writable state
+ProjectController.unarchiveWorkflow = async function(request, response) {
+    var context = 'ProjectController.unarchiveWorkflow';
+    var project_uuid = request.params.project_uuid;
+    var analysis_uuid = request.params.analysis_uuid;
+    var projectMetadata = request['project_metadata'];
+    var msg = null;
+
+    config.log.info(context, 'start, project: ' + project_uuid + ' unarchive analysis: ' + analysis_uuid);
+
+    // get analysis document
+    let metadata = await tapisIO.getMetadataForProject(project_uuid, analysis_uuid)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error while retrieving analysis document: ' + analysis_uuid);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    // record with uuid not found, so return 404
+    if (metadata.length == 0)
+        msg = config.log.error(context, 'Analysis document: ' + analysis_uuid + ' not found.');
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 400, response);
+    }
+    metadata = metadata[0];
+
+    if (metadata['name'] != 'archived_analysis') return apiResponseController.sendError('Not an archived analysis document', 400, response);
+
+    metadata['name'] = 'analysis_document';
+    await tapisIO.updateDocument(metadata.uuid, metadata.name, metadata.value)
+        .catch(function(error) {
+            msg = 'tapisIO.updateDocument error: ' + error;
+        });
+    if (msg) {
+        msg = config.log.error(context, msg);
+        webhookIO.postToSlack(msg);
+        return apiResponseController.sendError(msg, 500, response);
+    }
+
+    config.log.info(context, 'analysis ' + analysis_uuid + ' has been unarchived.');
+    return apiResponseController.sendSuccess('analysis has been unarchived.', response);
+};
 
 //
 // Generate visualizations
