@@ -111,9 +111,9 @@ var AnalysisConfig = {
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
-              "igblast-ls6-0.11": {
+              "igblast-ls6-0.12": {
                   "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.11",
+                  "vdjserver:app:version": "0.12",
                   "vdjserver:app:default": true
               }
             },

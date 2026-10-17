@@ -48,6 +48,7 @@ var context = 'app';
 var config = require('./config/config');
 app.set('port', config.port);
 app.set('sslOptions', config.sslOptions);
+app.set('trust proxy', true);
 
 // CORS
 var allowCrossDomain = function(request, response, next) {
@@ -187,10 +188,10 @@ ServiceAccount.getToken()
                 'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
             },
             errorMiddleware: function(err, req, res, next) {
-                console.log('Got an error!');
+                const clientIP = req.ip;
+                console.log('Got an error! From client IP: ' + clientIP);
                 console.log(JSON.stringify(err));
                 console.error(err.stack);
-                //console.trace("Here I am!");
                 if (err.status) res.status(err.status).json(err.errors);
                 else apiResponseController.sendError('Unknown server error.', 500, res);
             },
