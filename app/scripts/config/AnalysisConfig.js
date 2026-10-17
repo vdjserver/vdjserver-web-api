@@ -54,15 +54,11 @@ var AnalysisConfig = {
         "presto": {
             "vdjserver:name":"Presto",
             "activity": {
-              "presto-ls6-0.2": {
+              "presto-ls6-0.4": {
                   "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:version": "0.4",
                   "vdjserver:app:default": true
               },
-              "presto-ls6-0.1": {
-                  "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.1"
-              }
             },
             "vdjserver:activity:uses": {
                 "JobFiles": [ 'archive' ],
@@ -204,9 +200,9 @@ var AnalysisConfig = {
         "cellranger": {
             "vdjserver:name":"Cell Ranger",
             "activity": {
-              "cellranger-ls6-0.2": {
+              "cellranger-ls6-0.3": {
                   "vdjserver:app:name": "cellranger-ls6",
-                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:version": "0.3",
                   "vdjserver:app:default": true
               }
             },
