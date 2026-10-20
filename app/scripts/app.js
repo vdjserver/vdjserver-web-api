@@ -48,6 +48,7 @@ var context = 'app';
 var config = require('./config/config');
 app.set('port', config.port);
 app.set('sslOptions', config.sslOptions);
+app.set('trust proxy', true);
 
 // CORS
 var allowCrossDomain = function(request, response, next) {
@@ -187,10 +188,10 @@ ServiceAccount.getToken()
                 'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
             },
             errorMiddleware: function(err, req, res, next) {
-                console.log('Got an error!');
+                const clientIP = req.ip;
+                console.log('Got an error! From client IP: ' + clientIP);
                 console.log(JSON.stringify(err));
                 console.error(err.stack);
-                //console.trace("Here I am!");
                 if (err.status) res.status(err.status).json(err.errors);
                 else apiResponseController.sendError('Unknown server error.', 500, res);
             },
@@ -246,6 +247,8 @@ ServiceAccount.getToken()
                 removePermissionsForUsername: async function(req, res) { return try_function(req, res, projectController.removePermissionsForUsername); },
                 executeWorkflow: async function(req, res) { return try_function(req, res, projectController.executeWorkflow); },
                 primaryAnalysis: async function(req, res) { return try_function(req, res, projectController.primaryAnalysis); },
+                archiveWorkflow: async function(req, res) { return try_function(req, res, projectController.archiveWorkflow); },
+                unarchiveWorkflow: async function(req, res) { return try_function(req, res, projectController.unarchiveWorkflow); },
                 generateVisualization: async function(req, res) { return try_function(req, res, projectController.generateVisualization); },
                 publishProject: async function(req, res) { return try_function(req, res, projectController.publishProject); },
                 unpublishProject: async function(req, res) { return try_function(req, res, projectController.unpublishProject); },

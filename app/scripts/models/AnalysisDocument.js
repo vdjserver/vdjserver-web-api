@@ -169,16 +169,18 @@ AnalysisDocument.prototype.expand_airr_types = async function(project_metadata) 
                                         let seqfiles = rep['sample'][i]['sequencing_files'];
                                         //console.log(seqfiles);
                                         if (seqfiles['filename'] && seqfiles['file_type'] == 'fastq') {
-                                            found = true;
-                                            new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
-                                            let extra = {};
-                                            extra[input_name] = seqfiles['filename'];
-                                            extra['airr:Repertoire'] = rep['repertoire_id']
-                                            new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
-                                            if (project_file_map[seqfiles['filename']]) {
-                                                extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                            if (!seqfiles['paired_filename']) { // make sure no paired file
+                                                found = true;
+                                                new_entity_id.push('vdjserver:project_file:' + seqfiles['filename']);
+                                                let extra = {};
+                                                extra[input_name] = seqfiles['filename'];
+                                                extra['airr:Repertoire'] = rep['repertoire_id']
+                                                new_uses_id.push('vdjserver:app:inputs:' + activity_id + ':' + seqfiles['filename']);
+                                                if (project_file_map[seqfiles['filename']]) {
+                                                    extra['vdjserver:uuid'] = project_file_map[seqfiles['filename']];
+                                                }
+                                                extras.push(extra);
                                             }
-                                            extras.push(extra);
                                         }
                                     }
                                     break;
@@ -410,6 +412,7 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
         if (!activity)
             return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' cannot find activity referenced in uses relation:' + prev_uses['prov:activity']));
 
+        // load the provenance output from the previous analysis job
         let prov_output = await tapisIO.getProjectJobFileContents(project_uuid, e['vdjserver:uuid'], job_id, 'provenance_output.json')
             .catch(function(error) {
                 return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', could not read provenance_output.json'));
@@ -419,64 +422,68 @@ AnalysisDocument.prototype.expand_archive_input = async function(project_metadat
         if (!prov_output['value']['entity'])
             return Promise.reject(new Error('Entity ' + entity_id + ' with vdjserver:uuid: ' + e['vdjserver:uuid'] + ' and job id: ' + job_id + ', provenance_output.json is invalid format.'));
 
-        // entity with tapis file object
-        //let new_entity_id = 'vdjserver:project_job_file:' + job_id + '.zip';
-        //new_entities[new_entity_id] = { "vdjserver:type": "app:inputs" };
-        //new_entities[new_entity_id]['vdjserver:analysis'] = e['vdjserver:uuid'];
-        //new_entities[new_entity_id]['vdjserver:job'] = job_id;
-        // TODO: this (JobFiles) is hard-coded, we should look up the name in the config for the activity
-        //new_entities[new_entity_id]['JobFiles'] = job_id + '.zip';
-        // TODO: the entity should have a vdjserver uuid
-
         // what does this app use?
         // tags --> filenames
         // look for appropriate output entities in the previous analysis
         // copy those entities to this analysis and set input variable with filenames
         let app = AnalysisConfig['apps'][this.workflow_mode];
         for (let input_name in app['vdjserver:activity:uses']) {
-            //let input_array = [];
             for (let pe in prov_output['value']['entity']) {
+                // potential input?
                 if (prov_output['value']['entity'][pe]['vdjserver:type'] != 'app:outputs') continue;
                 if (!prov_output['value']['entity'][pe]['vdjserver:tags']) continue;
                 let tags = prov_output['value']['entity'][pe]['vdjserver:tags'].split(',');
                 let intersection = app['vdjserver:activity:uses'][input_name].filter(item => tags.includes(item));
                 if (intersection.length == 0) continue;
+
+                //console.log(intersection);
+                //console.log(JSON.stringify(prov_output['value']['entity'][pe]));
+
+                // does the activity require complete input
+                let should_add = true;
+                if (! app['vdjserver:activity:inputs:complete']) {
+                    // Is the entity associated with a Repertoire? If not, then add it
+                    // otherwise verify it is a selected repertoire for the activity
+                    if (prov_output['value']['entity'][pe]['airr:Repertoire']) {
+                        //console.log(JSON.stringify(this.entity['airr:Repertoire:' + prov_output['value']['entity'][pe]['airr:Repertoire']]));
+                        if (! this.entity['airr:Repertoire:' + prov_output['value']['entity'][pe]['airr:Repertoire']])
+                            should_add = false; // not a selected repertoire
+                    }
+                }
+
                 // add the entity
-                new_entities[pe] = prov_output['value']['entity'][pe];
-                new_entities[pe]['vdjserver:type'] = 'app:inputs';
-                new_entities[pe][input_name] = prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
-                if (prov_output['value']['entity'][pe]['vdjserver:tags'] == 'archive') { // JobFiles is hard-coded, for archive tag bring forward the analysis and job id
-                    new_entities[pe]['vdjserver:analysis'] = e['vdjserver:uuid'];
-                    new_entities[pe]['vdjserver:job'] = job_id;
+                if (should_add) {
+                    new_entities[pe] = prov_output['value']['entity'][pe];
+                    new_entities[pe]['vdjserver:type'] = 'app:inputs';
+                    new_entities[pe][input_name] = prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
+                    if (prov_output['value']['entity'][pe]['vdjserver:tags'] == 'archive') { // JobFiles is hard-coded, for archive tag bring forward the analysis and job id
+                        new_entities[pe]['vdjserver:analysis'] = e['vdjserver:uuid'];
+                        new_entities[pe]['vdjserver:job'] = job_id;
+                    }
+                    let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
+                    new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': pe };
                 }
-                let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + prov_output['value']['entity'][pe]['vdjserver:project_job_file'];
-                new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': pe };
-                //input_array.push(prov_output['value']['entity'][pe]['vdjserver:project_job_file']);
             }
-            //if (input_array.length > 0) {
-            //    new_entities[new_entity_id][input_name] = input_array.join(' ');
-            //}
         }
 
+        // if activity requires complete inputs
         // Any AIRR Repertoire or RepertoireGroup entities
-        for (let eid in data['value']['entity']) {
-            if (data['value']['entity'][eid]['airr:type'] == 'Repertoire') {
-                if (!this.entity[eid]) {
-                    new_entities[eid] = data['value']['entity'][eid];
-                    new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+        if (app['vdjserver:activity:inputs:complete']) {
+            for (let eid in data['value']['entity']) {
+                if (data['value']['entity'][eid]['airr:type'] == 'Repertoire') {
+                    if (!this.entity[eid]) {
+                        new_entities[eid] = data['value']['entity'][eid];
+                        new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+                    }
                 }
-            }
-            if (data['value']['entity'][eid]['airr:type'] == 'RepertoireGroup') {
-                if (!this.entity[eid]) {
-                    new_entities[eid] = data['value']['entity'][eid];
-                    new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+                if (data['value']['entity'][eid]['airr:type'] == 'RepertoireGroup') {
+                    if (!this.entity[eid]) {
+                        new_entities[eid] = data['value']['entity'][eid];
+                        new_uses[eid] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': eid };
+                    }
                 }
             }
         }
-
-        // uses relations for activities that use this entity
-        //let new_uses_id = 'vdjserver:app:inputs:' + this.workflow_mode + ':' + e['vdjserver:uuid'];
-        //new_uses[new_uses_id] = { 'prov:activity': prev_uses['prov:activity'], 'prov:entity': new_entity_id };
     }
 
     // add to document

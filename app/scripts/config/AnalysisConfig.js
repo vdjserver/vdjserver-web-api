@@ -54,15 +54,11 @@ var AnalysisConfig = {
         "presto": {
             "vdjserver:name":"Presto",
             "activity": {
-              "presto-ls6-0.2": {
+              "presto-ls6-0.4": {
                   "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:version": "0.4",
                   "vdjserver:app:default": true
               },
-              "presto-ls6-0.1": {
-                  "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.1"
-              }
             },
             "vdjserver:activity:uses": {
                 "JobFiles": [ 'archive' ],
@@ -115,9 +111,9 @@ var AnalysisConfig = {
         "igblast": {
             "vdjserver:name":"IgBlast",
             "activity": {
-              "igblast-ls6-0.11": {
+              "igblast-ls6-0.12": {
                   "vdjserver:app:name": "igblast-ls6",
-                  "vdjserver:app:version": "0.11",
+                  "vdjserver:app:version": "0.12",
                   "vdjserver:app:default": true
               }
             },
@@ -133,12 +129,12 @@ var AnalysisConfig = {
                 "assigned_clones"
             ],
             "vdjserver:schedule": [
-                { "inputSize":   2e8,  "time": 120 },
+                { "inputSize":   1e7,  "time": 120 },
+                { "inputSize":   1e8,  "time": 240, "node": 2 },
                 { "inputSize":   1e9, "time": 480, "node": 4 },
-                { "inputSize":   5e9, "time": 960, "node": 4 },
-                { "inputSize":   1e10, "time": 960, "node": 8 },
-                { "inputSize":   2e10, "time": 1440, "node": 8 },
-                { "inputSize":   4e10, "time": 2880, "node": 8 }
+                { "inputSize":   5e9, "time": 960, "node": 8 },
+                { "inputSize":   1e10, "time": 1440, "node": 8 },
+                { "inputSize":   2e10, "time": 2880, "node": 8 }
             ]
         },
         "tilde": {
@@ -175,6 +171,7 @@ var AnalysisConfig = {
                   "vdjserver:app:default": true
               }
             },
+            "vdjserver:activity:inputs:complete": true,  // all output from previous analyses are used as input
             "vdjserver:activity:uses": {
                 "JobFiles": [ 'archive' ],
                 "vdjserver:project_job_file": [ 'vdj_sequence_annotation', 'assigned_clones' ]
@@ -204,9 +201,9 @@ var AnalysisConfig = {
         "cellranger": {
             "vdjserver:name":"Cell Ranger",
             "activity": {
-              "cellranger-ls6-0.2": {
+              "cellranger-ls6-0.3": {
                   "vdjserver:app:name": "cellranger-ls6",
-                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:version": "0.3",
                   "vdjserver:app:default": true
               }
             },
