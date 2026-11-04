@@ -130,7 +130,7 @@ var AnalysisConfig = {
             ],
             "vdjserver:schedule": [
                 { "inputSize":   1e7,  "time": 120 },
-                { "inputSize":   1e8,  "time": 240, "node": 2 },
+                { "inputSize":   1e8,  "time": 480, "node": 2 },
                 { "inputSize":   1e9, "time": 480, "node": 4 },
                 { "inputSize":   5e9, "time": 960, "node": 8 },
                 { "inputSize":   1e10, "time": 1440, "node": 8 },
