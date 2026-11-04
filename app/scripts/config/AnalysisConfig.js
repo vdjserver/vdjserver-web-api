@@ -73,6 +73,12 @@ var AnalysisConfig = {
                 "FASTQ",
                 "FASTA",
                 "sequence"
+            ],
+            "vdjserver:schedule": [
+                { "inputSize":   1e7,  "time": 120 },
+                { "inputSize":   1e8,  "time": 480 },
+                { "inputSize":   1e9,  "time": 1440 },
+                { "inputSize":   1e10, "time": 2880 }
             ]
         },
         "vdjpipe": {
