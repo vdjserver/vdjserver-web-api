@@ -339,8 +339,10 @@ try {
                         msg = config.log.error(context, 'AnalysisDocument.create_job_data error' + error);
                     });
                 if (msg) {
+                    analysis['value']['status'] = 'FAILED';
+                    analysis['value']['status_message'] = 'Error when creating Tapis job data.';
                     webhookIO.postToSlack(msg);
-                    return Promise.resolve();
+                    break;
                 }
                 console.log(JSON.stringify(job_data, null, 2));
 
@@ -355,6 +357,7 @@ try {
                         analysis['value']['status'] = 'FAILED';
                         analysis['value']['status_message'] = 'Error when submitting Tapis job.';
                         webhookIO.postToSlack(msg);
+                        break;
                     } else {
                         if (job['fileInputs']) config.log.info(context, JSON.stringify(JSON.parse(job['fileInputs']), null, 2));
                         if (job['parameterSet']) config.log.info(context, JSON.stringify(JSON.parse(job['parameterSet']), null, 2));
