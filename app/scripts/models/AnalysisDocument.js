@@ -698,8 +698,13 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                             if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_file')) {
                                 job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/files/' + input_value, targetPath: input_value});
                                 let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/files/' + input_value);
-                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
-                                console.log(file_info);
+                                if (file_info.length == 1) {
+                                    if (input_value.endsWith('.gz'))
+                                        total_file_size += 5 * file_info[0]['size'];
+                                    else
+                                        total_file_size += file_info[0]['size'];
+                                }
+                                //console.log(file_info);
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
                                 // this needs an analysis id and job id for the path
@@ -707,8 +712,13 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                                 let prev_job_id = this.entity[this.uses[u]['prov:entity']]['vdjserver:job'];
                                 job_data["fileInputs"].push({ name: app_inputs[i]['name'], sourceUrl: "tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value, targetPath: input_value});
                                 let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
-                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
-                                console.log(file_info);
+                                if (file_info.length == 1) {
+                                    if (input_value.endsWith('.gz'))
+                                        total_file_size += 5 * file_info[0]['size'];
+                                    else
+                                        total_file_size += file_info[0]['size'];
+                                }
+                                //console.log(file_info);
                             }
                             break;
                         }
@@ -741,8 +751,13 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                                 inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/files/' + input_value);
                                 inputArrayEnv.push(input_value);
                                 let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/files/' + input_value);
-                                if (file_info.length == 1) total_file_size += file_info[0]['size'];
-                                console.log(file_info);
+                                if (file_info.length == 1) {
+                                    if (input_value.endsWith('.gz'))
+                                        total_file_size += 5 * file_info[0]['size'];
+                                    else
+                                        total_file_size += file_info[0]['size'];
+                                }
+                                //console.log(file_info);
                             } else if (this.uses[u]['prov:entity'].startsWith('vdjserver:project_job_file')) {
                                 // or a project_job_file?
                                 // this needs an analysis id and job id for the path
@@ -752,8 +767,13 @@ AnalysisDocument.prototype.create_job_data = async function(activity_id, analysi
                                 if (prev_analysis_id) {
                                     inputArrayData["sourceUrls"].push("tapis://" + tapisSettings.storageSystem + '/projects/' + project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
                                     let file_info = await tapisIO.getProjectFileDetail(project_uuid + '/analyses/' + prev_analysis_id + '/' + prev_job_id +'/' + input_value);
-                                    if (file_info.length == 1) total_file_size += file_info[0]['size'];
-                                    console.log(file_info);
+                                    if (file_info.length == 1) {
+                                        if (input_value.endsWith('.gz'))
+                                            total_file_size += 5 * file_info[0]['size'];
+                                        else
+                                            total_file_size += file_info[0]['size'];
+                                    }
+                                    //console.log(file_info);
                                 }
                                 inputArrayEnv.push(input_value);
                             }
