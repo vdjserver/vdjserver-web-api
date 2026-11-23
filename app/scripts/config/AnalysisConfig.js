@@ -32,14 +32,10 @@ var AnalysisConfig = {
         "takara_bio_umi_human_tr": {
             "vdjserver:name":"Takara Bio UMI Human TCR (pRESTO)",
             "activity": {
-              "presto-ls6-0.2": {
+              "presto-ls6-0.4": {
                   "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.2",
+                  "vdjserver:app:version": "0.4",
                   "vdjserver:app:default": true
-              },
-              "presto-ls6-0.1": {
-                  "vdjserver:app:name": "presto-ls6",
-                  "vdjserver:app:version": "0.1"
               }
             },
             "vdjserver:activity:uses": {
@@ -171,9 +167,9 @@ var AnalysisConfig = {
         "repcalc": {
             "vdjserver:name":"RepCalc",
             "activity": {
-              "repcalc2-ls6-0.10": {
+              "repcalc2-ls6-0.11": {
                   "vdjserver:app:name": "repcalc2-ls6",
-                  "vdjserver:app:version": "0.10",
+                  "vdjserver:app:version": "0.11",
                   "vdjserver:app:default": true
               }
             },
